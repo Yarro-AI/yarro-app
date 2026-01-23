@@ -24,37 +24,19 @@ export function PMProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    const loadSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (user) {
-        const { data: pm } = await supabase
-          .from('c1_property_managers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (pm) {
-          setPropertyManager(pm)
-        }
-      }
-
-      setLoading(false)
-    }
-
-    loadSession()
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT' || !session?.user) {
           setPropertyManager(null)
-        } else if (event === 'SIGNED_IN' && session?.user) {
+          setLoading(false)
+        } else if (session?.user) {
           const { data: pm } = await supabase
             .from('c1_property_managers')
             .select('*')
             .eq('user_id', session.user.id)
             .single()
-          if (pm) setPropertyManager(pm)
+          setPropertyManager(pm)
+          setLoading(false)
         }
       }
     )
