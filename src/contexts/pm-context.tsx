@@ -26,41 +26,29 @@ export function PMProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // Initial session check - getSession() is instant (reads from cookies, no network)
-    const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!mounted) return
-
-      if (session?.user) {
-        const { data: pm } = await supabase
-          .from('c1_property_managers')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single()
-        if (mounted) {
-          setPropertyManager(pm)
-          setLoading(false)
-        }
-      } else {
-        setLoading(false)
-      }
+    const fetchPM = async (userId: string) => {
+      const { data: pm } = await supabase
+        .from('c1_property_managers')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      return pm
     }
 
-    initSession()
-
-    // Listen for auth changes (sign in, sign out, token refresh)
+    // Listen for auth changes - handles ALL events including initial session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
+
         if (event === 'SIGNED_OUT' || !session?.user) {
           setPropertyManager(null)
           setLoading(false)
-        } else if (event === 'SIGNED_IN' && session?.user) {
-          const { data: pm } = await supabase
-            .from('c1_property_managers')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single()
+        } else if (
+          event === 'INITIAL_SESSION' ||
+          event === 'SIGNED_IN' ||
+          event === 'TOKEN_REFRESHED'
+        ) {
+          const pm = await fetchPM(session!.user.id)
           if (mounted) {
             setPropertyManager(pm)
             setLoading(false)
@@ -71,7 +59,7 @@ export function PMProvider({ children }: { children: ReactNode }) {
 
     // Fallback: never stay loading forever
     const timeout = setTimeout(() => {
-      if (mounted && loading) setLoading(false)
+      if (mounted) setLoading(false)
     }, 5000)
 
     return () => {

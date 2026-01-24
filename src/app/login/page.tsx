@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [resetSent, setResetSent] = useState(false)
   const supabase = createClient()
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = '/'
+    })
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

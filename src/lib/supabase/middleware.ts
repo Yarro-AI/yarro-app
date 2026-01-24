@@ -18,12 +18,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Has auth cookies + on login page → redirect to dashboard
-  if (hasAuthCookie && pathname === '/login') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
-  }
+  // Has auth cookies + on login page → let client handle redirect
+  // (Don't redirect here to avoid loop if PM lookup fails)
 
   // All other cases → pass through instantly
   return NextResponse.next({ request })

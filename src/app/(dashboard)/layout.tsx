@@ -12,7 +12,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { loading, propertyManager } = usePM()
+  const { loading, propertyManager, signOut } = usePM()
   const router = useRouter()
   const pathname = usePathname()
   const [checkingOnboarding, setCheckingOnboarding] = useState(true)
@@ -20,9 +20,10 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!loading && !propertyManager) {
-      router.push('/login')
+      // Sign out to clear cookies, preventing redirect loop with middleware
+      signOut()
     }
-  }, [loading, propertyManager, router])
+  }, [loading, propertyManager, signOut])
 
   // Check if PM needs onboarding (no properties yet)
   useEffect(() => {
