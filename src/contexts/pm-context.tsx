@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/types/database'
 
@@ -69,10 +69,14 @@ export function PMProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase])
 
-  const signOut = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
+  const signingOut = useRef(false)
+  const signOut = useCallback(() => {
+    if (signingOut.current) return
+    signingOut.current = true
+    supabase.auth.signOut().finally(() => {
+      window.location.href = '/login'
+    })
+  }, [supabase])
 
   return (
     <PMContext.Provider value={{ propertyManager, loading, signOut }}>
