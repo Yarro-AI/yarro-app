@@ -60,6 +60,14 @@ export function PMProvider({ children }: { children: ReactNode }) {
 
     loadPM()
 
+    // Re-check auth when tab becomes visible (handles backgrounded tabs returning)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadPM()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -87,6 +95,7 @@ export function PMProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       subscription.unsubscribe()
     }
   }, [supabase])
