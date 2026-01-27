@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { usePM } from '@/contexts/pm-context'
@@ -12,18 +12,18 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { loading, propertyManager, signOut } = usePM()
+  const { loading, propertyManager } = usePM()
   const router = useRouter()
   const pathname = usePathname()
   const [checkingOnboarding, setCheckingOnboarding] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = createClient()
 
+  // If no PM after loading completes, redirect to login (don't force signOut!)
   useEffect(() => {
     if (!loading && !propertyManager) {
-      // Sign out to clear cookies, preventing redirect loop with middleware
-      signOut()
+      router.push('/login')
     }
-  }, [loading, propertyManager, signOut])
+  }, [loading, propertyManager, router])
 
   // Check if PM needs onboarding (no properties yet)
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function DashboardLayout({
   if (!propertyManager) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Redirecting...</div>
+        <div className="text-gray-500">Redirecting to login...</div>
       </div>
     )
   }
