@@ -21,31 +21,27 @@ const PMContext = createContext<PMContextType>({
 export function PMProvider({ children }: { children: ReactNode }) {
   const [propertyManager, setPropertyManager] = useState<PropertyManager | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
   const supabase = createClient()
 
+  // Fetch PM record when userId changes (separate from auth listener)
   useEffect(() => {
+    if (!userId) {
+      setPropertyManager(null)
+      setLoading(false)
+      return
+    }
+
     let mounted = true
+    setLoading(true)
 
-    const loadPM = async () => {
+    const fetchPM = async () => {
       try {
-        // getUser() validates with server - unlike getSession() which reads stale local data
-        const { data: { user }, error } = await supabase.auth.getUser()
-
-        if (error || !user) {
-          if (mounted) {
-            setPropertyManager(null)
-            setLoading(false)
-          }
-          return
-        }
-
-        // Fetch PM record
         const { data: pm } = await supabase
           .from('c1_property_managers')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .single()
-
         if (mounted) {
           setPropertyManager(pm)
           setLoading(false)
@@ -57,75 +53,64 @@ export function PMProvider({ children }: { children: ReactNode }) {
         }
       }
     }
+    fetchPM()
 
-    // Initial load with timeout failsafe
-    const initialTimeout = setTimeout(() => {
-      // If initial loadPM takes too long, auth is broken - force logout
-      supabase.auth.signOut().catch(() => {})
-      window.location.href = '/login'
-    }, 8000)
+    return () => { mounted = false }
+  }, [userId, supabase])
 
-    loadPM().finally(() => clearTimeout(initialTimeout))
+  // Auth state management
+  // CRITICAL: onAuthStateChange callback must NOT be async and must NOT make Supabase calls
+  // See: https://github.com/supabase/supabase/issues/35754
+  useEffect(() => {
+    // Initial session check - getSession() reads cookies, no network call (won't hang)
+    // Middleware already validates with getUser() on every request
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null)
+    })
 
-    // Re-check auth when tab becomes visible (handles backgrounded tabs returning)
-    // Has timeout failsafe - if getUser() hangs, redirect to login
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        const timeout = setTimeout(() => {
-          // If loadPM takes too long, auth is broken - force logout
-          supabase.auth.signOut().catch(() => {})
-          window.location.href = '/login'
-        }, 8000)
-
-        try {
-          await loadPM()
-        } finally {
-          clearTimeout(timeout)
-        }
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Listen for auth state changes
+    // Listen for auth state changes - NOT async, NO Supabase calls inside
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return
-
+      (event, session) => {
+        // Just update userId - the other useEffect handles PM fetching
         if (event === 'SIGNED_OUT') {
-          setPropertyManager(null)
-          setLoading(false)
-        } else if (event === 'SIGNED_IN' && session?.user) {
-          setLoading(true)
-          const { data: pm } = await supabase
-            .from('c1_property_managers')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single()
-          if (mounted) {
-            setPropertyManager(pm)
-            setLoading(false)
-          }
-        } else if (event === 'TOKEN_REFRESHED') {
-          // Token refreshed - no action needed, session is still valid
+          setUserId(null)
+        } else if (session?.user) {
+          setUserId(session.user.id)
         }
       }
     )
 
-    return () => {
-      mounted = false
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      subscription.unsubscribe()
+    // When tab becomes visible, do a simple session check
+    // If no session, redirect to login. Don't use getUser() - it can hang.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            window.location.href = '/login'
+          } else if (session.user.id !== userId) {
+            // Session user changed (unlikely but handle it)
+            setUserId(session.user.id)
+          }
+        })
+      }
     }
-  }, [supabase])
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [supabase, userId])
 
   const signOut = useCallback(async () => {
     setLoading(true)
-    await supabase.auth.signOut()
-    // Don't manually clear cookies - Supabase handles this
+    // Use server-side logout to properly clear httpOnly cookies
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     setPropertyManager(null)
+    setUserId(null)
     setLoading(false)
     window.location.href = '/login'
-  }, [supabase])
+  }, [])
 
   return (
     <PMContext.Provider value={{ propertyManager, loading, signOut }}>

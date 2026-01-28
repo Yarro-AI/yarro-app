@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, subDays, startOfWeek, startOfMonth, startOfYear } from 'date-fns'
+import { startOfDay, endOfDay, startOfWeek, startOfMonth, startOfYear } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Calendar } from 'lucide-react'
@@ -18,11 +18,11 @@ type DateFilterProps = {
 }
 
 const presets = [
-  { label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
-  { label: 'Week', getValue: () => ({ from: startOfWeek(new Date(), { weekStartsOn: 1 }), to: new Date() }) },
-  { label: 'Month', getValue: () => ({ from: startOfMonth(new Date()), to: new Date() }) },
-  { label: 'Year', getValue: () => ({ from: startOfYear(new Date()), to: new Date() }) },
-  { label: 'All Time', getValue: () => ({ from: new Date(2020, 0, 1), to: new Date() }) },
+  { label: 'Today', getValue: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }) },
+  { label: 'Week', getValue: () => ({ from: startOfWeek(new Date(), { weekStartsOn: 1 }), to: endOfDay(new Date()) }) },
+  { label: 'Month', getValue: () => ({ from: startOfMonth(new Date()), to: endOfDay(new Date()) }) },
+  { label: 'Year', getValue: () => ({ from: startOfYear(new Date()), to: endOfDay(new Date()) }) },
+  { label: 'All Time', getValue: () => ({ from: new Date(2020, 0, 1), to: endOfDay(new Date()) }) },
 ]
 
 export function DateFilter({ value, onChange }: DateFilterProps) {
