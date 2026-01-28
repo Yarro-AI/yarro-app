@@ -22,13 +22,18 @@ export function PMProvider({ children }: { children: ReactNode }) {
   const [propertyManager, setPropertyManager] = useState<PropertyManager | null>(null)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false) // Track if initial session check is done
   const supabase = createClient()
 
   // Fetch PM record when userId changes (separate from auth listener)
   useEffect(() => {
     if (!userId) {
       setPropertyManager(null)
-      setLoading(false)
+      // Only set loading=false if we've completed the initial session check
+      // Otherwise we'd briefly show "not logged in" before session check resolves
+      if (initialized) {
+        setLoading(false)
+      }
       return
     }
 
@@ -56,7 +61,7 @@ export function PMProvider({ children }: { children: ReactNode }) {
     fetchPM()
 
     return () => { mounted = false }
-  }, [userId, supabase])
+  }, [userId, initialized, supabase])
 
   // Auth state management
   // CRITICAL: onAuthStateChange callback must NOT be async and must NOT make Supabase calls
@@ -66,6 +71,7 @@ export function PMProvider({ children }: { children: ReactNode }) {
     // Middleware already validates with getUser() on every request
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
+      setInitialized(true) // Mark that we've checked - now safe to show "no user" state
     })
 
     // Listen for auth state changes - NOT async, NO Supabase calls inside
