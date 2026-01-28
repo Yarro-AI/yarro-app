@@ -466,7 +466,7 @@ export default function MessagesPage() {
                               'bg-gray-100 text-gray-600'
                             }`}>
                               {status === 'approved' ? `✓ ${contractor.quote_amount || 'Approved'}` :
-                               status === 'replied' ? `£${contractor.quote_amount || 'Quoted'}` :
+                               status === 'replied' ? `${contractor.quote_amount || 'Quoted'}` :
                                status === 'sent' ? 'Sent' : 'Pending'}
                             </span>
                             {isOpen ? (
