@@ -29,12 +29,17 @@ import {
   Settings,
 } from 'lucide-react'
 
-const navItems = [
+// Core navigation - your data
+const coreNavItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/tickets', label: 'Tickets', icon: Ticket },
   { href: '/properties', label: 'Properties', icon: Building2 },
   { href: '/tenants', label: 'Tenants', icon: Users },
   { href: '/contractors', label: 'Contractors', icon: Wrench },
+]
+
+// Activity navigation - system generated
+const activityNavItems = [
+  { href: '/tickets', label: 'Tickets', icon: Ticket },
   { href: '/conversations', label: 'Conversations', icon: MessageSquare },
   { href: '/messages', label: 'Messages', icon: Mail },
   { href: '/completions', label: 'Completions', icon: CheckCircle2 },
@@ -64,32 +69,54 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {/* Core Navigation */}
+        {coreNavItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
-          const isDashboard = item.href === '/'
 
           return (
-            <div key={item.href}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                isActive
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                  : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+              )}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {item.label}
+            </Link>
+          )
+        })}
+
+        {/* Activity Section - System Generated */}
+        <div className="pt-4 mt-4 border-t border-sidebar-border/40">
+          <p className="px-3 py-2 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">
+            Activity
+          </p>
+          {activityNavItems.map((item) => {
+            const isActive = pathname === item.href
+            const Icon = item.icon
+
+            return (
               <Link
+                key={item.href}
                 href={item.href}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                   isActive
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent',
-                  isDashboard && !isActive && 'text-sidebar-foreground'
+                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
                 )}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 {item.label}
               </Link>
-              {isDashboard && (
-                <div className="my-3 mx-3 border-t border-sidebar-border/40" />
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
 
         {/* Data Management Section */}
         <div className="pt-4 mt-4 border-t border-sidebar-border/40">

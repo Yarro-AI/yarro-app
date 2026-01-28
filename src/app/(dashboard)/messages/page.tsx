@@ -12,6 +12,7 @@ import {
 } from '@/components/detail-drawer'
 import { ChatHistory } from '@/components/chat-message'
 import { StatusBadge } from '@/components/status-badge'
+import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -68,6 +69,7 @@ export default function MessagesPage() {
   const [openContractors, setOpenContractors] = useState<number[]>([])
   const [openManager, setOpenManager] = useState(false)
   const [openLandlord, setOpenLandlord] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -75,7 +77,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchMessages()
-  }, [propertyManager])
+  }, [propertyManager, dateRange])
 
   useEffect(() => {
     if (selectedId && messages.length > 0) {
@@ -107,6 +109,8 @@ export default function MessagesPage() {
         *,
         c1_tickets(issue_description, job_stage, property_manager_id, c1_properties(address))
       `)
+      .gte('updated_at', dateRange.from.toISOString())
+      .lte('updated_at', dateRange.to.toISOString())
       .order('updated_at', { ascending: false })
       .limit(200)
 
@@ -372,11 +376,14 @@ export default function MessagesPage() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold">Messages</h1>
-        <p className="text-muted-foreground mt-1">
-          Outbound messaging status for tickets
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Messages</h1>
+          <p className="text-muted-foreground mt-1">
+            Outbound messaging status for tickets
+          </p>
+        </div>
+        <DateFilter value={dateRange} onChange={setDateRange} />
       </div>
 
       {/* Data Table */}

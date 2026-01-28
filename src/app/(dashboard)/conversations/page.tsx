@@ -13,6 +13,7 @@ import {
 } from '@/components/detail-drawer'
 import { ChatHistory } from '@/components/chat-message'
 import { StatusBadge } from '@/components/status-badge'
+import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { Building2, Phone, User, Ticket } from 'lucide-react'
@@ -58,6 +59,7 @@ export default function ConversationsPage() {
   const [relatedTicket, setRelatedTicket] = useState<RelatedTicket | null>(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -65,7 +67,7 @@ export default function ConversationsPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchConversations()
-  }, [propertyManager])
+  }, [propertyManager, dateRange])
 
   useEffect(() => {
     if (selectedId && conversations.length > 0) {
@@ -96,6 +98,8 @@ export default function ConversationsPage() {
         c1_properties(address)
       `)
       .eq('property_manager_id', propertyManager!.id)
+      .gte('last_updated', dateRange.from.toISOString())
+      .lte('last_updated', dateRange.to.toISOString())
       .order('last_updated', { ascending: false })
       .limit(200)
 
@@ -235,11 +239,14 @@ export default function ConversationsPage() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold">Conversations</h1>
-        <p className="text-muted-foreground mt-1">
-          WhatsApp conversations with tenants and contractors
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Conversations</h1>
+          <p className="text-muted-foreground mt-1">
+            WhatsApp conversations with tenants and contractors
+          </p>
+        </div>
+        <DateFilter value={dateRange} onChange={setDateRange} />
       </div>
 
       {/* Data Table */}

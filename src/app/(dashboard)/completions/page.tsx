@@ -13,6 +13,7 @@ import {
   DetailDivider,
 } from '@/components/detail-drawer'
 import { Badge } from '@/components/ui/badge'
+import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { CheckCircle, XCircle, Building2, Wrench, Ticket, Image, PoundSterling, Calendar, Users, Mail } from 'lucide-react'
@@ -51,6 +52,7 @@ export default function CompletionsPage() {
   const [hasMessage, setHasMessage] = useState(false)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -58,7 +60,7 @@ export default function CompletionsPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchCompletions()
-  }, [propertyManager])
+  }, [propertyManager, dateRange])
 
   useEffect(() => {
     if (selectedId && completions.length > 0) {
@@ -91,6 +93,8 @@ export default function CompletionsPage() {
         c1_tickets(issue_description, property_manager_id),
         c1_tenants(full_name)
       `)
+      .gte('received_at', dateRange.from.toISOString())
+      .lte('received_at', dateRange.to.toISOString())
       .order('received_at', { ascending: false })
 
     if (data) {
@@ -209,11 +213,14 @@ export default function CompletionsPage() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold">Job Completions</h1>
-        <p className="text-muted-foreground mt-1">
-          Review job completion reports from contractors
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Job Completions</h1>
+          <p className="text-muted-foreground mt-1">
+            Review job completion reports from contractors
+          </p>
+        </div>
+        <DateFilter value={dateRange} onChange={setDateRange} />
       </div>
 
       {/* Data Table */}
