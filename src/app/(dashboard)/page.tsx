@@ -119,7 +119,7 @@ export default function DashboardPage() {
         (t) => t.status?.toLowerCase() === 'open' && ['pm_approved'].includes(t.job_stage || '')
       ).length
       const scheduledJobs = tickets.filter(
-        (t) => t.status?.toLowerCase() === 'open' && ['scheduled', 'reminder_sent', 'll_approved'].includes(t.job_stage || '')
+        (t) => t.status?.toLowerCase() === 'open' && ['scheduled', 'booked', 'reminder_sent', 'll_approved'].includes(t.job_stage || '')
       ).length
 
       setStats({
@@ -156,7 +156,7 @@ export default function DashboardPage() {
     if (type === 'contractor') stages = ['created', 'contractor_notified']
     if (type === 'manager') stages = ['quote_received']
     if (type === 'landlord') stages = ['pm_approved']
-    if (type === 'scheduled') stages = ['scheduled', 'reminder_sent', 'll_approved']
+    if (type === 'scheduled') stages = ['scheduled', 'booked', 'reminder_sent', 'll_approved']
 
     const { data } = await supabase
       .from('c1_tickets')
