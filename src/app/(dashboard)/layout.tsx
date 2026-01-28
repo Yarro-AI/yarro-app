@@ -8,14 +8,15 @@ import { createClient } from '@/lib/supabase/client'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { Button } from '@/components/ui/button'
 
-const LOADING_TIMEOUT_MS = 5000 // Show recovery UI after 5 seconds
+const SOFT_TIMEOUT_MS = 5000  // Show recovery buttons after 5s
+const HARD_TIMEOUT_MS = 10000 // Force logout after 10s - don't leave user stuck
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { loading, propertyManager, signOut } = usePM()
+  const { loading, propertyManager } = usePM()
   const router = useRouter()
   const pathname = usePathname()
   const [checkingOnboarding, setCheckingOnboarding] = useState(true)
@@ -29,13 +30,25 @@ export default function DashboardLayout({
     }
   }, [loading, propertyManager, router])
 
-  // Loading timeout - show recovery UI if stuck
+  // Loading timeout - show recovery UI, then force logout
   useEffect(() => {
     if (loading || checkingOnboarding) {
-      const timeout = setTimeout(() => {
+      // Soft timeout - show buttons
+      const softTimeout = setTimeout(() => {
         setLoadingTimedOut(true)
-      }, LOADING_TIMEOUT_MS)
-      return () => clearTimeout(timeout)
+      }, SOFT_TIMEOUT_MS)
+
+      // Hard timeout - force logout (don't leave user stuck forever)
+      const hardTimeout = setTimeout(async () => {
+        const freshSupabase = createClient()
+        await freshSupabase.auth.signOut().catch(() => {})
+        window.location.href = '/login'
+      }, HARD_TIMEOUT_MS)
+
+      return () => {
+        clearTimeout(softTimeout)
+        clearTimeout(hardTimeout)
+      }
     } else {
       setLoadingTimedOut(false)
     }
@@ -74,14 +87,18 @@ export default function DashboardLayout({
     checkProperties()
   }, [propertyManager, pathname, router, supabase])
 
+  // Recovery handlers MUST bypass React - don't depend on context state
   const handleRetry = useCallback(() => {
-    // Hard refresh the page - simplest way to retry everything
     window.location.reload()
   }, [])
 
-  const handleLogout = useCallback(() => {
-    signOut()
-  }, [signOut])
+  const handleLogout = useCallback(async () => {
+    // Create fresh client - don't use context's potentially-broken reference
+    const freshSupabase = createClient()
+    await freshSupabase.auth.signOut().catch(() => {})
+    // Hard redirect - don't use router which depends on React
+    window.location.href = '/login'
+  }, [])
 
   // Loading state with timeout recovery
   if (loading || checkingOnboarding) {

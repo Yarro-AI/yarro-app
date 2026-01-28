@@ -58,12 +58,30 @@ export function PMProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    loadPM()
+    // Initial load with timeout failsafe
+    const initialTimeout = setTimeout(() => {
+      // If initial loadPM takes too long, auth is broken - force logout
+      supabase.auth.signOut().catch(() => {})
+      window.location.href = '/login'
+    }, 8000)
+
+    loadPM().finally(() => clearTimeout(initialTimeout))
 
     // Re-check auth when tab becomes visible (handles backgrounded tabs returning)
-    const handleVisibilityChange = () => {
+    // Has timeout failsafe - if getUser() hangs, redirect to login
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        loadPM()
+        const timeout = setTimeout(() => {
+          // If loadPM takes too long, auth is broken - force logout
+          supabase.auth.signOut().catch(() => {})
+          window.location.href = '/login'
+        }, 8000)
+
+        try {
+          await loadPM()
+        } finally {
+          clearTimeout(timeout)
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
