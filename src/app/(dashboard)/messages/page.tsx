@@ -225,12 +225,14 @@ export default function MessagesPage() {
         const stage = m.job_stage.toLowerCase()
         const isGreen = stage === 'closed' || stage === 'completed'
         const isOrange = stage === 'created'
+        // Title case: "created" → "Created", "closed" → "Closed"
+        const label = m.job_stage.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
         if (isGreen || isOrange) {
           return (
             <span className={`px-2 py-0.5 text-xs rounded-full ${
               isGreen ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
             }`}>
-              {m.job_stage}
+              {label}
             </span>
           )
         }
@@ -247,16 +249,17 @@ export default function MessagesPage() {
         const sent = contractors.filter(c => c.sent_at).length
         const replied = contractors.filter(c => c.replied_at).length
         const approved = contractors.filter(c => c.manager_decision === 'approved').length
+        const notSent = contractors.length - sent
         return (
           <div className="flex items-center gap-1">
             {approved > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">{approved} approved</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">{approved} Approved</span>
             ) : replied > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{replied}/{sent} quoted</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{replied}/{sent} Quoted</span>
             ) : sent > 0 ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">{sent} sent</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">{sent} Sent</span>
             ) : (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">not sent</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">{notSent} Not Sent</span>
             )}
           </div>
         )
