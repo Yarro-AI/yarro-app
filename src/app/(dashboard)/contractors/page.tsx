@@ -588,7 +588,7 @@ export default function ContractorsPage() {
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="text-xs text-muted-foreground">Phone</p>
-                        <p className="font-mono text-sm">{selectedContractor.contractor_phone}</p>
+                        <p className="font-mono text-sm">{formatPhoneDisplay(selectedContractor.contractor_phone)}</p>
                       </div>
                     </div>
                   )}

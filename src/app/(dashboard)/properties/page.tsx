@@ -596,7 +596,7 @@ export default function PropertiesPage() {
                         <div>
                           <p className="text-sm font-medium">{tenant.full_name}</p>
                           {tenant.phone && (
-                            <p className="text-xs text-muted-foreground">{tenant.phone}</p>
+                            <p className="text-xs text-muted-foreground">{formatPhoneDisplay(tenant.phone)}</p>
                           )}
                         </div>
                         <Badge variant="outline" className="text-xs">{tenant.role_tag || 'tenant'}</Badge>

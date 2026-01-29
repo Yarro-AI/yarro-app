@@ -25,19 +25,18 @@ export function normalizePhone(phone: string | null | undefined): string {
 }
 
 /**
- * Display phone in user-friendly format: (44) 7508 743333
+ * Display phone in user-friendly format: +44 7508 743333
  */
 export function formatPhoneDisplay(phone: string | null | undefined): string {
   if (!phone) return ''
   const normalized = normalizePhone(phone)
   if (normalized.length < 10) return phone // Return as-is if too short
 
-  // Format: (44) 7XXX XXXXXX
+  // Format: +44 7XXX XXXXXX
   if (normalized.startsWith('44') && normalized.length >= 12) {
-    const countryCode = normalized.slice(0, 2)
     const areaCode = normalized.slice(2, 6)
     const local = normalized.slice(6)
-    return `(${countryCode}) ${areaCode} ${local}`
+    return `+44 ${areaCode} ${local}`
   }
   return phone
 }
