@@ -11,6 +11,16 @@ export async function GET(request: Request) {
 
   if (token_hash && type) {
     const cookieStore = await cookies()
+
+    // CRITICAL: Clear ALL existing auth cookies FIRST
+    // This prevents old sessions from interfering with new invite tokens
+    const allCookies = cookieStore.getAll()
+    for (const cookie of allCookies) {
+      if (cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')) {
+        cookieStore.delete(cookie.name)
+      }
+    }
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,6 +37,9 @@ export async function GET(request: Request) {
         },
       }
     )
+
+    // Sign out any existing session before verifying new token
+    await supabase.auth.signOut()
 
     const { error } = await supabase.auth.verifyOtp({
       type,
