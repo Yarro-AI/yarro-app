@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,17 @@ export default function UpdatePasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Get the user's email to display
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        setUserEmail(session.user.email)
+      }
+    })
+  }, [supabase])
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,9 +82,13 @@ export default function UpdatePasswordPage() {
         ) : (
           <>
             <div className="space-y-2 mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight">Set new password</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Set your password</h1>
               <p className="text-muted-foreground">
-                Enter your new password below
+                {userEmail ? (
+                  <>Create a password for <span className="font-medium text-foreground">{userEmail}</span></>
+                ) : (
+                  'Create your account password'
+                )}
               </p>
             </div>
 
@@ -125,10 +139,10 @@ export default function UpdatePasswordPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
+                    Setting up...
                   </>
                 ) : (
-                  'Update password'
+                  'Set password'
                 )}
               </Button>
             </form>
