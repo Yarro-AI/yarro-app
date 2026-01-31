@@ -402,128 +402,137 @@ export default function DashboardPage() {
               title="Needs Attention"
               description="Tickets requiring action — click any card to view details"
             />
-            <div className="grid grid-cols-6 gap-3">
-              {/* Handoff - RED accent when count > 0, blue outline always */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => showAwaitingTickets('handoff')}
-                    className={`bg-card rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
-                      stats?.handoffTickets
-                        ? 'border-red-400 hover:border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
-                        : 'border-blue-500/30 hover:border-blue-500/50 dark:border-blue-400/30 dark:hover:border-blue-400/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <AlertTriangle className={`h-3.5 w-3.5 ${stats?.handoffTickets ? 'text-red-500' : 'text-blue-500'}`} />
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Handoff</span>
-                    </div>
-                    <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-500' : 'text-card-foreground'}`}>
-                      {stats?.handoffTickets || 0}
-                    </p>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p>
-                </TooltipContent>
-              </Tooltip>
+            <div className="flex gap-3">
+              {/* Left group - Awaiting states (muted style) */}
+              <div className="flex-1 grid grid-cols-3 gap-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => showAwaitingTickets('contractor')}
+                      className="bg-card rounded-xl border border-border p-3 text-left hover:border-muted-foreground/30 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contractor</span>
+                      </div>
+                      <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingContractor || 0}</p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs">{ACTION_DESCRIPTIONS.contractor}</p>
+                  </TooltipContent>
+                </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => showAwaitingTickets('contractor')}
-                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Awaiting Contractor</span>
-                    </div>
-                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingContractor || 0}</p>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <p className="text-xs">{ACTION_DESCRIPTIONS.contractor}</p>
-                </TooltipContent>
-              </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => showAwaitingTickets('manager')}
+                      className="bg-card rounded-xl border border-border p-3 text-left hover:border-muted-foreground/30 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Manager</span>
+                      </div>
+                      <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingManager || 0}</p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p>
+                  </TooltipContent>
+                </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => showAwaitingTickets('manager')}
-                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <UserCheck className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Awaiting Manager</span>
-                    </div>
-                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingManager || 0}</p>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p>
-                </TooltipContent>
-              </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => showAwaitingTickets('landlord')}
+                      className="bg-card rounded-xl border border-border p-3 text-left hover:border-muted-foreground/30 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Hourglass className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Landlord</span>
+                      </div>
+                      <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingLandlord || 0}</p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs">{ACTION_DESCRIPTIONS.landlord}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => showAwaitingTickets('landlord')}
-                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Hourglass className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Awaiting Landlord</span>
-                    </div>
-                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingLandlord || 0}</p>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <p className="text-xs">{ACTION_DESCRIPTIONS.landlord}</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Subtle divider */}
+              <div className="w-px bg-border/50 self-stretch" />
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => showAwaitingTickets('scheduled')}
-                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <CalendarClock className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Scheduled</span>
-                    </div>
-                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.scheduledJobs || 0}</p>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <p className="text-xs">{ACTION_DESCRIPTIONS.scheduled}</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Right group - Action states (accent style) */}
+              <div className="flex-1 grid grid-cols-3 gap-3">
+                {/* Handoff - RED accent when count > 0 */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => showAwaitingTickets('handoff')}
+                      className={`bg-card rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
+                        stats?.handoffTickets
+                          ? 'border-red-400 hover:border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
+                          : 'border-blue-500/30 hover:border-blue-500/50 dark:border-blue-400/30 dark:hover:border-blue-400/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className={`h-3.5 w-3.5 ${stats?.handoffTickets ? 'text-red-500' : 'text-blue-500'}`} />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Handoff</span>
+                      </div>
+                      <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-500' : 'text-card-foreground'}`}>
+                        {stats?.handoffTickets || 0}
+                      </p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p>
+                  </TooltipContent>
+                </Tooltip>
 
-              {/* Landlord Declined - orange accent when count > 0, blue outline always, NOT disabled */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => showAwaitingTickets('declined')}
-                    className={`bg-card rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
-                      stats?.landlordDeclined
-                        ? 'border-orange-400 hover:border-orange-500'
-                        : 'border-blue-500/30 hover:border-blue-500/50 dark:border-blue-400/30 dark:hover:border-blue-400/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <XCircle className={`h-3.5 w-3.5 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-blue-500'}`} />
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Declined</span>
-                    </div>
-                    <p className={`text-2xl font-bold mt-1 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-card-foreground'}`}>
-                      {stats?.landlordDeclined || 0}
-                    </p>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p>
-                </TooltipContent>
-              </Tooltip>
+                {/* Landlord Declined - orange accent when count > 0 */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => showAwaitingTickets('declined')}
+                      className={`bg-card rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
+                        stats?.landlordDeclined
+                          ? 'border-orange-400 hover:border-orange-500'
+                          : 'border-blue-500/30 hover:border-blue-500/50 dark:border-blue-400/30 dark:hover:border-blue-400/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className={`h-3.5 w-3.5 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-blue-500'}`} />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Declined</span>
+                      </div>
+                      <p className={`text-2xl font-bold mt-1 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-card-foreground'}`}>
+                        {stats?.landlordDeclined || 0}
+                      </p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => showAwaitingTickets('scheduled')}
+                      className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <CalendarClock className="h-3.5 w-3.5 text-blue-500" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Scheduled</span>
+                      </div>
+                      <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.scheduledJobs || 0}</p>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p className="text-xs">{ACTION_DESCRIPTIONS.scheduled}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
 
