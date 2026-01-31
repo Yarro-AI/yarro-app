@@ -408,7 +408,7 @@ export function OnboardingWizard() {
       )}
 
       {/* Step Content */}
-      <div className="bg-white rounded-xl border p-6">
+      <div className="bg-card rounded-xl border p-6">
         {state.step === 'pm_details' && (
           <StepPMDetails
             details={state.pmDetails}
@@ -450,10 +450,10 @@ export function OnboardingWizard() {
 
         {state.step === 'complete' && (
           <div className="text-center space-y-4 py-6">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
+              <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-lg font-medium">Onboarding Complete</h2>
+            <h2 className="text-lg font-medium text-card-foreground">Onboarding Complete</h2>
             <div className="flex justify-center gap-6">
               {state.insertedCounts.properties > 0 && (
                 <div>

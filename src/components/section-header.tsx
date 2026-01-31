@@ -24,8 +24,8 @@ export function SectionHeader({
         <Icon className={cn('h-4 w-4', iconTextColor)} />
       </div>
       <div>
-        <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
-        <p className="text-xs text-gray-500">{description}</p>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
     </div>
   )

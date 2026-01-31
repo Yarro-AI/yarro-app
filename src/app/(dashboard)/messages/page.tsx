@@ -394,7 +394,7 @@ export default function MessagesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Messages</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Messages</h1>
           <p className="text-muted-foreground mt-1">
             Quotes, approvals and job coordination
           </p>

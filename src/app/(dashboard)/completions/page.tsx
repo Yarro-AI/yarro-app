@@ -215,7 +215,7 @@ export default function CompletionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Job Completions</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Job Completions</h1>
           <p className="text-muted-foreground mt-1">
             Review job completion reports from contractors
           </p>

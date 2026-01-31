@@ -66,16 +66,16 @@ export default function DashboardLayout({
   // Loading state - simple, no timeouts needed now that root cause is fixed
   if (loading || checkingOnboarding) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   if (!authUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Redirecting to login...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Redirecting to login...</div>
       </div>
     )
   }
@@ -83,14 +83,14 @@ export default function DashboardLayout({
   // Allow /import route without PM (new user onboarding)
   if (!propertyManager && pathname !== '/import') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Redirecting to onboarding...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Redirecting to onboarding...</div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <ErrorBoundary>

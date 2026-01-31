@@ -323,7 +323,7 @@ export default function TicketsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Tickets</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Tickets</h1>
           <p className="text-muted-foreground mt-1">
             Manage maintenance tickets across your properties
           </p>

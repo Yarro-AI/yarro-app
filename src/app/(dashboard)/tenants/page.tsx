@@ -426,7 +426,7 @@ export default function TenantsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Tenants</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Tenants</h1>
           <p className="text-muted-foreground mt-1">
             Manage tenant contacts across your properties
           </p>

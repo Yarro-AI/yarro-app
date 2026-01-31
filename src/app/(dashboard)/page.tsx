@@ -348,7 +348,7 @@ export default function DashboardPage() {
               icon={LayoutGrid}
               iconColor="bg-emerald-500/10"
               iconTextColor="text-emerald-600"
-              title="Your Organization"
+              title="Your Organisation"
               description="Properties, tenants, and contractors you manage"
             />
             <div className="grid grid-cols-3 gap-4">
@@ -678,7 +678,7 @@ export default function DashboardPage() {
             </SheetHeader>
             <div className="space-y-3">
               {awaitingTickets.length === 0 ? (
-                <p className="text-gray-500 py-8 text-center">No tickets in this category</p>
+                <p className="text-muted-foreground py-8 text-center">No tickets in this category</p>
               ) : (
                 awaitingTickets.map((ticket) => (
                   <Link
@@ -689,10 +689,10 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 leading-snug">{ticket.issue_description || 'No description'}</p>
-                        <p className="text-sm text-gray-500 mt-1.5 truncate">{ticket.address}</p>
+                        <p className="font-medium text-card-foreground leading-snug">{ticket.issue_description || 'No description'}</p>
+                        <p className="text-sm text-muted-foreground mt-1.5 truncate">{ticket.address}</p>
                       </div>
-                      <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                      <span className="text-xs text-muted-foreground/70 whitespace-nowrap flex-shrink-0">
                         {formatDate(ticket.date_logged)}
                       </span>
                     </div>

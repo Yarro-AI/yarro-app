@@ -41,10 +41,10 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-6">Settings</h1>
+      <h1 className="text-2xl font-semibold text-foreground mb-6">Settings</h1>
 
       {/* Account Info */}
-      <div className="bg-white rounded-xl border p-6 space-y-4 mb-6">
+      <div className="bg-card rounded-xl border p-6 space-y-4 mb-6">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Account</h2>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -74,7 +74,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Password Change */}
-      <div className="bg-white rounded-xl border p-6">
+      <div className="bg-card rounded-xl border p-6">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
           <Lock className="h-4 w-4 inline mr-1" />
           Change Password
