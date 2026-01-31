@@ -25,5 +25,5 @@ export const TICKET_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const
 export type TicketPriority = (typeof TICKET_PRIORITIES)[number]
 
 // Tenant roles
-export const TENANT_ROLES = ['tenant', 'lead_tenant', 'occupant', 'caretaker', 'manager'] as const
+export const TENANT_ROLES = ['tenant', 'lead_tenant', 'other'] as const
 export type TenantRole = (typeof TENANT_ROLES)[number]
