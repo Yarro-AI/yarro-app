@@ -413,7 +413,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contractor</span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Awaiting Contractor</span>
                       </div>
                       <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingContractor || 0}</p>
                     </button>
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center gap-1.5">
                         <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Manager</span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Awaiting Manager</span>
                       </div>
                       <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingManager || 0}</p>
                     </button>
@@ -449,7 +449,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center gap-1.5">
                         <Hourglass className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Landlord</span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Awaiting Landlord</span>
                       </div>
                       <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingLandlord || 0}</p>
                     </button>
