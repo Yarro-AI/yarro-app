@@ -47,7 +47,7 @@ export function CopyableGuide({ title, content, children }: CopyableGuideProps) 
           )}
         </Button>
       </CardHeader>
-      <CardContent className="min-h-[420px]">{children}</CardContent>
+      <CardContent className="min-h-[540px]">{children}</CardContent>
     </Card>
   )
 }
