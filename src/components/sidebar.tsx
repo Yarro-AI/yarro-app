@@ -25,7 +25,7 @@ import {
   LogOut,
   ChevronDown,
   User,
-  Upload,
+  BookOpen,
   Settings,
 } from 'lucide-react'
 
@@ -46,7 +46,7 @@ const activityNavItems = [
 ]
 
 const dataManagementItems = [
-  { href: '/import', label: 'Import Data', icon: Upload },
+  { href: '/guide', label: 'Product Guide', icon: BookOpen },
 ]
 
 export function Sidebar() {
@@ -118,13 +118,13 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Data Management Section */}
+        {/* Resources Section */}
         <div className="pt-4 mt-4 border-t border-sidebar-border/40">
           <p className="px-3 py-2 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">
-            Data Management
+            Resources
           </p>
           {dataManagementItems.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
 
             return (

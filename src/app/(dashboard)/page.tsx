@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
 import { StatusBadge } from '@/components/status-badge'
+import { SectionHeader } from '@/components/section-header'
 import {
   Ticket,
   Building2,
@@ -15,7 +16,6 @@ import {
   ArrowRight,
   Hourglass,
   CalendarClock,
-  TrendingUp,
   AlertTriangle,
   XCircle,
 } from 'lucide-react'
@@ -57,7 +57,6 @@ interface TicketSummary {
 }
 
 // Chart colors
-const STATUS_COLORS = { open: '#0059ff', closed: '#34d399' }
 const CATEGORY_COLORS = ['#0059ff', '#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981']
 
 export default function DashboardPage() {
@@ -117,17 +116,13 @@ export default function DashboardPage() {
 
     if (tickets) {
       const total = tickets.length
-      // Open = anything not closed
       const closed = tickets.filter((t) => t.status?.toLowerCase() === 'closed').length
       const open = total - closed
 
-      // Use c1_messages.stage as source of truth for workflow state
-      // c1_messages is a one-to-one relationship (ticket_id is primary key), so it returns an object not an array
       type MessageData = { stage: string; landlord?: { approval?: boolean | null } | null }
       const getMessageData = (t: { c1_messages: MessageData | MessageData[] | null }): MessageData | null => {
         const messages = t.c1_messages
         if (!messages) return null
-        // Handle both single object (one-to-one) and array (one-to-many) relationships
         if (Array.isArray(messages)) {
           return messages[0] || null
         }
@@ -143,10 +138,8 @@ export default function DashboardPage() {
         return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
       }
 
-      // Count handoff tickets (open and handoff = true)
       const handoffTickets = tickets.filter((t) => isOpen(t) && t.handoff === true).length
 
-      // Count based on actual message thread state
       const awaitingContractor = tickets.filter((t) => {
         if (!isOpen(t)) return false
         const msgStage = getMessageStage(t)
@@ -165,7 +158,6 @@ export default function DashboardPage() {
         return msgStage === 'awaiting_landlord'
       }).length
 
-      // Count landlord declines
       const landlordDeclined = tickets.filter((t) => {
         const data = getMessageData(t)
         return data?.landlord?.approval === false
@@ -190,7 +182,6 @@ export default function DashboardPage() {
 
       const mappedTickets = tickets.map((t) => {
         const messages = t.c1_messages as MessageData | MessageData[] | null
-        // Handle both single object and array
         const messageStage = messages
           ? Array.isArray(messages) ? messages[0]?.stage : messages.stage
           : null
@@ -215,7 +206,6 @@ export default function DashboardPage() {
   }
 
   const showAwaitingTickets = (type: string) => {
-    // Filter from already-fetched tickets using message_stage (source of truth)
     const isOpen = (t: TicketSummary) => t.status?.toLowerCase() !== 'closed'
 
     let filtered: TicketSummary[] = []
@@ -246,6 +236,8 @@ export default function DashboardPage() {
       })
     } else if (type === 'handoff') {
       filtered = allTickets.filter((t) => isOpen(t) && t.handoff === true)
+    } else if (type === 'declined') {
+      filtered = []
     }
 
     setAwaitingTickets(filtered)
@@ -264,15 +256,6 @@ export default function DashboardPage() {
     return Math.round((value / total) * 100)
   }
 
-  // Chart data
-  const statusChartData = stats
-    ? [
-        { name: 'Open', value: stats.openTickets, color: STATUS_COLORS.open },
-        { name: 'Closed', value: stats.closedTickets, color: STATUS_COLORS.closed },
-      ]
-    : []
-
-  // Calculate category data from all filtered tickets
   const categoryData = allTickets.reduce(
     (acc, ticket) => {
       const cat = ticket.category || 'Other'
@@ -283,7 +266,7 @@ export default function DashboardPage() {
   )
 
   const categoryChartData = Object.entries(categoryData)
-    .sort((a, b) => b[1] - a[1]) // Sort by count descending
+    .sort((a, b) => b[1] - a[1])
     .map(([name, value], i) => ({
       name: name.length > 12 ? name.substring(0, 12) + '...' : name,
       fullName: name,
@@ -296,13 +279,13 @@ export default function DashboardPage() {
       <div className="p-6 h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30 overflow-hidden">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-[140px] bg-muted rounded-xl" />
+          <div className="grid grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-[120px] bg-muted rounded-xl" />
             ))}
           </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-6 gap-3">
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="h-[88px] bg-muted rounded-xl" />
             ))}
           </div>
@@ -313,10 +296,9 @@ export default function DashboardPage() {
 
   return (
     <div className="h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30 overflow-hidden">
-      {/* Blue haze overlay */}
       <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none" />
 
-      <div className="relative p-6 h-full flex flex-col gap-4">
+      <div className="relative p-6 h-full flex flex-col gap-5">
         {/* Header */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div>
@@ -328,280 +310,280 @@ export default function DashboardPage() {
           <DateFilter value={dateRange} onChange={setDateRange} />
         </div>
 
-        {/* Main KPIs */}
-        <div className="grid grid-cols-5 gap-3 flex-shrink-0">
-          {/* Tickets */}
-          <Link href="/tickets" className="bg-white rounded-xl border-2 border-blue-500/20 p-4 hover:border-blue-500/40 hover:shadow-lg transition-all">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tickets</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalTickets || 0}</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-xs font-medium text-blue-600">{stats?.openTickets || 0} open</span>
-                  <span className="text-xs text-gray-400">·</span>
-                  <span className="text-xs font-medium text-emerald-600">{stats?.closedTickets || 0} closed</span>
+        {/* YOUR ORGANIZATION Section */}
+        <div className="flex-shrink-0 space-y-3">
+          <SectionHeader
+            icon="🏢"
+            title="Your Organization"
+            description="Properties, tenants, and contractors you manage"
+          />
+          <div className="grid grid-cols-3 gap-4">
+            <Link href="/properties" className="bg-white rounded-xl border-2 border-emerald-500/20 p-5 hover:border-emerald-500/40 hover:shadow-lg transition-all">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Properties</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalProperties || 0}</p>
+                  <p className="text-xs text-gray-400 mt-1">Active properties</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-emerald-600" />
                 </div>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Ticket className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-          </Link>
+            </Link>
 
-          {/* Handoff - RED alert */}
-          <button
-            onClick={() => showAwaitingTickets('handoff')}
-            className={`bg-white rounded-xl border-2 p-4 text-left hover:shadow-lg transition-all ${
-              stats?.handoffTickets ? 'border-red-500/40 hover:border-red-500/60' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Handoff</p>
-                <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-600' : 'text-gray-900'}`}>
-                  {stats?.handoffTickets || 0}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Needs attention</p>
-              </div>
-              <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
-                stats?.handoffTickets ? 'bg-red-500/10' : 'bg-gray-100'
-              }`}>
-                <AlertTriangle className={`h-4 w-4 ${stats?.handoffTickets ? 'text-red-600' : 'text-gray-400'}`} />
-              </div>
-            </div>
-          </button>
-
-          {/* Properties */}
-          <Link href="/properties" className="bg-white rounded-xl border-2 border-emerald-500/20 p-4 hover:border-emerald-500/40 hover:shadow-lg transition-all">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Properties</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalProperties || 0}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Building2 className="h-4 w-4 text-emerald-600" />
-              </div>
-            </div>
-          </Link>
-
-          {/* Tenants */}
-          <Link href="/tenants" className="bg-white rounded-xl border-2 border-violet-500/20 p-4 hover:border-violet-500/40 hover:shadow-lg transition-all">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tenants</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalTenants || 0}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-violet-600" />
-              </div>
-            </div>
-          </Link>
-
-          {/* Contractors */}
-          <Link href="/contractors" className="bg-white rounded-xl border-2 border-amber-500/20 p-4 hover:border-amber-500/40 hover:shadow-lg transition-all">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractors</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalContractors || 0}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Wrench className="h-4 w-4 text-amber-600" />
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Awaiting Action */}
-        <div className="grid grid-cols-5 gap-3 flex-shrink-0">
-          <button
-            onClick={() => showAwaitingTickets('contractor')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
-          >
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractor</span>
-            </div>
-            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.awaitingContractor || 0}</p>
-          </button>
-
-          <button
-            onClick={() => showAwaitingTickets('manager')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
-          >
-            <div className="flex items-center gap-1.5">
-              <UserCheck className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manager</span>
-            </div>
-            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.awaitingManager || 0}</p>
-          </button>
-
-          <button
-            onClick={() => showAwaitingTickets('landlord')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
-          >
-            <div className="flex items-center gap-1.5">
-              <Hourglass className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Landlord</span>
-            </div>
-            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.awaitingLandlord || 0}</p>
-          </button>
-
-          <button
-            onClick={() => showAwaitingTickets('scheduled')}
-            className="bg-white rounded-xl border-2 border-primary/20 p-3 text-left hover:border-primary/50 hover:shadow-lg transition-all"
-          >
-            <div className="flex items-center gap-1.5">
-              <CalendarClock className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scheduled</span>
-            </div>
-            <p className="text-xl font-bold text-gray-900 mt-1">{stats?.scheduledJobs || 0}</p>
-          </button>
-
-          {/* Landlord Declined - only show if > 0 */}
-          {stats?.landlordDeclined ? (
-            <div className="bg-white rounded-xl border-2 border-orange-500/30 p-3 text-left">
-              <div className="flex items-center gap-1.5">
-                <XCircle className="h-3.5 w-3.5 text-orange-500" />
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">LL Declined</span>
-              </div>
-              <p className="text-xl font-bold text-orange-600 mt-1">{stats.landlordDeclined}</p>
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-xl border-2 border-gray-100 p-3 text-left opacity-50">
-              <div className="flex items-center gap-1.5">
-                <XCircle className="h-3.5 w-3.5 text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">LL Declined</span>
-              </div>
-              <p className="text-xl font-bold text-gray-400 mt-1">0</p>
-            </div>
-          )}
-        </div>
-
-        {/* Charts + Recent Tickets - fills remaining space exactly */}
-        <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-          {/* Left side: Status + Category stacked */}
-          <div className="flex flex-col gap-4 min-h-0">
-            {/* Status - Open vs Closed */}
-            <div className="bg-white rounded-xl border-2 border-blue-500/20 p-5 flex-shrink-0">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">By Status</h3>
-              <div className="space-y-4">
-                {/* Progress bar */}
-                <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex">
-                  {stats && stats.totalTickets > 0 ? (
-                    <>
-                      <div
-                        className="h-full bg-blue-500 transition-all duration-500"
-                        style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
-                      />
-                      <div
-                        className="h-full bg-emerald-400 transition-all duration-500"
-                        style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
-                      />
-                    </>
-                  ) : (
-                    <div className="h-full w-full bg-gray-100" />
-                  )}
+            <Link href="/tenants" className="bg-white rounded-xl border-2 border-violet-500/20 p-5 hover:border-violet-500/40 hover:shadow-lg transition-all">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tenants</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalTenants || 0}</p>
+                  <p className="text-xs text-gray-400 mt-1">Registered tenants</p>
                 </div>
-                {/* Key - horizontal */}
-                <div className="flex gap-3">
-                  <div className="flex-1 flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500">Open</p>
-                      <p className="text-xl font-bold text-gray-900">{stats?.openTickets || 0}</p>
-                    </div>
-                    <span className="text-sm font-medium text-blue-600">
-                      {stats && stats.totalTickets > 0 ? getPercentage(stats.openTickets, stats.totalTickets) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex-1 flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-                    <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500">Closed</p>
-                      <p className="text-xl font-bold text-gray-900">{stats?.closedTickets || 0}</p>
-                    </div>
-                    <span className="text-sm font-medium text-emerald-600">
-                      {stats && stats.totalTickets > 0 ? getPercentage(stats.closedTickets, stats.totalTickets) : 0}%
-                    </span>
-                  </div>
+                <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-violet-600" />
                 </div>
               </div>
-            </div>
+            </Link>
 
-            {/* Category - matching status style, scrollable for many categories */}
-            <div className="bg-white rounded-xl border-2 border-cyan-500/20 p-5 flex-1 flex flex-col min-h-0">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4 flex-shrink-0">By Category</h3>
-              {categoryChartData.length > 0 ? (
-                <div className="flex-1 overflow-y-auto min-h-0">
-                  <div className="grid grid-cols-2 gap-2">
-                    {categoryChartData.map((item) => (
-                      <div
-                        key={item.fullName}
-                        className="flex items-center gap-2.5 p-2.5 rounded-lg"
-                        style={{ backgroundColor: `${item.color}10` }}
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-gray-500 truncate">{item.fullName}</p>
-                          <p className="text-lg font-bold text-gray-900">{item.value}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            <Link href="/contractors" className="bg-white rounded-xl border-2 border-amber-500/20 p-5 hover:border-amber-500/40 hover:shadow-lg transition-all">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractors</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalContractors || 0}</p>
+                  <p className="text-xs text-gray-400 mt-1">Active contractors</p>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center flex-1 text-sm text-gray-400">
-                  No category data
+                <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <Wrench className="h-5 w-5 text-amber-600" />
                 </div>
-              )}
-            </div>
+              </div>
+            </Link>
           </div>
+        </div>
 
-          {/* Right side: Recent Tickets */}
-          <div className="bg-white rounded-xl border-2 border-blue-500/20 flex flex-col min-h-0">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Tickets</h3>
-              <Link href="/tickets">
-                <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                  View all
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
-            <div className="divide-y divide-gray-50 flex-1 overflow-auto">
-              {recentTickets.length === 0 ? (
-                <div className="p-6 text-center text-sm text-gray-500">
-                  No tickets found for this period
+        {/* NEEDS ATTENTION Section */}
+        <div className="flex-shrink-0 space-y-3">
+          <SectionHeader
+            icon="🔴"
+            title="Needs Attention"
+            description="Tickets requiring action — click any card to view details"
+          />
+          <div className="grid grid-cols-6 gap-3">
+            {/* Handoff - RED glow when count > 0 */}
+            <button
+              onClick={() => showAwaitingTickets('handoff')}
+              className={`bg-white rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
+                stats?.handoffTickets
+                  ? 'border-red-500/40 hover:border-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className={`h-3.5 w-3.5 ${stats?.handoffTickets ? 'text-red-500' : 'text-gray-400'}`} />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Handoff</span>
+              </div>
+              <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-600' : 'text-gray-900'}`}>
+                {stats?.handoffTickets || 0}
+              </p>
+            </button>
+
+            <button
+              onClick={() => showAwaitingTickets('contractor')}
+              className="bg-white rounded-xl border-2 border-blue-500/20 p-3 text-left hover:border-blue-500/40 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractor</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingContractor || 0}</p>
+            </button>
+
+            <button
+              onClick={() => showAwaitingTickets('manager')}
+              className="bg-white rounded-xl border-2 border-blue-500/20 p-3 text-left hover:border-blue-500/40 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-1.5">
+                <UserCheck className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manager</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingManager || 0}</p>
+            </button>
+
+            <button
+              onClick={() => showAwaitingTickets('landlord')}
+              className="bg-white rounded-xl border-2 border-blue-500/20 p-3 text-left hover:border-blue-500/40 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-1.5">
+                <Hourglass className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Landlord</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingLandlord || 0}</p>
+            </button>
+
+            <button
+              onClick={() => showAwaitingTickets('scheduled')}
+              className="bg-white rounded-xl border-2 border-blue-500/20 p-3 text-left hover:border-blue-500/40 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-1.5">
+                <CalendarClock className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scheduled</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.scheduledJobs || 0}</p>
+            </button>
+
+            {/* Landlord Declined - full words */}
+            <button
+              onClick={() => showAwaitingTickets('declined')}
+              className={`bg-white rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
+                stats?.landlordDeclined
+                  ? 'border-orange-500/30 hover:border-orange-500/50'
+                  : 'border-gray-100 opacity-50'
+              }`}
+              disabled={!stats?.landlordDeclined}
+            >
+              <div className="flex items-center gap-1.5">
+                <XCircle className={`h-3.5 w-3.5 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-gray-400'}`} />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Declined</span>
+              </div>
+              <p className={`text-2xl font-bold mt-1 ${stats?.landlordDeclined ? 'text-orange-600' : 'text-gray-400'}`}>
+                {stats?.landlordDeclined || 0}
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* TICKET OVERVIEW Section */}
+        <div className="flex-1 min-h-0 space-y-3">
+          <SectionHeader
+            icon="📊"
+            title="Ticket Overview"
+            description="Status and category breakdown for your tickets"
+          />
+          <div className="grid grid-cols-2 gap-4 h-[calc(100%-28px)]">
+            <div className="flex flex-col gap-4 min-h-0">
+              {/* Status */}
+              <div className="bg-white rounded-xl border-2 border-blue-500/20 p-5 flex-shrink-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">By Status</h3>
+                  <Link href="/tickets" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    {stats?.totalTickets || 0} total
+                  </Link>
                 </div>
-              ) : (
-                recentTickets.map((ticket) => (
-                  <Link
-                    key={ticket.id}
-                    href={`/tickets?id=${ticket.id}`}
-                    className="flex items-center justify-between px-5 py-3 hover:bg-blue-50/50 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {ticket.issue_description || 'No description'}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">
-                        {ticket.address}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 ml-4">
-                      {ticket.job_stage && (
-                        <StatusBadge status={ticket.job_stage} />
-                      )}
-                      <span className="text-xs text-gray-400 whitespace-nowrap">
-                        {formatDate(ticket.date_logged)}
+                <div className="space-y-4">
+                  <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex">
+                    {stats && stats.totalTickets > 0 ? (
+                      <>
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-500"
+                          style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
+                        />
+                        <div
+                          className="h-full bg-emerald-400 transition-all duration-500"
+                          style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
+                        />
+                      </>
+                    ) : (
+                      <div className="h-full w-full bg-gray-100" />
+                    )}
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1 flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Open</p>
+                        <p className="text-xl font-bold text-gray-900">{stats?.openTickets || 0}</p>
+                      </div>
+                      <span className="text-sm font-medium text-blue-600">
+                        {stats && stats.totalTickets > 0 ? getPercentage(stats.openTickets, stats.totalTickets) : 0}%
                       </span>
                     </div>
-                  </Link>
-                ))
-              )}
+                    <div className="flex-1 flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
+                      <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Closed</p>
+                        <p className="text-xl font-bold text-gray-900">{stats?.closedTickets || 0}</p>
+                      </div>
+                      <span className="text-sm font-medium text-emerald-600">
+                        {stats && stats.totalTickets > 0 ? getPercentage(stats.closedTickets, stats.totalTickets) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="bg-white rounded-xl border-2 border-cyan-500/20 p-5 flex-1 flex flex-col min-h-0">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4 flex-shrink-0">By Category</h3>
+                {categoryChartData.length > 0 ? (
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    <div className="grid grid-cols-2 gap-2">
+                      {categoryChartData.map((item) => (
+                        <div
+                          key={item.fullName}
+                          className="flex items-center gap-2.5 p-2.5 rounded-lg"
+                          style={{ backgroundColor: `${item.color}10` }}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-500 truncate">{item.fullName}</p>
+                            <p className="text-lg font-bold text-gray-900">{item.value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center flex-1 text-sm text-gray-400">
+                    No category data
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Tickets */}
+            <div className="bg-white rounded-xl border-2 border-blue-500/20 flex flex-col min-h-0">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Tickets</h3>
+                <Link href="/tickets">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                    View all
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="divide-y divide-gray-50 flex-1 overflow-auto">
+                {recentTickets.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-gray-500">
+                    No tickets found for this period
+                  </div>
+                ) : (
+                  recentTickets.map((ticket) => (
+                    <Link
+                      key={ticket.id}
+                      href={`/tickets?id=${ticket.id}`}
+                      className="flex items-center justify-between px-5 py-3 hover:bg-blue-50/50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {ticket.issue_description || 'No description'}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {ticket.address}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 ml-4">
+                        {ticket.job_stage && (
+                          <StatusBadge status={ticket.job_stage} />
+                        )}
+                        <span className="text-xs text-gray-400 whitespace-nowrap">
+                          {formatDate(ticket.date_logged)}
+                        </span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -611,7 +593,9 @@ export default function DashboardPage() {
       <Sheet open={!!awaitingType} onOpenChange={(open) => !open && setAwaitingType(null)}>
         <SheetContent className="w-[500px] sm:w-[600px] overflow-y-auto p-6" title={`Awaiting ${awaitingType}`}>
           <SheetHeader className="mb-6">
-            <SheetTitle className="capitalize text-lg">Awaiting {awaitingType}</SheetTitle>
+            <SheetTitle className="capitalize text-lg">
+              {awaitingType === 'declined' ? 'Landlord Declined' : `Awaiting ${awaitingType}`}
+            </SheetTitle>
           </SheetHeader>
           <div className="space-y-3">
             {awaitingTickets.length === 0 ? (
