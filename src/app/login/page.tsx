@@ -118,15 +118,15 @@ export default function LoginPage() {
           {mode === 'login' ? (
             <>
               <div className="space-y-2 mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Welcome back</h1>
+                <p className="text-[#606266]">
                   Sign in to your account to continue
                 </p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
+                  <label htmlFor="email" className="text-sm font-medium text-[#101011]">
                     Email
                   </label>
                   <Input
@@ -135,14 +135,14 @@ export default function LoginPage() {
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11"
+                    className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="password" className="text-sm font-medium">
+                    <label htmlFor="password" className="text-sm font-medium text-[#101011]">
                       Password
                     </label>
                     <button
@@ -159,7 +159,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11"
+                    className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
                     required
                   />
                 </div>
@@ -191,13 +191,13 @@ export default function LoginPage() {
               <div className="space-y-2 mb-8">
                 <button
                   onClick={() => { setMode('login'); setError(null); setResetSent(false) }}
-                  className="flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+                  className="flex items-center text-sm text-[#606266] hover:text-[#101011] mb-4"
                 >
                   <ArrowLeft className="h-4 w-4 mr-1" />
                   Back to sign in
                 </button>
-                <h1 className="text-2xl font-semibold tracking-tight">Reset password</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Reset password</h1>
+                <p className="text-[#606266]">
                   Enter your email and we&apos;ll send you a reset link
                 </p>
               </div>
@@ -209,7 +209,7 @@ export default function LoginPage() {
               ) : (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="reset-email" className="text-sm font-medium">
+                    <label htmlFor="reset-email" className="text-sm font-medium text-[#101011]">
                       Email
                     </label>
                     <Input
@@ -218,7 +218,7 @@ export default function LoginPage() {
                       placeholder="you@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-11"
+                      className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
                       required
                     />
                   </div>
@@ -248,7 +248,7 @@ export default function LoginPage() {
             </>
           )}
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
+          <p className="mt-8 text-center text-sm text-[#606266]">
             Need help? Contact your administrator.
           </p>
         </div>

@@ -74,18 +74,18 @@ export default function UpdatePasswordPage() {
         {success ? (
           <div className="text-center space-y-4">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-            <h1 className="text-2xl font-semibold tracking-tight">Password updated</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Password updated</h1>
+            <p className="text-[#606266]">
               Redirecting to dashboard...
             </p>
           </div>
         ) : (
           <>
             <div className="space-y-2 mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight">Set your password</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Set your password</h1>
+              <p className="text-[#606266]">
                 {userEmail ? (
-                  <>Create a password for <span className="font-medium text-foreground">{userEmail}</span></>
+                  <>Create a password for <span className="font-medium text-[#101011]">{userEmail}</span></>
                 ) : (
                   'Create your account password'
                 )}
@@ -94,7 +94,7 @@ export default function UpdatePasswordPage() {
 
             <form onSubmit={handleUpdatePassword} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
+                <label htmlFor="password" className="text-sm font-medium text-[#101011]">
                   New password
                 </label>
                 <Input
@@ -103,14 +103,14 @@ export default function UpdatePasswordPage() {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11"
+                  className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
                   required
                   minLength={6}
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="confirm-password" className="text-sm font-medium">
+                <label htmlFor="confirm-password" className="text-sm font-medium text-[#101011]">
                   Confirm password
                 </label>
                 <Input
@@ -119,7 +119,7 @@ export default function UpdatePasswordPage() {
                   placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-11"
+                  className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
                   required
                   minLength={6}
                 />
