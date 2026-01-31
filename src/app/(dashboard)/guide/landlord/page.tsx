@@ -50,60 +50,69 @@ export default function LandlordGuidePage() {
                 Share this guide with your landlords so they know how approvals and notifications work.
               </p>
 
-              {/* Step 1 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">1. Get Notified</h3>
-                  <p className="text-sm text-muted-foreground mt-1">When a maintenance ticket is created for your property, you'll receive a WhatsApp notification with:</p>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                    <li>Property address</li>
-                    <li>Issue description</li>
-                    <li>Category (plumbing, electrical, etc.)</li>
-                  </ul>
-                </div>
-              </div>
+              {/* Two column layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left column - Steps 1-2 */}
+                <div className="space-y-6">
+                  {/* Step 1 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">1. Get Notified</h3>
+                      <p className="text-sm text-muted-foreground mt-1">When a maintenance ticket is created for your property, you'll receive a WhatsApp notification with:</p>
+                      <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
+                        <li>Property address</li>
+                        <li>Issue description</li>
+                        <li>Category (plumbing, electrical, etc.)</li>
+                      </ul>
+                    </div>
+                  </div>
 
-              {/* Step 2 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <ThumbsUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  {/* Step 2 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <ThumbsUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">2. Approve Quotes (When Needed)</h3>
+                      <p className="text-sm text-muted-foreground mt-1">If the quoted cost is <strong>ABOVE</strong> your auto-approve limit:</p>
+                      <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
+                        <li>You'll be asked to approve or decline</li>
+                        <li>Tap "Approve" to proceed</li>
+                        <li>Tap "Decline" to stop the work</li>
+                      </ul>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-3 bg-emerald-500/10 inline-block px-2 py-1 rounded">
+                        If the quote is BELOW your limit, work proceeds automatically.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">2. Approve Quotes (When Needed)</h3>
-                  <p className="text-sm text-muted-foreground mt-1">If the quoted cost is <strong>ABOVE</strong> your auto-approve limit:</p>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                    <li>You'll be asked to approve or decline</li>
-                    <li>Tap "Approve" to proceed</li>
-                    <li>Tap "Decline" to stop the work</li>
-                  </ul>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-3 bg-emerald-500/10 inline-block px-2 py-1 rounded">
-                    If the quote is BELOW your limit, work proceeds automatically.
-                  </p>
-                </div>
-              </div>
 
-              {/* Step 3 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <Settings className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">3. That's It!</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Your property manager handles everything else. You only get involved for costs above your set limit.
-                  </p>
-                </div>
-              </div>
+                {/* Right column - Step 3 + Auto-approve info */}
+                <div className="space-y-6">
+                  {/* Step 3 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                      <Settings className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">3. That's It!</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your property manager handles everything else. You only get involved for costs above your set limit.
+                      </p>
+                    </div>
+                  </div>
 
-              {/* Auto-approve info */}
-              <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
-                <h4 className="font-medium text-card-foreground mb-2">Auto-Approve Limits</h4>
-                <p className="text-sm text-muted-foreground">
-                  Each property can have a different limit. Work below this amount proceeds without your approval. Talk to your property manager to set or adjust your limits.
-                </p>
+                  {/* Auto-approve info */}
+                  <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
+                    <h4 className="font-medium text-card-foreground mb-2">Auto-Approve Limits</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Each property can have a different limit. Work below this amount proceeds without your approval. Talk to your property manager to set or adjust your limits.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CopyableGuide>
