@@ -103,7 +103,7 @@ export default function UpdatePasswordPage() {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
+                  className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
                   required
                   minLength={6}
                 />
@@ -119,7 +119,7 @@ export default function UpdatePasswordPage() {
                   placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
+                  className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
                   required
                   minLength={6}
                 />

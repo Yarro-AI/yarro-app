@@ -15,8 +15,8 @@ When a maintenance ticket is created for your property, you'll receive a WhatsAp
 2. APPROVE QUOTES (WHEN NEEDED)
 If the quoted cost is ABOVE your auto-approve limit:
 - You'll be asked to approve or decline
-- Reply "Approve" to proceed
-- Reply "Decline" to stop the work
+- Tap "Approve" to proceed
+- Tap "Decline" to stop the work
 
 If the quote is BELOW your limit, work proceeds automatically.
 
@@ -76,8 +76,8 @@ export default function LandlordGuidePage() {
                   <p className="text-sm text-muted-foreground mt-1">If the quoted cost is <strong>ABOVE</strong> your auto-approve limit:</p>
                   <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
                     <li>You'll be asked to approve or decline</li>
-                    <li>Reply "Approve" to proceed</li>
-                    <li>Reply "Decline" to stop the work</li>
+                    <li>Tap "Approve" to proceed</li>
+                    <li>Tap "Decline" to stop the work</li>
                   </ul>
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-3 bg-emerald-500/10 inline-block px-2 py-1 rounded">
                     If the quote is BELOW your limit, work proceeds automatically.

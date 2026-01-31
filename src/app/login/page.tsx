@@ -25,15 +25,18 @@ export default function LoginPage() {
   // Handles: (1) already logged in user landing on /login, (2) after fresh login
   useEffect(() => {
     if (pmLoading) return
-    if (propertyManager) {
+    // Only navigate if we have a PM and there's no error showing
+    if (propertyManager && !error) {
       router.push('/')
-    } else if (authSuccess) {
+    } else if (authSuccess && !propertyManager) {
       // Auth succeeded but no PM record found — user removed from system
       setError('Account not found. Please contact your administrator.')
       setLoading(false)
       setAuthSuccess(false)
+      // Sign out since there's no PM record
+      supabase.auth.signOut()
     }
-  }, [pmLoading, propertyManager, authSuccess, router])
+  }, [pmLoading, propertyManager, authSuccess, error, router, supabase])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,7 +138,7 @@ export default function LoginPage() {
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
+                    className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
                     required
                   />
                 </div>
@@ -159,7 +162,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
+                    className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
                     required
                   />
                 </div>
@@ -218,7 +221,7 @@ export default function LoginPage() {
                       placeholder="you@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 bg-white border-[#e0e7ef] text-[#101011]"
+                      className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
                       required
                     />
                   </div>
