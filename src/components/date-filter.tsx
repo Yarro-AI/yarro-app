@@ -36,7 +36,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
           className={cn(
             'h-8 px-3 text-sm font-medium rounded-md transition-all',
             value.label === preset.label
-              ? 'bg-white text-foreground shadow-sm'
+              ? 'bg-card text-card-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
           )}
           onClick={() => {

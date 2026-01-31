@@ -29,11 +29,11 @@ Each property can have a different limit. Work below this amount proceeds withou
 
 export default function LandlordGuidePage() {
   return (
-    <div className="h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30">
+    <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold">Product Guide</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Product Guide</h1>
           <p className="text-muted-foreground mt-1">
             Your complete guide to Yarro property management
           </p>
@@ -42,23 +42,23 @@ export default function LandlordGuidePage() {
         {/* Tabs */}
         <GuideTabs />
 
-        {/* Content */}
-        <div className="max-w-3xl">
+        {/* Content - full width */}
+        <div>
           <CopyableGuide title="For Your Landlords" content={LANDLORD_GUIDE_TEXT}>
             <div className="space-y-6">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Share this guide with your landlords so they know how approvals and notifications work.
               </p>
 
               {/* Step 1 */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Bell className="h-5 w-5 text-blue-600" />
+                  <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">1. Get Notified</h3>
-                  <p className="text-sm text-gray-600 mt-1">When a maintenance ticket is created for your property, you'll receive a WhatsApp notification with:</p>
-                  <ul className="text-sm text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                  <h3 className="font-semibold text-card-foreground">1. Get Notified</h3>
+                  <p className="text-sm text-muted-foreground mt-1">When a maintenance ticket is created for your property, you'll receive a WhatsApp notification with:</p>
+                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
                     <li>Property address</li>
                     <li>Issue description</li>
                     <li>Category (plumbing, electrical, etc.)</li>
@@ -69,17 +69,17 @@ export default function LandlordGuidePage() {
               {/* Step 2 */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <ThumbsUp className="h-5 w-5 text-emerald-600" />
+                  <ThumbsUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">2. Approve Quotes (When Needed)</h3>
-                  <p className="text-sm text-gray-600 mt-1">If the quoted cost is <strong>ABOVE</strong> your auto-approve limit:</p>
-                  <ul className="text-sm text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                  <h3 className="font-semibold text-card-foreground">2. Approve Quotes (When Needed)</h3>
+                  <p className="text-sm text-muted-foreground mt-1">If the quoted cost is <strong>ABOVE</strong> your auto-approve limit:</p>
+                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
                     <li>You'll be asked to approve or decline</li>
                     <li>Reply "Approve" to proceed</li>
                     <li>Reply "Decline" to stop the work</li>
                   </ul>
-                  <p className="text-xs text-emerald-600 mt-3 bg-emerald-50 inline-block px-2 py-1 rounded">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-3 bg-emerald-500/10 inline-block px-2 py-1 rounded">
                     If the quote is BELOW your limit, work proceeds automatically.
                   </p>
                 </div>
@@ -88,20 +88,20 @@ export default function LandlordGuidePage() {
               {/* Step 3 */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <Settings className="h-5 w-5 text-violet-600" />
+                  <Settings className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">3. That's It!</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h3 className="font-semibold text-card-foreground">3. That's It!</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Your property manager handles everything else. You only get involved for costs above your set limit.
                   </p>
                 </div>
               </div>
 
               {/* Auto-approve info */}
-              <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                <h4 className="font-medium text-amber-900 mb-2">Auto-Approve Limits</h4>
-                <p className="text-sm text-amber-800">
+              <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
+                <h4 className="font-medium text-card-foreground mb-2">Auto-Approve Limits</h4>
+                <p className="text-sm text-muted-foreground">
                   Each property can have a different limit. Work below this amount proceeds without your approval. Talk to your property manager to set or adjust your limits.
                 </p>
               </div>

@@ -21,17 +21,16 @@ Our assistant will ask for:
 You'll automatically hear when:
 - A contractor is assigned
 - A visit is scheduled
-- The job is complete
 
 That's it! Just follow the conversation, send one message at a time, and wait for replies. We handle the rest.`
 
 export default function TenantGuidePage() {
   return (
-    <div className="h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30">
+    <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold">Product Guide</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Product Guide</h1>
           <p className="text-muted-foreground mt-1">
             Your complete guide to Yarro property management
           </p>
@@ -40,25 +39,25 @@ export default function TenantGuidePage() {
         {/* Tabs */}
         <GuideTabs />
 
-        {/* Content */}
-        <div className="max-w-3xl">
+        {/* Content - full width */}
+        <div>
           <CopyableGuide title="For Your Tenants" content={TENANT_GUIDE_TEXT}>
             <div className="space-y-6">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Share this guide with your tenants so they know how to report maintenance issues.
               </p>
 
               {/* Step 1 */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-blue-600" />
+                  <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">1. Start a Conversation</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h3 className="font-semibold text-card-foreground">1. Start a Conversation</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Send a WhatsApp message to report your maintenance issue.
                   </p>
-                  <p className="text-xs text-blue-600 mt-2 bg-blue-50 inline-block px-2 py-1 rounded">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 bg-blue-500/10 inline-block px-2 py-1 rounded">
                     Tip: One issue per conversation works best.
                   </p>
                 </div>
@@ -67,12 +66,12 @@ export default function TenantGuidePage() {
               {/* Step 2 */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <ClipboardList className="h-5 w-5 text-violet-600" />
+                  <ClipboardList className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">2. Follow the Prompts</h3>
-                  <p className="text-sm text-gray-600 mt-1">Our assistant will ask for:</p>
-                  <ul className="text-sm text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                  <h3 className="font-semibold text-card-foreground">2. Follow the Prompts</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Our assistant will ask for:</p>
+                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
                     <li>Your property address</li>
                     <li>Description of the issue</li>
                     <li>Photos if helpful</li>
@@ -84,22 +83,21 @@ export default function TenantGuidePage() {
               {/* Step 3 */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <Bell className="h-5 w-5 text-emerald-600" />
+                  <Bell className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">3. Wait for Updates</h3>
-                  <p className="text-sm text-gray-600 mt-1">You'll automatically hear when:</p>
-                  <ul className="text-sm text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                  <h3 className="font-semibold text-card-foreground">3. Wait for Updates</h3>
+                  <p className="text-sm text-muted-foreground mt-1">You'll automatically hear when:</p>
+                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
                     <li>A contractor is assigned</li>
                     <li>A visit is scheduled</li>
-                    <li>The job is complete</li>
                   </ul>
                 </div>
               </div>
 
               {/* Summary */}
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-sm text-gray-700">
+              <div className="bg-muted rounded-lg p-4 border border-border">
+                <p className="text-sm text-card-foreground">
                   <strong>That's it!</strong> Just follow the conversation, send one message at a time, and wait for replies. We handle the rest.
                 </p>
               </div>

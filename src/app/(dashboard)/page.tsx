@@ -327,15 +327,15 @@ export default function DashboardPage() {
 
   return (
     <TooltipProvider>
-      <div className="h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30 overflow-hidden">
-        <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none" />
+      <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
+        <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:from-blue-500/[0.05]" />
 
         <div className="relative p-4 h-full flex flex-col gap-4">
           {/* Header */}
           <div className="flex items-center justify-between flex-shrink-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 Manage and monitor all property maintenance activity
               </p>
             </div>
@@ -352,41 +352,41 @@ export default function DashboardPage() {
               description="Properties, tenants, and contractors you manage"
             />
             <div className="grid grid-cols-3 gap-4">
-              <Link href="/properties" className="bg-white rounded-xl border-2 border-emerald-500/20 p-5 hover:border-emerald-500/40 hover:shadow-lg transition-all">
+              <Link href="/properties" className="bg-card rounded-xl border-2 border-emerald-500/20 p-5 hover:border-emerald-500/40 hover:shadow-lg transition-all">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Properties</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalProperties || 0}</p>
-                    <p className="text-xs text-gray-400 mt-1">Active properties</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Properties</p>
+                    <p className="text-3xl font-bold text-card-foreground mt-2">{stats?.totalProperties || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Active properties</p>
                   </div>
                   <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-emerald-600" />
+                    <Building2 className="h-5 w-5 text-emerald-500" />
                   </div>
                 </div>
               </Link>
 
-              <Link href="/tenants" className="bg-white rounded-xl border-2 border-violet-500/20 p-5 hover:border-violet-500/40 hover:shadow-lg transition-all">
+              <Link href="/tenants" className="bg-card rounded-xl border-2 border-violet-500/20 p-5 hover:border-violet-500/40 hover:shadow-lg transition-all">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tenants</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalTenants || 0}</p>
-                    <p className="text-xs text-gray-400 mt-1">Registered tenants</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tenants</p>
+                    <p className="text-3xl font-bold text-card-foreground mt-2">{stats?.totalTenants || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Registered tenants</p>
                   </div>
                   <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-violet-600" />
+                    <Users className="h-5 w-5 text-violet-500" />
                   </div>
                 </div>
               </Link>
 
-              <Link href="/contractors" className="bg-white rounded-xl border-2 border-amber-500/20 p-5 hover:border-amber-500/40 hover:shadow-lg transition-all">
+              <Link href="/contractors" className="bg-card rounded-xl border-2 border-amber-500/20 p-5 hover:border-amber-500/40 hover:shadow-lg transition-all">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contractors</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats?.totalContractors || 0}</p>
-                    <p className="text-xs text-gray-400 mt-1">Active contractors</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contractors</p>
+                    <p className="text-3xl font-bold text-card-foreground mt-2">{stats?.totalContractors || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Active contractors</p>
                   </div>
                   <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <Wrench className="h-5 w-5 text-amber-600" />
+                    <Wrench className="h-5 w-5 text-amber-500" />
                   </div>
                 </div>
               </Link>
@@ -408,17 +408,17 @@ export default function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => showAwaitingTickets('handoff')}
-                    className={`bg-white rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
+                    className={`bg-card rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
                       stats?.handoffTickets
                         ? 'border-red-400 hover:border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
-                        : 'border-blue-200 hover:border-blue-300'
+                        : 'border-blue-500/30 hover:border-blue-500/50 dark:border-blue-400/30 dark:hover:border-blue-400/50'
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
                       <AlertTriangle className={`h-3.5 w-3.5 ${stats?.handoffTickets ? 'text-red-500' : 'text-blue-500'}`} />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Handoff</span>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Handoff</span>
                     </div>
-                    <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-600' : 'text-gray-900'}`}>
+                    <p className={`text-2xl font-bold mt-1 ${stats?.handoffTickets ? 'text-red-500' : 'text-card-foreground'}`}>
                       {stats?.handoffTickets || 0}
                     </p>
                   </button>
@@ -432,13 +432,13 @@ export default function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => showAwaitingTickets('contractor')}
-                    className="bg-white rounded-xl border-2 border-blue-200 p-3 text-left hover:border-blue-300 hover:shadow-lg transition-all"
+                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Awaiting Contractor</span>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Awaiting Contractor</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingContractor || 0}</p>
+                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingContractor || 0}</p>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-[200px]">
@@ -450,13 +450,13 @@ export default function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => showAwaitingTickets('manager')}
-                    className="bg-white rounded-xl border-2 border-blue-200 p-3 text-left hover:border-blue-300 hover:shadow-lg transition-all"
+                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-center gap-1.5">
                       <UserCheck className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Awaiting Manager</span>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Awaiting Manager</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingManager || 0}</p>
+                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingManager || 0}</p>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-[200px]">
@@ -468,13 +468,13 @@ export default function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => showAwaitingTickets('landlord')}
-                    className="bg-white rounded-xl border-2 border-blue-200 p-3 text-left hover:border-blue-300 hover:shadow-lg transition-all"
+                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-center gap-1.5">
                       <Hourglass className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Awaiting Landlord</span>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Awaiting Landlord</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.awaitingLandlord || 0}</p>
+                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.awaitingLandlord || 0}</p>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-[200px]">
@@ -486,13 +486,13 @@ export default function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => showAwaitingTickets('scheduled')}
-                    className="bg-white rounded-xl border-2 border-blue-200 p-3 text-left hover:border-blue-300 hover:shadow-lg transition-all"
+                    className="bg-card rounded-xl border-2 border-blue-500/30 dark:border-blue-400/30 p-3 text-left hover:border-blue-500/50 dark:hover:border-blue-400/50 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-center gap-1.5">
                       <CalendarClock className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scheduled</span>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Scheduled</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.scheduledJobs || 0}</p>
+                    <p className="text-2xl font-bold text-card-foreground mt-1">{stats?.scheduledJobs || 0}</p>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-[200px]">
@@ -505,17 +505,17 @@ export default function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => showAwaitingTickets('declined')}
-                    className={`bg-white rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
+                    className={`bg-card rounded-xl border-2 p-3 text-left hover:shadow-lg transition-all ${
                       stats?.landlordDeclined
                         ? 'border-orange-400 hover:border-orange-500'
-                        : 'border-blue-200 hover:border-blue-300'
+                        : 'border-blue-500/30 hover:border-blue-500/50 dark:border-blue-400/30 dark:hover:border-blue-400/50'
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
                       <XCircle className={`h-3.5 w-3.5 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-blue-500'}`} />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Declined</span>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Declined</span>
                     </div>
-                    <p className={`text-2xl font-bold mt-1 ${stats?.landlordDeclined ? 'text-orange-600' : 'text-gray-900'}`}>
+                    <p className={`text-2xl font-bold mt-1 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-card-foreground'}`}>
                       {stats?.landlordDeclined || 0}
                     </p>
                   </button>
@@ -528,7 +528,7 @@ export default function DashboardPage() {
           </div>
 
           {/* TICKET OVERVIEW Section */}
-          <div className="flex-1 min-h-0 max-h-[340px] space-y-2">
+          <div className="flex-1 min-h-0 pb-2 space-y-2">
             <SectionHeader
               icon={BarChart3}
               iconColor="bg-blue-500/10"
@@ -539,15 +539,15 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-4 h-[calc(100%-32px)]">
               <div className="flex flex-col gap-4 min-h-0">
                 {/* Status */}
-                <div className="bg-white rounded-xl border-2 border-blue-500/20 p-5 flex-shrink-0">
+                <div className="bg-card rounded-xl border-2 border-blue-500/20 p-5 flex-shrink-0">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">By Status</h3>
-                    <Link href="/tickets" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By Status</h3>
+                    <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium">
                       {stats?.totalTickets || 0} total
                     </Link>
                   </div>
                   <div className="space-y-4">
-                    <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex">
+                    <div className="h-4 bg-muted rounded-full overflow-hidden flex">
                       {stats && stats.totalTickets > 0 ? (
                         <>
                           <div
@@ -560,27 +560,27 @@ export default function DashboardPage() {
                           />
                         </>
                       ) : (
-                        <div className="h-full w-full bg-gray-100" />
+                        <div className="h-full w-full bg-muted" />
                       )}
                     </div>
                     <div className="flex gap-3">
-                      <div className="flex-1 flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="flex-1 flex items-center gap-3 p-3 bg-blue-500/10 rounded-lg">
                         <div className="w-3 h-3 rounded-full bg-blue-500" />
                         <div className="flex-1">
-                          <p className="text-xs text-gray-500">Open</p>
-                          <p className="text-xl font-bold text-gray-900">{stats?.openTickets || 0}</p>
+                          <p className="text-xs text-muted-foreground">Open</p>
+                          <p className="text-xl font-bold text-card-foreground">{stats?.openTickets || 0}</p>
                         </div>
-                        <span className="text-sm font-medium text-blue-600">
+                        <span className="text-sm font-medium text-blue-500">
                           {stats && stats.totalTickets > 0 ? getPercentage(stats.openTickets, stats.totalTickets) : 0}%
                         </span>
                       </div>
-                      <div className="flex-1 flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
+                      <div className="flex-1 flex items-center gap-3 p-3 bg-emerald-500/10 rounded-lg">
                         <div className="w-3 h-3 rounded-full bg-emerald-400" />
                         <div className="flex-1">
-                          <p className="text-xs text-gray-500">Closed</p>
-                          <p className="text-xl font-bold text-gray-900">{stats?.closedTickets || 0}</p>
+                          <p className="text-xs text-muted-foreground">Closed</p>
+                          <p className="text-xl font-bold text-card-foreground">{stats?.closedTickets || 0}</p>
                         </div>
-                        <span className="text-sm font-medium text-emerald-600">
+                        <span className="text-sm font-medium text-emerald-500">
                           {stats && stats.totalTickets > 0 ? getPercentage(stats.closedTickets, stats.totalTickets) : 0}%
                         </span>
                       </div>
@@ -589,8 +589,8 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Category */}
-                <div className="bg-white rounded-xl border-2 border-cyan-500/20 p-5 flex-1 flex flex-col min-h-0">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4 flex-shrink-0">By Category</h3>
+                <div className="bg-card rounded-xl border-2 border-cyan-500/20 p-5 flex-1 flex flex-col min-h-0">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4 flex-shrink-0">By Category</h3>
                   {categoryChartData.length > 0 ? (
                     <div className="flex-1 overflow-y-auto min-h-0">
                       <div className="grid grid-cols-2 gap-2">
@@ -598,22 +598,22 @@ export default function DashboardPage() {
                           <div
                             key={item.fullName}
                             className="flex items-center gap-2.5 p-2.5 rounded-lg"
-                            style={{ backgroundColor: `${item.color}10` }}
+                            style={{ backgroundColor: `${item.color}15` }}
                           >
                             <div
                               className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: item.color }}
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-500 truncate">{item.fullName}</p>
-                              <p className="text-lg font-bold text-gray-900">{item.value}</p>
+                              <p className="text-xs text-muted-foreground truncate">{item.fullName}</p>
+                              <p className="text-lg font-bold text-card-foreground">{item.value}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center flex-1 text-sm text-gray-400">
+                    <div className="flex items-center justify-center flex-1 text-sm text-muted-foreground">
                       No category data
                     </div>
                   )}
@@ -621,19 +621,19 @@ export default function DashboardPage() {
               </div>
 
               {/* Recent Tickets */}
-              <div className="bg-white rounded-xl border-2 border-blue-500/20 flex flex-col min-h-0">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Tickets</h3>
+              <div className="bg-card rounded-xl border-2 border-blue-500/20 flex flex-col min-h-0">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recent Tickets</h3>
                   <Link href="/tickets">
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                       View all
                       <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
-                <div className="divide-y divide-gray-50 flex-1 overflow-auto">
+                <div className="divide-y divide-border flex-1 overflow-auto">
                   {recentTickets.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-gray-500">
+                    <div className="p-6 text-center text-sm text-muted-foreground">
                       No tickets found for this period
                     </div>
                   ) : (
@@ -641,13 +641,13 @@ export default function DashboardPage() {
                       <Link
                         key={ticket.id}
                         href={`/tickets?id=${ticket.id}`}
-                        className="flex items-center justify-between px-5 py-3 hover:bg-blue-50/50 transition-colors"
+                        className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-card-foreground truncate">
                             {ticket.issue_description || 'No description'}
                           </p>
-                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
                             {ticket.address}
                           </p>
                         </div>
@@ -655,7 +655,7 @@ export default function DashboardPage() {
                           {ticket.job_stage && (
                             <StatusBadge status={ticket.job_stage} />
                           )}
-                          <span className="text-xs text-gray-400 whitespace-nowrap">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatDate(ticket.date_logged)}
                           </span>
                         </div>
