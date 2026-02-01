@@ -25,8 +25,8 @@ export function CopyableGuide({ title, content, children }: CopyableGuideProps) 
   }
 
   return (
-    <Card className="border-2">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+    <Card className="border-2 h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 flex-shrink-0">
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         <Button
           variant="outline"
@@ -47,7 +47,7 @@ export function CopyableGuide({ title, content, children }: CopyableGuideProps) 
           )}
         </Button>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="flex-1 overflow-hidden">{children}</CardContent>
     </Card>
   )
 }
