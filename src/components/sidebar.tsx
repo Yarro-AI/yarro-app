@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { usePM } from '@/contexts/pm-context'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
@@ -31,14 +32,20 @@ import {
   Settings,
   Upload,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
-// Core navigation - your data
+interface SidebarCounts {
+  properties: number
+  tenants: number
+  contractors: number
+}
+
+// Core navigation - your data (countKey maps to SidebarCounts)
 const coreNavItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/properties', label: 'Properties', icon: Building2 },
-  { href: '/tenants', label: 'Tenants', icon: Users },
-  { href: '/contractors', label: 'Contractors', icon: Wrench },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, countKey: null },
+  { href: '/properties', label: 'Properties', icon: Building2, countKey: 'properties' as const },
+  { href: '/tenants', label: 'Tenants', icon: Users, countKey: 'tenants' as const },
+  { href: '/contractors', label: 'Contractors', icon: Wrench, countKey: 'contractors' as const },
 ]
 
 // Activity navigation - system generated
@@ -59,10 +66,32 @@ export function Sidebar() {
   const { propertyManager, signOut } = usePM()
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [counts, setCounts] = useState<SidebarCounts>({ properties: 0, tenants: 0, contractors: 0 })
+  const supabase = createClient()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const fetchCounts = useCallback(async () => {
+    if (!propertyManager) return
+
+    const [propsRes, tenantsRes, contractorsRes] = await Promise.all([
+      supabase.from('c1_properties').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
+      supabase.from('c1_tenants').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
+      supabase.from('c1_contractors').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id).eq('active', true),
+    ])
+
+    setCounts({
+      properties: propsRes.count || 0,
+      tenants: tenantsRes.count || 0,
+      contractors: contractorsRes.count || 0,
+    })
+  }, [propertyManager, supabase])
+
+  useEffect(() => {
+    fetchCounts()
+  }, [fetchCounts])
 
   // Use wordmark logo for light mode, white logo for dark mode
   const logoSrc = mounted && resolvedTheme === 'dark' ? '/logo-white.png' : '/logo-wordmark.png'
@@ -88,20 +117,31 @@ export function Sidebar() {
         {coreNavItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
+          const count = item.countKey ? counts[item.countKey] : null
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive
                   ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                   : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
               )}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {item.label}
+              <div className="flex items-center gap-3">
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {item.label}
+              </div>
+              {count !== null && (
+                <span className={cn(
+                  'text-xs font-medium tabular-nums',
+                  isActive ? 'text-sidebar-primary-foreground/80' : 'text-sidebar-foreground/50'
+                )}>
+                  {count}
+                </span>
+              )}
             </Link>
           )
         })}

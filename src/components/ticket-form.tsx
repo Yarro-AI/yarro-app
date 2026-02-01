@@ -56,11 +56,19 @@ interface TicketFormData {
   access: string                 // Optional
 }
 
+interface PrefillData extends Partial<TicketFormData> {
+  contractor_id?: string | null  // Legacy support
+  conversation_id?: string       // For handoff tickets
+}
+
 interface TicketFormProps {
-  initialData?: Partial<TicketFormData> & { contractor_id?: string | null }  // Support legacy single contractor
-  onSubmit: (data: TicketFormData) => Promise<void>
+  initialData?: PrefillData      // Legacy support
+  prefill?: PrefillData          // Alias for initialData (clearer naming)
+  onSubmit?: (data: TicketFormData) => Promise<void>  // External handler
+  onSuccess?: () => void         // Simple callback when form handles creation
   onCancel: () => void
   submitLabel?: string
+  isHandoff?: boolean            // Visual styling for handoff tickets
 }
 
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
@@ -75,26 +83,35 @@ const PRIORITY_OPTIONS = TICKET_PRIORITIES.map((p) => ({
 
 export function TicketForm({
   initialData,
+  prefill,
   onSubmit,
+  onSuccess,
   onCancel,
   submitLabel = 'Create Ticket',
+  isHandoff = false,
 }: TicketFormProps) {
   const { propertyManager } = usePM()
   const supabase = createClient()
 
+  // Merge initialData and prefill (prefill takes precedence)
+  const mergedPrefill = { ...initialData, ...prefill }
+
+  // Default label based on mode
+  const finalSubmitLabel = submitLabel || (isHandoff ? 'Create & Dispatch' : 'Create Ticket')
+
   // Convert legacy contractor_id to contractor_ids array if present
-  const initialContractorIds = initialData?.contractor_ids ||
-    (initialData?.contractor_id ? [initialData.contractor_id] : [])
+  const initialContractorIds = mergedPrefill?.contractor_ids ||
+    (mergedPrefill?.contractor_id ? [mergedPrefill.contractor_id] : [])
 
   const [formData, setFormData] = useState<TicketFormData>({
-    property_id: initialData?.property_id || '',
-    tenant_id: initialData?.tenant_id || '',
-    issue_description: initialData?.issue_description || '',
-    category: initialData?.category || '',
-    priority: initialData?.priority || 'MEDIUM',
+    property_id: mergedPrefill?.property_id || '',
+    tenant_id: mergedPrefill?.tenant_id || '',
+    issue_description: mergedPrefill?.issue_description || '',
+    category: mergedPrefill?.category || '',
+    priority: mergedPrefill?.priority || 'MEDIUM',
     contractor_ids: initialContractorIds,
-    availability: initialData?.availability || '',
-    access: initialData?.access || '',
+    availability: mergedPrefill?.availability || '',
+    access: mergedPrefill?.access || '',
   })
 
   const [properties, setProperties] = useState<Property[]>([])
@@ -201,7 +218,12 @@ export function TicketForm({
 
   // Add new tenant handler
   const handleAddTenant = async () => {
-    const errors = validateTenant({ ...newTenant, role_tag: 'tenant', property_id: formData.property_id })
+    const errors = validateTenant({
+      full_name: newTenant.full_name,
+      phone: newTenant.phone,
+      email: newTenant.email || null,
+      property_id: formData.property_id,
+    })
     if (hasErrors(errors)) {
       setError(Object.values(errors).filter(Boolean).join(', '))
       return
@@ -249,10 +271,10 @@ export function TicketForm({
   // Add new contractor handler
   const handleAddContractor = async () => {
     const errors = validateContractor({
-      ...newContractor,
+      contractor_name: newContractor.contractor_name,
+      contractor_phone: newContractor.contractor_phone,
       contractor_email: null,
-      active: true,
-      property_ids: formData.property_id ? [formData.property_id] : [],
+      category: newContractor.category,
     })
     if (hasErrors(errors)) {
       setError(Object.values(errors).filter(Boolean).join(', '))
@@ -327,7 +349,91 @@ export function TicketForm({
     setError(null)
 
     try {
-      await onSubmit(formData)
+      // If onSubmit provided, use external handler
+      if (onSubmit) {
+        await onSubmit(formData)
+        return
+      }
+
+      // Otherwise handle ticket creation internally (for handoff flow)
+      const conversationId = mergedPrefill?.conversation_id
+
+      // Create ticket
+      const { data: ticket, error: ticketError } = await supabase
+        .from('c1_tickets')
+        .insert({
+          property_id: formData.property_id,
+          tenant_id: formData.tenant_id,
+          issue_description: formData.issue_description,
+          category: formData.category,
+          priority: formData.priority,
+          availability: formData.availability || null,
+          access: formData.access || null,
+          status: 'OPEN',
+          job_stage: 'logged',
+          handoff: false,  // No longer a handoff once we create the ticket
+          conversation_id: conversationId || null,
+          property_manager_id: propertyManager!.id,
+          date_logged: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (ticketError) throw ticketError
+
+      // Create messages entry for dispatcher
+      const firstContractor = contractors.find(c => c.id === formData.contractor_ids[0])
+      const { error: msgError } = await supabase
+        .from('c1_messages')
+        .insert({
+          ticket_id: ticket.id,
+          stage: 'contractor_notified',
+          contractor_id: formData.contractor_ids[0],
+          contractor_queue: formData.contractor_ids,
+          contractor_queue_index: 0,
+          property_manager_id: propertyManager!.id,
+        })
+
+      if (msgError) throw msgError
+
+      // If there was a conversation, mark it as processed (close it)
+      if (conversationId) {
+        await supabase
+          .from('c1_conversations')
+          .update({ status: 'closed' })
+          .eq('id', conversationId)
+      }
+
+      // Trigger dispatcher webhook to send SMS to contractor
+      const property = properties.find(p => p.id === formData.property_id)
+      const tenant = tenants.find(t => t.id === formData.tenant_id)
+
+      try {
+        await fetch('https://n8n.antigravitygroup.co.uk/webhook/dispatcher', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instruction: 'contractor-sms',
+            ticket_id: ticket.id,
+            contractor_id: formData.contractor_ids[0],
+            contractor_name: firstContractor?.contractor_name,
+            issue_description: formData.issue_description,
+            category: formData.category,
+            priority: formData.priority,
+            address: property?.address,
+            tenant_name: tenant?.full_name,
+            availability: formData.availability,
+            access: formData.access,
+          }),
+        })
+      } catch (webhookErr) {
+        console.error('Dispatcher webhook failed:', webhookErr)
+        // Don't fail the whole operation if webhook fails
+        toast.error('Ticket created but contractor notification may be delayed')
+      }
+
+      toast.success('Ticket created and contractor notified')
+      onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create ticket')
       setSubmitting(false)
@@ -344,6 +450,19 @@ export function TicketForm({
 
   return (
     <div className="space-y-6">
+      {/* Handoff indicator */}
+      {isHandoff && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-300">Creating from handoff</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              Review the pre-filled details from the conversation and select contractors to dispatch.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
           {error}
@@ -632,7 +751,7 @@ export function TicketForm({
               Creating...
             </>
           ) : (
-            submitLabel
+            finalSubmitLabel
           )}
         </Button>
       </div>

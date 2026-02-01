@@ -2,7 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
-import { Bell, CheckCircle, MessageSquare, ClipboardList, AlertTriangle } from 'lucide-react'
+import { Bell, CheckCircle, MessageSquare, ClipboardList, AlertTriangle, Shield } from 'lucide-react'
 
 const PM_GUIDE_TEXT = `HOW TO USE YARRO AS A PROPERTY MANAGER
 
@@ -158,6 +158,19 @@ export default function PMGuidePage() {
                     <li>Respond to WhatsApp notifications promptly</li>
                     <li>Keep contractor and landlord details up to date</li>
                   </ul>
+                </div>
+
+                {/* Compliance Note */}
+                <div className="bg-slate-500/10 rounded-lg p-4 border border-slate-500/20 break-inside-avoid">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-slate-600 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-card-foreground mb-1">Data &amp; AI Compliance</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Yarro uses AI to process tenant messages and route maintenance requests. All data is stored securely and processed in accordance with GDPR. Conversation logs are retained for operational purposes. For data subject requests or to understand how your data is processed, contact your account administrator.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
