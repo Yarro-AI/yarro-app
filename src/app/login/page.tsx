@@ -25,18 +25,18 @@ export default function LoginPage() {
   // Handles: (1) already logged in user landing on /login, (2) after fresh login
   useEffect(() => {
     if (pmLoading) return
-    // Only navigate if we have a PM and there's no error showing
-    if (propertyManager && !error) {
+    // Only navigate if we have a PM, no error, and not in forgot password mode
+    if (propertyManager && !error && mode === 'login') {
       router.push('/')
     } else if (authSuccess && !propertyManager) {
       // Auth succeeded but no PM record found — user removed from system
       setError('Account not found. Please contact your administrator.')
       setLoading(false)
       setAuthSuccess(false)
-      // Sign out since there's no PM record
-      supabase.auth.signOut()
+      // Use server-side logout to properly clear httpOnly cookies
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     }
-  }, [pmLoading, propertyManager, authSuccess, error, router, supabase])
+  }, [pmLoading, propertyManager, authSuccess, error, mode, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

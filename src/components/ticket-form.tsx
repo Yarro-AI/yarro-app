@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
-import { Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
 
 interface Property {
   id: string
@@ -150,34 +150,31 @@ export function TicketForm({
     }
   }, [formData.property_id, tenants, formData.tenant_id])
 
-  // Filter contractors by property only (no category constraint)
-  // Contractors with null property_ids can work on ANY property
-  // Sort: category matches first, then alphabetically
+  // Show ALL contractors (no property constraint) — manual tickets need flexibility
+  // Sort order: property-assigned + category match first, then property-assigned, then others
   useEffect(() => {
-    if (formData.property_id) {
-      const filtered = contractors.filter(
-        (c) => c.property_ids === null || c.property_ids?.includes(formData.property_id)
-      )
-      // Sort: category matches first, then by name
-      const sorted = [...filtered].sort((a, b) => {
-        const aMatch = formData.category && a.category === formData.category ? 0 : 1
-        const bMatch = formData.category && b.category === formData.category ? 0 : 1
-        if (aMatch !== bMatch) return aMatch - bMatch
-        return a.contractor_name.localeCompare(b.contractor_name)
-      })
-      setFilteredContractors(sorted)
-    } else {
-      // Show all contractors sorted when no property selected
-      const sorted = [...contractors].sort((a, b) => {
-        const aMatch = formData.category && a.category === formData.category ? 0 : 1
-        const bMatch = formData.category && b.category === formData.category ? 0 : 1
-        if (aMatch !== bMatch) return aMatch - bMatch
-        return a.contractor_name.localeCompare(b.contractor_name)
-      })
-      setFilteredContractors(sorted)
-    }
-    // Don't reset contractors on category change - allow any contractor
-  }, [formData.category, formData.property_id, contractors])
+    const isPropertyAssigned = (c: Contractor) =>
+      c.property_ids === null || (formData.property_id && c.property_ids?.includes(formData.property_id))
+    const isCategoryMatch = (c: Contractor) =>
+      formData.category && c.category === formData.category
+
+    // Sort: property-assigned first, then category matches, then alphabetically
+    const sorted = [...contractors].sort((a, b) => {
+      const aProp = isPropertyAssigned(a) ? 0 : 1
+      const bProp = isPropertyAssigned(b) ? 0 : 1
+      if (aProp !== bProp) return aProp - bProp
+      const aCat = isCategoryMatch(a) ? 0 : 1
+      const bCat = isCategoryMatch(b) ? 0 : 1
+      if (aCat !== bCat) return aCat - bCat
+      return a.contractor_name.localeCompare(b.contractor_name)
+    })
+    setFilteredContractors(sorted)
+  }, [contractors, formData.property_id, formData.category])
+
+  // Helper to check if contractor is assigned to current property
+  const isAssignedToProperty = (c: Contractor) =>
+    c.property_ids === null || (formData.property_id && c.property_ids?.includes(formData.property_id))
+
 
   const updateField = useCallback((field: keyof TicketFormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -355,7 +352,7 @@ export function TicketForm({
           {filteredContractors.length === 0 ? (
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 text-center">
               <p className="text-sm text-amber-700">
-                No contractors available for this property
+                No contractors available. Add contractors in the Contractors section.
               </p>
             </div>
           ) : (
@@ -364,6 +361,7 @@ export function TicketForm({
                 const isSelected = formData.contractor_ids.includes(c.id)
                 const orderIndex = formData.contractor_ids.indexOf(c.id)
                 const isCategoryMatch = formData.category && c.category === formData.category
+                const isPropertyAssigned = isAssignedToProperty(c)
                 return (
                   <button
                     key={c.id}
@@ -401,6 +399,11 @@ export function TicketForm({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {!isPropertyAssigned && formData.property_id && (
+                        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          Other
+                        </span>
+                      )}
                       {isCategoryMatch && (
                         <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">
                           Match
@@ -432,6 +435,46 @@ export function TicketForm({
               </div>
             </div>
           )}
+
+          {/* Category mismatch warning */}
+          {formData.category && formData.contractor_ids.length > 0 && (() => {
+            const mismatchedContractors = formData.contractor_ids
+              .map(id => contractors.find(c => c.id === id))
+              .filter(c => c && c.category !== formData.category) as Contractor[]
+            if (mismatchedContractors.length === 0) return null
+            return (
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800">Category mismatch</p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      Job category is <span className="font-medium">&quot;{formData.category}&quot;</span> but{' '}
+                      {mismatchedContractors.length === 1 ? (
+                        <>
+                          <span className="font-medium">{mismatchedContractors[0].contractor_name}</span> specialises in{' '}
+                          <span className="font-medium">&quot;{mismatchedContractors[0].category}&quot;</span>
+                        </>
+                      ) : (
+                        <>
+                          {mismatchedContractors.map((c, i) => (
+                            <span key={c.id}>
+                              {i > 0 && (i === mismatchedContractors.length - 1 ? ' and ' : ', ')}
+                              <span className="font-medium">{c.contractor_name}</span> ({c.category})
+                            </span>
+                          ))}
+                          {' '}don&apos;t match
+                        </>
+                      )}.
+                    </p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      Check this is intentional before proceeding.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Additional details */}
           <div className="pt-2 space-y-3">
