@@ -22,7 +22,10 @@ You'll automatically hear when:
 - A contractor is assigned
 - A visit is scheduled
 
-That's it! Just follow the conversation, send one message at a time, and wait for replies. We handle the rest.`
+TIPS
+- Send one message at a time
+- Wait for replies before sending more
+- Include photos when helpful`
 
 export default function TenantGuidePage() {
   return (
@@ -49,10 +52,10 @@ export default function TenantGuidePage() {
                 Share this guide with your tenants so they know how to report maintenance issues.
               </p>
 
-              {/* Two column grid - steps on left, summary on right */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-                {/* Left column - 3 steps with fixed spacing */}
-                <div className="flex flex-col gap-8">
+              {/* Two column grid - steps on left, tips on right */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+                {/* Left column - 3 steps */}
+                <div className="flex flex-col gap-6">
                   {/* Step 1 */}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -102,13 +105,15 @@ export default function TenantGuidePage() {
                   </div>
                 </div>
 
-                {/* Right column - summary */}
+                {/* Right column - tips */}
                 <div className="flex flex-col gap-4">
                   <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
-                    <h4 className="text-base font-semibold text-card-foreground mb-2">That's It!</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Just follow the conversation, send one message at a time, and wait for replies. We handle the rest.
-                    </p>
+                    <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Send one message at a time</li>
+                      <li>Wait for replies before sending more</li>
+                      <li>Include photos when helpful</li>
+                    </ul>
                   </div>
                 </div>
               </div>

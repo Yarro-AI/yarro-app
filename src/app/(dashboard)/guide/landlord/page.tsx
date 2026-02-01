@@ -2,7 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
-import { Bell, ThumbsUp, Settings } from 'lucide-react'
+import { Bell, ThumbsUp } from 'lucide-react'
 
 const LANDLORD_GUIDE_TEXT = `HOW YARRO WORKS FOR LANDLORDS
 
@@ -20,12 +20,8 @@ If the quoted cost is ABOVE your auto-approve limit:
 
 If the quote is BELOW your limit, work proceeds automatically.
 
-3. THAT'S IT!
-Your property manager handles everything else.
-You only get involved for costs above your set limit.
-
 AUTO-APPROVE LIMITS
-Each property can have a different limit. Work below this amount proceeds without your approval.`
+Each property can have a different limit. Work below this amount proceeds without your approval. Talk to your PM to adjust.`
 
 export default function LandlordGuidePage() {
   return (
@@ -53,9 +49,9 @@ export default function LandlordGuidePage() {
               </p>
 
               {/* Two column grid - steps on left, info on right */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-                {/* Left column - 3 steps with fixed spacing */}
-                <div className="flex flex-col gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+                {/* Left column - 2 steps */}
+                <div className="flex flex-col gap-6">
                   {/* Step 1 */}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -90,18 +86,6 @@ export default function LandlordGuidePage() {
                     </div>
                   </div>
 
-                  {/* Step 3 */}
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                      <Settings className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-card-foreground">3. That's It!</h3>
-                      <p className="text-sm text-muted-foreground mt-1.5">
-                        Your property manager handles everything else. You only get involved for costs above your set limit.
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Right column - info box */}
