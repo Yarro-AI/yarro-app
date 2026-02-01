@@ -213,13 +213,36 @@ export function OnboardingWizard() {
           }
         }
 
+        // Check for existing properties to avoid duplicates
+        const { data: existingProps } = await supabase
+          .from('c1_properties')
+          .select('id, address')
+          .eq('property_manager_id', propertyManager.id)
+
+        const existingAddresses = new Set(
+          (existingProps || []).map((p) => p.address.toLowerCase().trim())
+        )
+
         let insertedCount = 0
+        let skippedCount = 0
 
         const updatedProperties = [...state.properties]
 
         for (let i = 0; i < updatedProperties.length; i++) {
           const prop = updatedProperties[i]
           if (!prop.address.trim() || prop.insertedId) continue
+
+          // Skip if already exists
+          if (existingAddresses.has(prop.address.toLowerCase().trim())) {
+            const existing = existingProps?.find(
+              (p) => p.address.toLowerCase().trim() === prop.address.toLowerCase().trim()
+            )
+            if (existing) {
+              updatedProperties[i] = { ...prop, insertedId: existing.id }
+              skippedCount++
+              continue
+            }
+          }
 
           // Find landlord info
           const landlord = state.landlords.find((l) => l.tempId === prop.landlordTempId)
@@ -258,7 +281,12 @@ export function OnboardingWizard() {
           insertedCount++
         }
 
-        if (insertedCount > 0) toast.success(`${insertedCount} properties added`)
+        if (insertedCount > 0 || skippedCount > 0) {
+          const parts = []
+          if (insertedCount > 0) parts.push(`${insertedCount} added`)
+          if (skippedCount > 0) parts.push(`${skippedCount} already existed`)
+          toast.success(`Properties: ${parts.join(', ')}`)
+        }
 
         setState((prev) => ({
           ...prev,
