@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
@@ -94,89 +94,6 @@ const ACTION_DESCRIPTIONS = {
   declined: 'Tickets where the landlord declined the quoted price — these need follow-up',
 }
 
-// Action section component with inline ticket details
-function ActionSection({
-  title,
-  icon: Icon,
-  count,
-  color,
-  description,
-  tickets,
-  onViewAll,
-}: {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  count: number
-  color: 'red' | 'orange' | 'blue'
-  description: string
-  tickets: TicketSummary[]
-  onViewAll: () => void
-}) {
-  const colorClasses = {
-    red: count > 0 ? 'border-red-400 bg-red-50/50 dark:bg-red-950/20' : 'border-border',
-    orange: count > 0 ? 'border-orange-400 bg-orange-50/50 dark:bg-orange-950/20' : 'border-border',
-    blue: 'border-blue-400 bg-blue-50/50 dark:bg-blue-950/20',
-  }
-  const iconColors = {
-    red: count > 0 ? 'text-red-500' : 'text-muted-foreground',
-    orange: count > 0 ? 'text-orange-500' : 'text-muted-foreground',
-    blue: 'text-blue-500',
-  }
-  const countColors = {
-    red: count > 0 ? 'text-red-500' : 'text-card-foreground',
-    orange: count > 0 ? 'text-orange-500' : 'text-card-foreground',
-    blue: 'text-blue-500',
-  }
-
-  const displayTickets = tickets.slice(0, 3)
-
-  return (
-    <div className={`bg-card rounded-xl border ${colorClasses[color]} p-4 flex-shrink-0`}>
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColors[color]}`} />
-          <div>
-            <h3 className="text-sm font-semibold text-card-foreground">{title}</h3>
-            <p className="text-xs text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        <span className={`text-2xl font-bold ${countColors[color]}`}>{count}</span>
-      </div>
-      {displayTickets.length > 0 ? (
-        <div className="space-y-1.5 mt-3">
-          {displayTickets.map((ticket) => (
-            <Link
-              key={ticket.id}
-              href={`/tickets?id=${ticket.id}`}
-              className="flex items-center justify-between p-2 bg-background/50 rounded-lg hover:bg-background transition-colors"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-card-foreground truncate">
-                  {ticket.issue_description || 'No description'}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
-              </div>
-              {ticket.category && (
-                <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">{ticket.category}</span>
-              )}
-            </Link>
-          ))}
-          {tickets.length > 3 && (
-            <button
-              onClick={onViewAll}
-              className="w-full text-xs text-primary hover:text-primary/80 font-medium py-1"
-            >
-              +{tickets.length - 3} more
-            </button>
-          )}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground mt-2">No tickets</p>
-      )}
-    </div>
-  )
-}
-
 export default function DashboardPage() {
   const { propertyManager } = usePM()
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
@@ -191,12 +108,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!propertyManager) return
-    fetchData()
-  }, [propertyManager, dateRange])
-
-  const fetchData = async () => {
     setLoading(true)
 
     // Fetch tickets with message stage (source of truth for workflow state)
@@ -216,7 +129,7 @@ export default function DashboardPage() {
           c1_properties(address),
           c1_messages(stage, landlord)
         `)
-        .eq('property_manager_id', propertyManager!.id)
+        .eq('property_manager_id', propertyManager.id)
         .gte('date_logged', dateRange.from.toISOString())
         .lte('date_logged', dateRange.to.toISOString())
         .order('date_logged', { ascending: false }),
@@ -235,7 +148,7 @@ export default function DashboardPage() {
           log,
           c1_properties(address)
         `)
-        .eq('property_manager_id', propertyManager!.id)
+        .eq('property_manager_id', propertyManager.id)
         .eq('handoff', true)
         .eq('status', 'open')
         .order('last_updated', { ascending: false })
@@ -341,7 +254,11 @@ export default function DashboardPage() {
     }
 
     setLoading(false)
-  }
+  }, [propertyManager, dateRange, supabase])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const showAwaitingTickets = (type: string) => {
     const isOpen = (t: TicketSummary) => t.status?.toLowerCase() !== 'closed'
