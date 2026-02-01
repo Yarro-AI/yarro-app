@@ -11,7 +11,7 @@ import { StepLandlords, LandlordPersona } from './onboarding/step-landlords'
 import { StepProperties, PropertyEntry } from './onboarding/step-properties'
 import { StepTenants, TenantEntry } from './onboarding/step-tenants'
 import { StepContractors, ContractorEntry } from './onboarding/step-contractors'
-import { normalizeRecord, normalizePhone, isValidUKPhone } from '@/lib/normalize'
+import { normalizeRecord, normalizePhone, isValidUKPhone, hasValidUKPostcode } from '@/lib/normalize'
 import { validatePhone, validateEmail } from '@/lib/validate'
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2, SkipForward } from 'lucide-react'
 
@@ -193,6 +193,16 @@ export function OnboardingWizard() {
         if (!propertyManager) return
         // Insert properties
         const validProps = state.properties.filter((p) => p.address.trim())
+
+        // Validate all properties have valid UK postcodes before inserting
+        for (const prop of validProps) {
+          if (!hasValidUKPostcode(prop.address)) {
+            setError(`Property "${prop.address}": Address must end with a valid UK postcode (e.g., SW1A 1AA, M1 1AE)`)
+            setSaving(false)
+            return
+          }
+        }
+
         let insertedCount = 0
 
         const updatedProperties = [...state.properties]
