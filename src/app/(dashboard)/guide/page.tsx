@@ -11,7 +11,7 @@ When tenants report issues, you'll receive WhatsApp notifications about:
 - New tickets created
 - Contractor quotes received
 - Jobs that need your approval
-- Completed jobs
+- Job completions
 
 2. APPROVE OR DECLINE QUOTES
 When a contractor submits a quote:
@@ -63,32 +63,33 @@ export default function GuidePage() {
               </p>
 
               {/* Two column grid - steps on left, tips/GDPR on right */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-                {/* Left column - 4 steps */}
-                <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+                {/* Left column - 4 steps filling height */}
+                <div className="flex flex-col justify-between h-full">
                   {/* Step 1 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">1. You'll Be Notified via WhatsApp</h3>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">1. You'll Be Notified via WhatsApp</h3>
+                      <ul className="text-sm text-muted-foreground mt-1.5 space-y-1 list-disc list-inside">
                         <li>New tickets created</li>
                         <li>Contractor quotes received</li>
                         <li>Jobs needing approval</li>
+                        <li>Job completions</li>
                       </ul>
                     </div>
                   </div>
 
                   {/* Step 2 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">2. Approve or Decline Quotes</h3>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">2. Approve or Decline Quotes</h3>
+                      <ul className="text-sm text-muted-foreground mt-1.5 space-y-1 list-disc list-inside">
                         <li>Review and add your markup</li>
                         <li>Tap Approve or Decline in WhatsApp</li>
                         <li>Landlords approve if above their limit</li>
@@ -97,13 +98,13 @@ export default function GuidePage() {
                   </div>
 
                   {/* Step 3 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">3. Handle Handoffs</h3>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">3. Handle Handoffs</h3>
+                      <ul className="text-sm text-muted-foreground mt-1.5 space-y-1 list-disc list-inside">
                         <li>Marked as "Handoff" on dashboard</li>
                         <li>Review conversation history</li>
                         <li>Complete ticket manually</li>
@@ -112,13 +113,13 @@ export default function GuidePage() {
                   </div>
 
                   {/* Step 4 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                      <MessageSquare className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">4. Monitor Your Dashboard</h3>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">4. Monitor Your Dashboard</h3>
+                      <ul className="text-sm text-muted-foreground mt-1.5 space-y-1 list-disc list-inside">
                         <li>Tickets needing attention</li>
                         <li>Awaiting contractor response</li>
                         <li>Scheduled visits &amp; pending decisions</li>
@@ -128,11 +129,11 @@ export default function GuidePage() {
                 </div>
 
                 {/* Right column - Tips + Compliance */}
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4">
                   {/* Tips */}
-                  <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-                    <h4 className="font-semibold text-card-foreground mb-1">Tips</h4>
-                    <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
+                  <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
+                    <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Check dashboard daily</li>
                       <li>Respond to notifications promptly via WhatsApp</li>
                       <li>Keep contractor/landlord details updated</li>
@@ -140,12 +141,12 @@ export default function GuidePage() {
                   </div>
 
                   {/* Compliance Note */}
-                  <div className="bg-slate-500/10 rounded-lg p-4 border border-slate-500/20">
-                    <div className="flex items-start gap-2">
-                      <Shield className="h-5 w-5 text-slate-600 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                  <div className="bg-slate-500/10 rounded-xl p-5 border border-slate-500/20">
+                    <div className="flex items-start gap-3">
+                      <Shield className="h-6 w-6 text-slate-600 dark:text-slate-400 flex-shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-card-foreground">Data &amp; AI Compliance</h4>
-                        <p className="text-sm text-muted-foreground">
+                        <h4 className="text-base font-semibold text-card-foreground">Data &amp; AI Compliance</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
                           Yarro uses AI to process tenant messages. All data stored securely per GDPR.
                         </p>
                       </div>

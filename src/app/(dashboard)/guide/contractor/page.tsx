@@ -57,18 +57,18 @@ export default function ContractorGuidePage() {
               </p>
 
               {/* Two column grid - all 4 steps on left, tips on right */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-                {/* Left column - all 4 steps */}
-                <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+                {/* Left column - 4 steps filling height */}
+                <div className="flex flex-col justify-between h-full">
                   {/* Step 1 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">1. Receive Job Requests</h3>
-                      <p className="text-sm text-muted-foreground mt-1">You'll get WhatsApp messages with:</p>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">1. Receive Job Requests</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">You'll get WhatsApp messages with:</p>
+                      <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
                         <li>Property details and access info</li>
                         <li>Issue description and photos</li>
                         <li>Urgency level</li>
@@ -77,13 +77,13 @@ export default function ContractorGuidePage() {
                   </div>
 
                   {/* Step 2 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <PoundSterling className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <PoundSterling className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">2. Submit Your Quote</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <h3 className="text-base font-semibold text-card-foreground">2. Submit Your Quote</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">
                         Tap to enter your estimated cost for the job.
                       </p>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-500/10 inline-block px-2 py-1 rounded">
@@ -93,14 +93,14 @@ export default function ContractorGuidePage() {
                   </div>
 
                   {/* Step 3 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-violet-600 dark:text-violet-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">3. Get Approval Notification</h3>
-                      <p className="text-sm text-muted-foreground mt-1">If your quote is approved, you'll receive:</p>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">3. Get Approval Notification</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">If your quote is approved, you'll receive:</p>
+                      <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
                         <li>Confirmation message</li>
                         <li>Link to schedule the visit</li>
                         <li>Tenant's availability (if provided)</li>
@@ -109,13 +109,13 @@ export default function ContractorGuidePage() {
                   </div>
 
                   {/* Step 4 */}
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                      <CheckCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-card-foreground">4. Complete the Job</h3>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      <h3 className="text-base font-semibold text-card-foreground">4. Complete the Job</h3>
+                      <ul className="text-sm text-muted-foreground mt-1.5 space-y-1 list-disc list-inside">
                         <li>You'll get a reminder on the day</li>
                         <li>Tap "Complete" when finished</li>
                         <li>Attach a photo of the work</li>
@@ -125,10 +125,10 @@ export default function ContractorGuidePage() {
                 </div>
 
                 {/* Right column - tips */}
-                <div>
-                  <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-                    <h4 className="font-semibold text-card-foreground mb-1">Tips</h4>
-                    <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
+                <div className="flex flex-col gap-4">
+                  <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
+                    <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Respond to quotes within 6 hours</li>
                       <li>Contact the property manager if you can't complete a job</li>
                     </ul>
