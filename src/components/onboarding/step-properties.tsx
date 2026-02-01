@@ -91,7 +91,7 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
         </p>
       </div>
 
-      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} />
+      <EditableTable columns={columns} rows={rows} onChange={handleRowsChange} highlightEmptySelections />
 
       <CsvUpload
         expectedColumns={CSV_COLUMNS}

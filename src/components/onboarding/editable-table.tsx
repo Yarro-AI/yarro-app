@@ -28,9 +28,20 @@ interface EditableTableProps {
   rows: Record<string, string>[]
   onChange: (rows: Record<string, string>[]) => void
   minRows?: number
+  highlightEmptySelections?: boolean
 }
 
-export function EditableTable({ columns, rows, onChange, minRows = 1 }: EditableTableProps) {
+export function EditableTable({ columns, rows, onChange, minRows = 1, highlightEmptySelections = false }: EditableTableProps) {
+  // Check if row has empty selection fields (combobox or select)
+  const rowNeedsAttention = (row: Record<string, string>) => {
+    if (!highlightEmptySelections) return false
+    return columns.some(col =>
+      (col.type === 'combobox' || col.type === 'select') &&
+      col.options &&
+      col.options.length > 0 &&
+      !row[col.key]
+    )
+  }
   const addRow = () => {
     const newRow: Record<string, string> = {}
     columns.forEach((col) => {
@@ -105,7 +116,7 @@ export function EditableTable({ columns, rows, onChange, minRows = 1 }: Editable
           </thead>
           <tbody>
             {rows.map((row, rowIdx) => (
-              <tr key={rowIdx} className="border-b last:border-b-0">
+              <tr key={rowIdx} className={`border-b last:border-b-0 ${rowNeedsAttention(row) ? 'bg-muted/30' : ''}`}>
                 {columns.map((col, colIdx) => (
                   <td key={col.key} className="px-2 py-1.5">
                     {col.type === 'combobox' && col.options ? (
