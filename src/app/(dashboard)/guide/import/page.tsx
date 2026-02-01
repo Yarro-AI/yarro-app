@@ -1,6 +1,5 @@
 'use client'
 
-import { GuideTabs } from '@/components/guide-tabs'
 import { OnboardingWizard } from '@/components/onboarding-wizard'
 
 export default function ImportPage() {
@@ -9,14 +8,11 @@ export default function ImportPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Product Guide</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Import Data</h1>
           <p className="text-muted-foreground mt-1">
-            Your complete guide to Yarro property management
+            Import properties, landlords, tenants, and contractors from spreadsheets
           </p>
         </div>
-
-        {/* Tabs */}
-        <GuideTabs />
 
         {/* Content - full width */}
         <div>

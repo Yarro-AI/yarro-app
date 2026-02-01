@@ -3,11 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Upload, UserCog, Users, Wrench, Building } from 'lucide-react'
+import { UserCog, Users, Wrench, Building } from 'lucide-react'
 
 const tabs = [
-  { href: '/guide', label: 'Import Data', icon: Upload },
-  { href: '/guide/you', label: 'For You', icon: UserCog },
+  { href: '/guide', label: 'Getting Started', icon: UserCog },
   { href: '/guide/tenant', label: 'For Tenants', icon: Users },
   { href: '/guide/contractor', label: 'For Contractors', icon: Wrench },
   { href: '/guide/landlord', label: 'For Landlords', icon: Building },
@@ -20,7 +19,7 @@ export function GuideTabs() {
     <div className="border-b border-border">
       <nav className="flex gap-1" aria-label="Guide sections">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.href || (tab.href === '/guide' && pathname === '/guide/import')
+          const isActive = pathname === tab.href
           const Icon = tab.icon
           return (
             <Link

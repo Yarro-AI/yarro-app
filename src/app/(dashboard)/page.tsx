@@ -383,78 +383,85 @@ export default function DashboardPage() {
             <DateFilter value={dateRange} onChange={setDateRange} />
           </div>
 
-          {/* Main Two-Column Layout */}
+          {/* Main Two-Column Layout with true 50/50 vertical split */}
           <div className="flex-1 min-h-0 grid grid-cols-2 gap-4">
-            {/* LEFT COLUMN: Status + Category (above midline) + Recent Tickets (below midline) */}
-            <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
-              {/* Row 1: By Status (compact) */}
-              <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-blue-500" />
-                    <h3 className="text-sm font-semibold text-card-foreground">By Status</h3>
+            {/* LEFT COLUMN */}
+            <div className="flex flex-col gap-3 min-h-0">
+              {/* TOP HALF: By Status + By Category */}
+              <div className="flex flex-col gap-3 h-1/2">
+                {/* By Status */}
+                <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-blue-500" />
+                      <h3 className="text-sm font-semibold text-card-foreground">By Status</h3>
+                    </div>
+                    <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium">
+                      {stats?.totalTickets || 0} total
+                    </Link>
                   </div>
-                  <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium">
-                    {stats?.totalTickets || 0} total
-                  </Link>
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden flex mb-2">
+                    {stats && stats.totalTickets > 0 ? (
+                      <>
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-500"
+                          style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
+                        />
+                        <div
+                          className="h-full bg-emerald-400 transition-all duration-500"
+                          style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
+                        />
+                      </>
+                    ) : (
+                      <div className="h-full w-full bg-muted" />
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center gap-2 p-1.5 bg-blue-500/10 rounded-lg">
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                      <span className="text-xs text-muted-foreground">Open</span>
+                      <span className="text-sm font-bold text-card-foreground ml-auto">{stats?.openTickets || 0}</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2 p-1.5 bg-emerald-500/10 rounded-lg">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs text-muted-foreground">Closed</span>
+                      <span className="text-sm font-bold text-card-foreground ml-auto">{stats?.closedTickets || 0}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="h-2.5 bg-muted rounded-full overflow-hidden flex mb-2">
-                  {stats && stats.totalTickets > 0 ? (
-                    <>
-                      <div
-                        className="h-full bg-blue-500 transition-all duration-500"
-                        style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
-                      />
-                      <div
-                        className="h-full bg-emerald-400 transition-all duration-500"
-                        style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
-                      />
-                    </>
+
+                {/* By Category (fills remaining top half) */}
+                <div className="bg-card rounded-xl border border-border p-3 flex-1 min-h-0 flex flex-col">
+                  <h3 className="text-sm font-semibold text-card-foreground mb-2 flex-shrink-0">By Category</h3>
+                  {categoryChartData.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto">
+                      {categoryChartData.slice(0, 8).map((item) => (
+                        <div
+                          key={item.fullName}
+                          className="flex items-center gap-2 p-2 rounded-lg"
+                          style={{ backgroundColor: `${item.color}15` }}
+                        >
+                          <div
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground truncate">{item.name}</p>
+                            <p className="text-sm font-bold text-card-foreground">{item.value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <div className="h-full w-full bg-muted" />
+                    <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                      No category data
+                    </div>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1 flex items-center gap-2 p-1.5 bg-blue-500/10 rounded-lg">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-xs text-muted-foreground">Open</span>
-                    <span className="text-sm font-bold text-card-foreground ml-auto">{stats?.openTickets || 0}</span>
-                  </div>
-                  <div className="flex-1 flex items-center gap-2 p-1.5 bg-emerald-500/10 rounded-lg">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs text-muted-foreground">Closed</span>
-                    <span className="text-sm font-bold text-card-foreground ml-auto">{stats?.closedTickets || 0}</span>
-                  </div>
-                </div>
               </div>
 
-              {/* Row 2: By Category (compact, above midline) */}
-              <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
-                <h3 className="text-sm font-semibold text-card-foreground mb-2">By Category</h3>
-                {categoryChartData.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {categoryChartData.slice(0, 6).map((item) => (
-                      <div
-                        key={item.fullName}
-                        className="flex items-center gap-2 p-1.5 rounded-lg"
-                        style={{ backgroundColor: `${item.color}15` }}
-                      >
-                        <div
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="text-xs text-muted-foreground truncate flex-1">{item.name}</span>
-                        <span className="text-xs font-bold text-card-foreground">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground text-center py-2">No category data</p>
-                )}
-              </div>
-
-              {/* Row 3: Recent Tickets (fills remaining space, below midline) */}
-              <div className="bg-card rounded-xl border border-border flex flex-col flex-1 min-h-0">
+              {/* BOTTOM HALF: Recent Tickets */}
+              <div className="bg-card rounded-xl border border-border flex flex-col h-1/2 min-h-0">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border flex-shrink-0">
                   <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
                   <Link href="/tickets">
@@ -499,131 +506,109 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Handoff + Awaiting (above midline) + Scheduled/Declined (below midline) */}
-            <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
-              {/* Row 1: Handoff Review (matches By Status height) */}
+            {/* RIGHT COLUMN */}
+            <div className="flex flex-col gap-3 min-h-0">
+              {/* TOP HALF: Awaiting Action (includes Handoff) */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
                 const hasHandoffs = totalHandoffs > 0
                 return (
-                  <div className={`bg-card rounded-xl border p-3 flex-shrink-0 ${hasHandoffs ? 'border-red-400 bg-red-50/50 dark:bg-red-950/20' : 'border-border'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className={`h-4 w-4 ${hasHandoffs ? 'text-red-500' : 'text-muted-foreground'}`} />
-                        <h3 className="text-sm font-semibold text-card-foreground">Handoff Review</h3>
-                      </div>
-                      <span className={`text-xl font-bold ${hasHandoffs ? 'text-red-500' : 'text-card-foreground'}`}>{totalHandoffs}</span>
+                  <div className="bg-card rounded-xl border border-border flex flex-col h-1/2 min-h-0">
+                    <div className="px-4 py-2.5 border-b border-border flex-shrink-0">
+                      <h3 className="text-sm font-semibold text-card-foreground">Awaiting Action</h3>
                     </div>
-                    {totalHandoffs > 0 ? (
-                      <div className="space-y-1">
-                        {handoffConversations.slice(0, 2).map((convo) => (
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                      {/* Handoff Review row */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <button
-                            key={convo.id}
-                            onClick={() => {
-                              setSelectedHandoff(convo)
-                              setCreateTicketOpen(true)
-                            }}
-                            className="w-full flex items-center justify-between p-1.5 bg-background/50 rounded-lg hover:bg-background transition-colors text-left border border-dashed border-red-300"
+                            onClick={() => hasHandoffs ? showAwaitingTickets('handoff') : undefined}
+                            className={`w-full flex items-center justify-between p-2.5 rounded-lg transition-colors text-left ${
+                              hasHandoffs
+                                ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                : 'bg-muted/30 hover:bg-muted/50'
+                            }`}
                           >
-                            <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                              <MessageSquare className="h-3 w-3 text-red-500 flex-shrink-0" />
-                              <p className="text-xs font-medium text-card-foreground truncate">
-                                {convo.caller_name || 'Unknown'}
-                              </p>
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className={`h-4 w-4 ${hasHandoffs ? 'text-red-500' : 'text-muted-foreground'}`} />
+                              <span className={`text-sm ${hasHandoffs ? 'text-red-700 dark:text-red-300 font-medium' : 'text-card-foreground'}`}>
+                                Handoff Review
+                              </span>
                             </div>
-                            <span className="flex items-center gap-1 text-xs text-red-600 font-medium ml-2">
-                              <Plus className="h-3 w-3" />
+                            <span className={`text-base font-bold ${hasHandoffs ? 'text-red-500' : 'text-card-foreground'}`}>
+                              {totalHandoffs}
                             </span>
                           </button>
-                        ))}
-                        {handoffTicketsList.slice(0, 2 - Math.min(handoffConversations.length, 2)).map((ticket) => (
-                          <Link
-                            key={ticket.id}
-                            href={`/tickets?id=${ticket.id}`}
-                            className="flex items-center p-1.5 bg-background/50 rounded-lg hover:bg-background transition-colors"
-                          >
-                            <p className="text-xs font-medium text-card-foreground truncate">
-                              {ticket.issue_description || 'No description'}
-                            </p>
-                          </Link>
-                        ))}
-                        {totalHandoffs > 2 && (
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px]">
+                          <p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      {/* Awaiting Contractor */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <button
-                            onClick={() => showAwaitingTickets('handoff')}
-                            className="w-full text-xs text-primary hover:text-primary/80 font-medium"
+                            onClick={() => showAwaitingTickets('contractor')}
+                            className="w-full flex items-center justify-between p-2.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
-                            +{totalHandoffs - 2} more
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm text-card-foreground">Awaiting Contractor</span>
+                            </div>
+                            <span className="text-base font-bold text-card-foreground">{stats?.awaitingContractor || 0}</span>
                           </button>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No handoffs — all good!</p>
-                    )}
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px]">
+                          <p className="text-xs">{ACTION_DESCRIPTIONS.contractor}</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      {/* Awaiting Manager */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => showAwaitingTickets('manager')}
+                            className="w-full flex items-center justify-between p-2.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm text-card-foreground">Awaiting Manager</span>
+                            </div>
+                            <span className="text-base font-bold text-card-foreground">{stats?.awaitingManager || 0}</span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px]">
+                          <p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      {/* Awaiting Landlord */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => showAwaitingTickets('landlord')}
+                            className="w-full flex items-center justify-between p-2.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Hourglass className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm text-card-foreground">Awaiting Landlord</span>
+                            </div>
+                            <span className="text-base font-bold text-card-foreground">{stats?.awaitingLandlord || 0}</span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px]">
+                          <p className="text-xs">{ACTION_DESCRIPTIONS.landlord}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
                 )
               })()}
 
-              {/* Row 2: Awaiting Action (compact, matches By Category) */}
-              <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
-                <h3 className="text-sm font-semibold text-card-foreground mb-2">Awaiting Action</h3>
-                <div className="space-y-1.5">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => showAwaitingTickets('contractor')}
-                        className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-card-foreground">Awaiting Contractor</span>
-                        </div>
-                        <span className="text-base font-bold text-card-foreground">{stats?.awaitingContractor || 0}</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[200px]">
-                      <p className="text-xs">{ACTION_DESCRIPTIONS.contractor}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => showAwaitingTickets('manager')}
-                        className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <UserCheck className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-card-foreground">Awaiting Manager</span>
-                        </div>
-                        <span className="text-base font-bold text-card-foreground">{stats?.awaitingManager || 0}</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[200px]">
-                      <p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => showAwaitingTickets('landlord')}
-                        className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Hourglass className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-card-foreground">Awaiting Landlord</span>
-                        </div>
-                        <span className="text-base font-bold text-card-foreground">{stats?.awaitingLandlord || 0}</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[200px]">
-                      <p className="text-xs">{ACTION_DESCRIPTIONS.landlord}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-
-              {/* Row 3: Scheduled + Declined (side by side, fills remaining space, below midline) */}
-              <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
+              {/* BOTTOM HALF: Scheduled + Declined side by side */}
+              <div className="grid grid-cols-2 gap-3 h-1/2 min-h-0">
                 {/* Scheduled */}
                 <div className="bg-card rounded-xl border border-blue-200 dark:border-blue-900 flex flex-col min-h-0">
                   <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center justify-between">
@@ -652,7 +637,7 @@ export default function DashboardPage() {
                           </Link>
                         ))
                       ) : (
-                        <p className="text-xs text-muted-foreground text-center py-2">No scheduled jobs</p>
+                        <p className="text-xs text-muted-foreground text-center py-4">No scheduled jobs</p>
                       )
                     })()}
                   </div>
@@ -685,7 +670,7 @@ export default function DashboardPage() {
                           </Link>
                         ))
                       ) : (
-                        <p className="text-xs text-muted-foreground text-center py-2">No declined quotes</p>
+                        <p className="text-xs text-muted-foreground text-center py-4">No declined quotes</p>
                       )
                     })()}
                   </div>
