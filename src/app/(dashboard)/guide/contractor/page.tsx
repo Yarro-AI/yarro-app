@@ -51,15 +51,15 @@ export default function ContractorGuidePage() {
         {/* Content - fills remaining space */}
         <div className="flex-1 min-h-0">
           <CopyableGuide title="For Your Contractors" content={CONTRACTOR_GUIDE_TEXT}>
-            <div className="h-full flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground flex-shrink-0">
+            <div className="h-full flex flex-col">
+              <p className="text-sm text-muted-foreground mb-4">
                 Share this guide with your contractors so they know how the quote and job process works.
               </p>
 
-              {/* Grid layout - 2 columns on large screens */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 flex-1">
+              {/* Column layout - flows down first, then right */}
+              <div className="columns-1 lg:columns-2 gap-8 flex-1">
                 {/* Step 1 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
                     <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
@@ -75,7 +75,7 @@ export default function ContractorGuidePage() {
                 </div>
 
                 {/* Step 2 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                     <PoundSterling className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
@@ -91,7 +91,7 @@ export default function ContractorGuidePage() {
                 </div>
 
                 {/* Step 3 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
                     <Calendar className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                   </div>
@@ -107,7 +107,7 @@ export default function ContractorGuidePage() {
                 </div>
 
                 {/* Step 4 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
                     <CheckCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
@@ -122,7 +122,7 @@ export default function ContractorGuidePage() {
                 </div>
 
                 {/* Tips */}
-                <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 lg:col-span-2">
+                <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20 break-inside-avoid">
                   <h4 className="font-semibold text-card-foreground mb-1">Tips</h4>
                   <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                     <li>Respond to quotes within 6 hours</li>

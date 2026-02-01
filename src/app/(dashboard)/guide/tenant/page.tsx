@@ -44,15 +44,15 @@ export default function TenantGuidePage() {
         {/* Content - fills remaining space */}
         <div className="flex-1 min-h-0">
           <CopyableGuide title="For Your Tenants" content={TENANT_GUIDE_TEXT}>
-            <div className="h-full flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground flex-shrink-0">
+            <div className="h-full flex flex-col">
+              <p className="text-sm text-muted-foreground mb-4">
                 Share this guide with your tenants so they know how to report maintenance issues.
               </p>
 
-              {/* Grid layout - 2 columns on large screens */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 flex-1">
+              {/* Column layout - flows down first, then right */}
+              <div className="columns-1 lg:columns-2 gap-8 flex-1">
                 {/* Step 1 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
                     <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
@@ -68,12 +68,13 @@ export default function TenantGuidePage() {
                 </div>
 
                 {/* Step 2 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
                     <ClipboardList className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-card-foreground">2. Follow the Prompts</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Our assistant will ask for:</p>
                     <ul className="text-sm text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
                       <li>Your property address</li>
                       <li>Description of the issue</li>
@@ -84,7 +85,7 @@ export default function TenantGuidePage() {
                 </div>
 
                 {/* Step 3 */}
-                <div className="flex gap-4">
+                <div className="flex gap-3 mb-4 break-inside-avoid">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                     <Bell className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
@@ -99,7 +100,7 @@ export default function TenantGuidePage() {
                 </div>
 
                 {/* Summary */}
-                <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+                <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20 break-inside-avoid">
                   <h4 className="font-semibold text-card-foreground mb-1">That's It!</h4>
                   <p className="text-sm text-muted-foreground">
                     Just follow the conversation, send one message at a time, and wait for replies. We handle the rest.
