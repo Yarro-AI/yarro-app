@@ -636,6 +636,46 @@ export function OnboardingWizard() {
 
       {/* Step Content */}
       <div className="bg-card rounded-xl border p-6">
+        {/* Navigation at top */}
+        {state.step !== 'complete' && (
+          <div className="flex items-center justify-between mb-4 pb-4 border-b">
+            <div>
+              {canGoBack() && (
+                <Button variant="outline" size="sm" onClick={goBack} disabled={saving}>
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {(state.step !== 'pm_details' || pmDetailsConfigured) && (
+                <Button variant="ghost" size="sm" onClick={skip} disabled={saving}>
+                  <SkipForward className="h-4 w-4 mr-1" />
+                  Skip
+                </Button>
+              )}
+              <Button size="sm" onClick={handleNext} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : state.step === 'contractors' ? (
+                  <>
+                    Complete
+                    <CheckCircle className="h-4 w-4 ml-1" />
+                  </>
+                ) : (
+                  <>
+                    Next
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {state.step === 'pm_details' && (
           <StepPMDetails
             details={state.pmDetails}
@@ -710,46 +750,6 @@ export function OnboardingWizard() {
           </div>
         )}
       </div>
-
-      {/* Navigation */}
-      {state.step !== 'complete' && (
-        <div className="flex items-center justify-between">
-          <div>
-            {canGoBack() && (
-              <Button variant="outline" onClick={goBack} disabled={saving}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {(state.step !== 'pm_details' || pmDetailsConfigured) && (
-              <Button variant="ghost" onClick={skip} disabled={saving}>
-                <SkipForward className="h-4 w-4 mr-1" />
-                Skip
-              </Button>
-            )}
-            <Button onClick={handleNext} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : state.step === 'contractors' ? (
-                <>
-                  Complete
-                  <CheckCircle className="h-4 w-4 ml-2" />
-                </>
-              ) : (
-                <>
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
