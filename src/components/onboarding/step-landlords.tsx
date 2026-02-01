@@ -2,6 +2,7 @@
 
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
+import { Lightbulb } from 'lucide-react'
 
 export interface LandlordPersona {
   tempId: string
@@ -66,6 +67,18 @@ export function StepLandlords({ landlords, onChange }: StepLandlordsProps) {
         onParsed={handleCsvParsed}
         templateFilename="landlords_template.csv"
       />
+
+      <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-amber-900 dark:text-amber-100">
+            Use exact names for auto-linking
+          </p>
+          <p className="text-amber-700 dark:text-amber-300 mt-1">
+            In the next step, you can upload properties with a &quot;landlord_name&quot; column. If the name matches exactly (case-insensitive), the landlord will be auto-linked. E.g., &quot;David Williams&quot; or &quot;david williams&quot; will both match.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
 import { TENANT_ROLES } from '@/lib/constants'
+import { Lightbulb } from 'lucide-react'
 
 export interface TenantEntry {
   full_name: string
@@ -98,9 +99,17 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
         onParsed={handleCsvParsed}
         templateFilename="tenants_template.csv"
       />
-      <p className="text-xs text-muted-foreground">
-        <strong>Tip:</strong> Use property addresses from the previous step in your CSV. Partial matches work (e.g. &quot;14 Meadow&quot; matches &quot;14 Meadow Lane, Manchester, M14 5RL&quot;).
-      </p>
+      <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-amber-900 dark:text-amber-100">
+            Property matching &amp; duplicate handling
+          </p>
+          <p className="text-amber-700 dark:text-amber-300 mt-1">
+            Use property addresses from the previous step in your CSV &quot;property_address&quot; column. Partial matches work (e.g., &quot;14 Meadow&quot; matches &quot;14 Meadow Lane, Manchester, M14 5RL&quot;). Tenants with the same phone number at the same property are treated as duplicates.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

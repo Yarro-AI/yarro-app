@@ -467,21 +467,21 @@ export function OnboardingWizard() {
           }
         }
 
-        // Check for existing contractors to avoid duplicates (by phone)
+        // Check for existing contractors to avoid duplicates (by name - same contractor shouldn't be added twice)
         const { data: existingContractors } = await supabase
           .from('c1_contractors')
-          .select('contractor_phone')
+          .select('contractor_name')
           .eq('property_manager_id', propertyManager.id)
-        const existingPhones = new Set(
-          (existingContractors || []).map((c) => normalizePhone(c.contractor_phone))
+        const existingNames = new Set(
+          (existingContractors || []).map((c) => c.contractor_name.toLowerCase().trim())
         )
 
         let insertedCount = 0
         let skippedCount = 0
 
         for (const contractor of validContractors) {
-          const normalizedPhone = normalizePhone(contractor.contractor_phone)
-          if (existingPhones.has(normalizedPhone)) {
+          const normalizedName = contractor.contractor_name.toLowerCase().trim()
+          if (existingNames.has(normalizedName)) {
             skippedCount++
             continue
           }
@@ -510,7 +510,7 @@ export function OnboardingWizard() {
             return
           }
           insertedCount++
-          existingPhones.add(normalizedPhone) // Prevent duplicates within same batch
+          existingNames.add(normalizedName) // Prevent duplicates within same batch
         }
 
         if (insertedCount > 0 || skippedCount > 0) {
@@ -597,6 +597,7 @@ export function OnboardingWizard() {
         {state.step === 'contractors' && (
           <StepContractors
             contractors={state.contractors}
+            properties={allPropertyOptions}
             onChange={(contractors) => setState((prev) => ({ ...prev, contractors }))}
           />
         )}

@@ -2,6 +2,7 @@
 
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
+import { Lightbulb } from 'lucide-react'
 import type { LandlordPersona } from './step-landlords'
 
 export interface PropertyEntry {
@@ -98,9 +99,17 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
         onParsed={handleCsvParsed}
         templateFilename="properties_template.csv"
       />
-      <p className="text-xs text-muted-foreground">
-        <strong>Tip:</strong> Use exact landlord names from Step 1 in your CSV for auto-matching. Non-matching names will leave the landlord field empty for you to select manually.
-      </p>
+      <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-amber-900 dark:text-amber-100">
+            CSV auto-linking &amp; postcode requirement
+          </p>
+          <p className="text-amber-700 dark:text-amber-300 mt-1">
+            Use exact landlord names from Step 1 in your CSV &quot;landlord_name&quot; column for auto-matching. Non-matching names will be highlighted amber for manual selection. All addresses must include a valid UK postcode (e.g., &quot;M14 5RL&quot;).
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
