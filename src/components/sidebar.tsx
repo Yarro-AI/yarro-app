@@ -29,6 +29,7 @@ import {
   User,
   BookOpen,
   Settings,
+  Upload,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -50,6 +51,7 @@ const activityNavItems = [
 
 const dataManagementItems = [
   { href: '/guide', label: 'Product Guide', icon: BookOpen },
+  { href: '/guide/import', label: 'Import Data', icon: Upload },
 ]
 
 export function Sidebar() {

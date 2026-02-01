@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,8 +14,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Combobox } from '@/components/ui/combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
-import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
+import { Loader2, CheckCircle2, AlertTriangle, Plus } from 'lucide-react'
 
 interface Property {
   id: string
@@ -94,6 +105,13 @@ export function TicketForm({
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Add New modals
+  const [addTenantOpen, setAddTenantOpen] = useState(false)
+  const [addContractorOpen, setAddContractorOpen] = useState(false)
+  const [newTenant, setNewTenant] = useState({ full_name: '', phone: '', email: '' })
+  const [newContractor, setNewContractor] = useState({ contractor_name: '', contractor_phone: '', category: '' })
+  const [savingNew, setSavingNew] = useState(false)
 
   // Fetch properties, tenants, and contractors
   useEffect(() => {
@@ -181,6 +199,107 @@ export function TicketForm({
     setError(null)
   }, [])
 
+  // Add new tenant handler
+  const handleAddTenant = async () => {
+    const errors = validateTenant({ ...newTenant, role_tag: 'tenant', property_id: formData.property_id })
+    if (hasErrors(errors)) {
+      setError(Object.values(errors).filter(Boolean).join(', '))
+      return
+    }
+
+    setSavingNew(true)
+    try {
+      const normalized = normalizeRecord('tenants', {
+        full_name: newTenant.full_name,
+        phone: newTenant.phone,
+        email: newTenant.email || null,
+      })
+
+      const { data, error: insertError } = await supabase
+        .from('c1_tenants')
+        .insert({
+          ...normalized,
+          role_tag: 'tenant',
+          property_id: formData.property_id,
+          property_manager_id: propertyManager!.id,
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw insertError
+
+      // Add to local state and select it
+      const newT = {
+        id: data.id,
+        full_name: newTenant.full_name,
+        property_id: formData.property_id,
+      }
+      setTenants((prev) => [...prev, newT])
+      setFormData((prev) => ({ ...prev, tenant_id: data.id }))
+      setAddTenantOpen(false)
+      setNewTenant({ full_name: '', phone: '', email: '' })
+      toast.success('Tenant added')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add tenant')
+    } finally {
+      setSavingNew(false)
+    }
+  }
+
+  // Add new contractor handler
+  const handleAddContractor = async () => {
+    const errors = validateContractor({
+      ...newContractor,
+      contractor_email: null,
+      active: true,
+      property_ids: formData.property_id ? [formData.property_id] : [],
+    })
+    if (hasErrors(errors)) {
+      setError(Object.values(errors).filter(Boolean).join(', '))
+      return
+    }
+
+    setSavingNew(true)
+    try {
+      const normalized = normalizeRecord('contractors', {
+        contractor_name: newContractor.contractor_name,
+        contractor_phone: newContractor.contractor_phone,
+        contractor_email: null,
+      })
+
+      const { data, error: insertError } = await supabase
+        .from('c1_contractors')
+        .insert({
+          ...normalized,
+          category: newContractor.category,
+          active: true,
+          property_ids: formData.property_id ? [formData.property_id] : null,
+          property_manager_id: propertyManager!.id,
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw insertError
+
+      // Add to local state and select it
+      const newC: Contractor = {
+        id: data.id,
+        contractor_name: newContractor.contractor_name,
+        category: newContractor.category,
+        property_ids: formData.property_id ? [formData.property_id] : null,
+      }
+      setContractors((prev) => [...prev, newC])
+      setFormData((prev) => ({ ...prev, contractor_ids: [...prev.contractor_ids, data.id] }))
+      setAddContractorOpen(false)
+      setNewContractor({ contractor_name: '', contractor_phone: '', category: '' })
+      toast.success('Contractor added')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add contractor')
+    } finally {
+      setSavingNew(false)
+    }
+  }
+
   const handleSubmit = async () => {
     // Validate required fields
     if (!formData.property_id) {
@@ -239,45 +358,33 @@ export function TicketForm({
             <label className="text-sm font-medium">
               Property <span className="text-destructive">*</span>
             </label>
-            <Select
+            <Combobox
+              options={properties.map((p) => ({ value: p.id, label: p.address }))}
               value={formData.property_id}
               onValueChange={(v) => updateField('property_id', v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select property..." />
-              </SelectTrigger>
-              <SelectContent>
-                {properties.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.address}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Search properties..."
+              searchPlaceholder="Type to search..."
+              emptyText="No properties found"
+            />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               Tenant <span className="text-destructive">*</span>
             </label>
-            <Select
+            <Combobox
+              options={filteredTenants.map((t) => ({ value: t.id, label: t.full_name }))}
               value={formData.tenant_id}
               onValueChange={(v) => updateField('tenant_id', v)}
+              placeholder={formData.property_id ? 'Search tenants...' : 'Select property first'}
+              searchPlaceholder="Type to search..."
+              emptyText="No tenants found"
               disabled={!formData.property_id}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={formData.property_id ? 'Select tenant...' : 'Select property first'} />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredTenants.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onAddNew={formData.property_id ? () => setAddTenantOpen(true) : undefined}
+              addNewLabel="Add new tenant"
+            />
             {formData.property_id && filteredTenants.length === 0 && (
-              <p className="text-xs text-amber-600">No tenants at this property</p>
+              <p className="text-xs text-amber-600">No tenants at this property. Click to add one.</p>
             )}
           </div>
 
@@ -341,9 +448,21 @@ export function TicketForm({
         {/* Right column - Contractors */}
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Contractors <span className="text-destructive">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">
+                Contractors <span className="text-destructive">*</span>
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-primary"
+                onClick={() => setAddContractorOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add New
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Click to select. First contractor contacted immediately, others after 6h if no response.
             </p>
@@ -517,6 +636,125 @@ export function TicketForm({
           )}
         </Button>
       </div>
+
+      {/* Add Tenant Dialog */}
+      <Dialog open={addTenantOpen} onOpenChange={setAddTenantOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Tenant</DialogTitle>
+            <DialogDescription>
+              Add a new tenant to the selected property.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Full Name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={newTenant.full_name}
+                onChange={(e) => setNewTenant((prev) => ({ ...prev, full_name: e.target.value }))}
+                placeholder="John Smith"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Phone <span className="text-destructive">*</span>
+              </label>
+              <Input
+                type="tel"
+                value={newTenant.phone}
+                onChange={(e) => setNewTenant((prev) => ({ ...prev, phone: e.target.value }))}
+                placeholder="07700 900123"
+              />
+              <p className="text-xs text-muted-foreground">UK mobile format</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={newTenant.email}
+                onChange={(e) => setNewTenant((prev) => ({ ...prev, email: e.target.value }))}
+                placeholder="tenant@email.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddTenantOpen(false)} disabled={savingNew}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTenant} disabled={savingNew}>
+              {savingNew ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Add Tenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Contractor Dialog */}
+      <Dialog open={addContractorOpen} onOpenChange={setAddContractorOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Contractor</DialogTitle>
+            <DialogDescription>
+              Add a new contractor to your network.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={newContractor.contractor_name}
+                onChange={(e) => setNewContractor((prev) => ({ ...prev, contractor_name: e.target.value }))}
+                placeholder="ABC Plumbing"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Phone <span className="text-destructive">*</span>
+              </label>
+              <Input
+                type="tel"
+                value={newContractor.contractor_phone}
+                onChange={(e) => setNewContractor((prev) => ({ ...prev, contractor_phone: e.target.value }))}
+                placeholder="07700 900123"
+              />
+              <p className="text-xs text-muted-foreground">UK mobile format</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Category <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={newContractor.category}
+                onValueChange={(v) => setNewContractor((prev) => ({ ...prev, category: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddContractorOpen(false)} disabled={savingNew}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddContractor} disabled={savingNew}>
+              {savingNew ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Add Contractor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
   DetailSection,
   DetailDivider,
 } from '@/components/detail-drawer'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket, CheckCircle2 } from 'lucide-react'
+import { Building2, Wrench, MessageSquare, Mail, Users, Plus, Ticket, CheckCircle2, AlertTriangle } from 'lucide-react'
 
 interface Ticket {
   id: string
@@ -85,12 +86,14 @@ export default function TicketsPage() {
   const [selectedTicketBasic, setSelectedTicketBasic] = useState<Ticket | null>(null)
   const [hasMessage, setHasMessage] = useState(false)
   const [hasCompletion, setHasCompletion] = useState(false)
+  const [previouslyApprovedContractor, setPreviouslyApprovedContractor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all')
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -158,7 +161,7 @@ export default function TicketsPage() {
   const fetchTicketDetail = async (ticketId: string) => {
     const [ticketRes, messageRes, completionRes] = await Promise.all([
       supabase.rpc('c1_ticket_context', { ticket_uuid: ticketId }),
-      supabase.from('c1_messages').select('ticket_id').eq('ticket_id', ticketId).single(),
+      supabase.from('c1_messages').select('ticket_id, contractors').eq('ticket_id', ticketId).single(),
       supabase.from('c1_completions').select('id').eq('ticket_id', ticketId).single(),
     ])
 
@@ -167,6 +170,15 @@ export default function TicketsPage() {
     }
     setHasMessage(!!messageRes.data)
     setHasCompletion(!!completionRes.data)
+
+    // Check for previously approved contractor (double-quote warning)
+    if (messageRes.data?.contractors) {
+      const contractors = messageRes.data.contractors as Array<{ name?: string; manager_decision?: string }>
+      const approved = contractors.find((c) => c.manager_decision === 'approved')
+      setPreviouslyApprovedContractor(approved?.name || null)
+    } else {
+      setPreviouslyApprovedContractor(null)
+    }
   }
 
   const handleRowClick = (ticket: Ticket) => {
@@ -235,6 +247,35 @@ export default function TicketsPage() {
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
     fetchTickets()
+  }
+
+  const handleDelete = async () => {
+    if (!selectedTicketBasic) return
+
+    // Delete associated messages first (if any)
+    await supabase
+      .from('c1_messages')
+      .delete()
+      .eq('ticket_id', selectedTicketBasic.id)
+
+    // Delete completions (if any)
+    await supabase
+      .from('c1_completions')
+      .delete()
+      .eq('ticket_id', selectedTicketBasic.id)
+
+    // Delete the ticket
+    const { error } = await supabase
+      .from('c1_tickets')
+      .delete()
+      .eq('id', selectedTicketBasic.id)
+
+    if (error) throw error
+
+    toast.success('Ticket deleted')
+    setDeleteDialogOpen(false)
+    handleCloseDrawer()
+    await fetchTickets()
   }
 
   const formatDate = (date: string | null) => {
@@ -386,6 +427,8 @@ export default function TicketsPage() {
         onClose={handleCloseDrawer}
         title="Ticket Details"
         subtitle={selectedTicket?.property_address}
+        deletable={true}
+        onDelete={() => setDeleteDialogOpen(true)}
       >
         {selectedTicket && (
           <div className="space-y-4">
@@ -401,6 +444,22 @@ export default function TicketsPage() {
                 <StatusBadge status="handoff" size="md" />
               )}
             </div>
+
+            {/* Double-quote warning */}
+            {previouslyApprovedContractor && selectedTicketBasic?.contractor_id && (
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800">Previous contractor already approved</p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      <span className="font-medium">{previouslyApprovedContractor}</span> was previously approved for this ticket.
+                      Make sure to cancel the previous arrangement before proceeding with a new contractor.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Handoff completion button */}
             {selectedTicket.handoff && selectedTicketBasic?.status === 'open' && (
@@ -577,6 +636,16 @@ export default function TicketsPage() {
           </DialogBody>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Ticket"
+        description="Are you sure you want to delete this ticket? This will also remove any associated messages and completion records. This action cannot be undone."
+        itemName={selectedTicketBasic?.issue_description?.slice(0, 50) || undefined}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

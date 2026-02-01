@@ -12,6 +12,7 @@ import {
   DetailGrid,
   DetailDivider,
 } from '@/components/detail-drawer'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -92,6 +93,7 @@ export default function PropertiesPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -276,6 +278,43 @@ export default function PropertiesPage() {
     cancelCreating()
     setValidationErrors({})
     setDrawerOpen(false)
+  }
+
+  const handleDelete = async () => {
+    if (!selectedProperty?.property_id) return
+
+    // Check for tenants first
+    const { count: tenantCount } = await supabase
+      .from('c1_tenants')
+      .select('id', { count: 'exact', head: true })
+      .eq('property_id', selectedProperty.property_id)
+
+    if (tenantCount && tenantCount > 0) {
+      throw new Error(`Cannot delete property with ${tenantCount} tenant(s). Remove or reassign tenants first.`)
+    }
+
+    // Check for open tickets
+    const { count: ticketCount } = await supabase
+      .from('c1_tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('property_id', selectedProperty.property_id)
+      .neq('status', 'closed')
+
+    if (ticketCount && ticketCount > 0) {
+      throw new Error(`Cannot delete property with ${ticketCount} open ticket(s). Close tickets first.`)
+    }
+
+    const { error } = await supabase
+      .from('c1_properties')
+      .delete()
+      .eq('id', selectedProperty.property_id)
+
+    if (error) throw error
+
+    toast.success('Property deleted')
+    setDeleteDialogOpen(false)
+    handleCloseDrawer()
+    await fetchProperties()
   }
 
   const formatCurrency = (amount: number | null) => {
@@ -494,6 +533,8 @@ export default function PropertiesPage() {
           onEdit={startEditing}
           onSave={saveChanges}
           onCancel={cancelEditing}
+          deletable={true}
+          onDelete={() => setDeleteDialogOpen(true)}
         >
           {isEditing && editedData ? (
             <div className="space-y-4">
@@ -659,6 +700,16 @@ export default function PropertiesPage() {
           </div>
         </DetailDrawer>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Property"
+        description="Are you sure you want to delete this property? This action cannot be undone. Closed tickets will remain in history."
+        itemName={selectedProperty?.address || undefined}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

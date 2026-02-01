@@ -8,7 +8,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { X, Pencil, Save, Loader2 } from 'lucide-react'
+import { X, Pencil, Save, Loader2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type DetailDrawerProps = {
@@ -25,6 +25,10 @@ type DetailDrawerProps = {
   onEdit?: () => void
   onSave?: () => void
   onCancel?: () => void
+  // Delete props
+  deletable?: boolean
+  onDelete?: () => void
+  deleteLabel?: string
 }
 
 const widthClasses = {
@@ -46,6 +50,9 @@ export function DetailDrawer({
   onEdit,
   onSave,
   onCancel,
+  deletable = false,
+  onDelete,
+  deleteLabel = 'Delete',
 }: DetailDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -64,6 +71,17 @@ export function DetailDrawer({
               )}
             </div>
             <div className="flex items-center gap-2 -mr-2">
+              {deletable && !isEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  {deleteLabel}
+                </Button>
+              )}
               {editable && !isEditing && (
                 <Button
                   variant="ghost"

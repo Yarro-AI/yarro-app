@@ -12,6 +12,7 @@ import {
   DetailGrid,
   DetailDivider,
 } from '@/components/detail-drawer'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -81,6 +82,7 @@ export default function ContractorsPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -295,6 +297,34 @@ export default function ContractorsPage() {
     cancelCreating()
     setValidationErrors({})
     setDrawerOpen(false)
+  }
+
+  const handleDelete = async () => {
+    if (!selectedContractor) return
+
+    // Check for open tickets assigned to this contractor
+    const { count } = await supabase
+      .from('c1_tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('contractor_id', selectedContractor.id)
+      .neq('status', 'closed')
+
+    if (count && count > 0) {
+      throw new Error(`Cannot deactivate contractor with ${count} open ticket(s). Close or reassign tickets first.`)
+    }
+
+    // Soft delete - set active = false
+    const { error } = await supabase
+      .from('c1_contractors')
+      .update({ active: false })
+      .eq('id', selectedContractor.id)
+
+    if (error) throw error
+
+    toast.success('Contractor deactivated')
+    setDeleteDialogOpen(false)
+    handleCloseDrawer()
+    await fetchContractors()
   }
 
   const columns: Column<Contractor>[] = [
@@ -557,6 +587,9 @@ export default function ContractorsPage() {
           onEdit={startEditing}
           onSave={saveChanges}
           onCancel={cancelEditing}
+          deletable={true}
+          onDelete={() => setDeleteDialogOpen(true)}
+          deleteLabel="Deactivate"
         >
           {isEditing && editedData ? (
             <div className="space-y-4">
@@ -679,6 +712,16 @@ export default function ContractorsPage() {
           </div>
         </DetailDrawer>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Deactivate Contractor"
+        description="Are you sure you want to deactivate this contractor? They will no longer appear in selection lists but historical data will be preserved."
+        itemName={selectedContractor?.contractor_name || undefined}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

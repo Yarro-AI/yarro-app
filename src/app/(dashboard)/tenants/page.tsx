@@ -12,6 +12,7 @@ import {
   DetailGrid,
   DetailDivider,
 } from '@/components/detail-drawer'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -78,6 +79,7 @@ export default function TenantsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [properties, setProperties] = useState<PropertyOption[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -273,6 +275,33 @@ export default function TenantsPage() {
     cancelCreating()
     setValidationErrors({})
     setDrawerOpen(false)
+  }
+
+  const handleDelete = async () => {
+    if (!selectedTenant) return
+
+    // Check for open tickets first
+    const { count } = await supabase
+      .from('c1_tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', selectedTenant.id)
+      .neq('status', 'closed')
+
+    if (count && count > 0) {
+      throw new Error(`Cannot delete tenant with ${count} open ticket(s). Close or reassign tickets first.`)
+    }
+
+    const { error } = await supabase
+      .from('c1_tenants')
+      .delete()
+      .eq('id', selectedTenant.id)
+
+    if (error) throw error
+
+    toast.success('Tenant deleted')
+    setDeleteDialogOpen(false)
+    handleCloseDrawer()
+    await fetchTenants()
   }
 
   const columns: Column<Tenant>[] = [
@@ -471,6 +500,8 @@ export default function TenantsPage() {
           onEdit={startEditing}
           onSave={saveChanges}
           onCancel={cancelEditing}
+          deletable={true}
+          onDelete={() => setDeleteDialogOpen(true)}
         >
           {isEditing && editedData ? (
             <div className="space-y-4">
@@ -576,6 +607,16 @@ export default function TenantsPage() {
           </div>
         </DetailDrawer>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Tenant"
+        description="Are you sure you want to delete this tenant? This action cannot be undone. Any closed tickets will remain in history."
+        itemName={selectedTenant?.full_name || undefined}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }
