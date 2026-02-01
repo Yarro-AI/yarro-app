@@ -194,6 +194,16 @@ export function OnboardingWizard() {
         // Insert properties
         const validProps = state.properties.filter((p) => p.address.trim())
 
+        // Validate all properties have landlords selected (if landlords exist)
+        if (state.landlords.some((l) => l.name.trim())) {
+          const propsWithoutLandlord = validProps.filter((p) => !p.landlordTempId)
+          if (propsWithoutLandlord.length > 0) {
+            setError(`${propsWithoutLandlord.length} ${propsWithoutLandlord.length === 1 ? 'property needs' : 'properties need'} a landlord selected (highlighted in amber)`)
+            setSaving(false)
+            return
+          }
+        }
+
         // Validate all properties have valid UK postcodes before inserting
         for (const prop of validProps) {
           if (!hasValidUKPostcode(prop.address)) {

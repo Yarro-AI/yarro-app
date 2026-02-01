@@ -116,7 +116,7 @@ export function EditableTable({ columns, rows, onChange, minRows = 1, highlightE
           </thead>
           <tbody>
             {rows.map((row, rowIdx) => (
-              <tr key={rowIdx} className={`border-b last:border-b-0 ${rowNeedsAttention(row) ? 'bg-muted/30' : ''}`}>
+              <tr key={rowIdx} className={`border-b last:border-b-0 ${rowNeedsAttention(row) ? 'bg-amber-50 dark:bg-amber-950/30' : ''}`}>
                 {columns.map((col, colIdx) => (
                   <td key={col.key} className="px-2 py-1.5">
                     {col.type === 'combobox' && col.options ? (
