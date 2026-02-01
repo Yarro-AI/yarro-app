@@ -180,3 +180,24 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #2d4a6f;
 }
+
+/* Fix browser autofill styling - prevent grey/yellow backgrounds */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #101011 !important;
+  box-shadow: 0 0 0 1000px white inset !important;
+  caret-color: #101011 !important;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0f2136 inset !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  box-shadow: 0 0 0 1000px #0f2136 inset !important;
+  caret-color: #f1f5f9 !important;
+}

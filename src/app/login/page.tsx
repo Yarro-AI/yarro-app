@@ -138,7 +138,7 @@ export default function LoginPage() {
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af]"
+                    className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af] autofill:!bg-white autofill:!text-[#101011] autofill:shadow-[inset_0_0_0px_1000px_white]"
                     required
                   />
                 </div>
@@ -162,7 +162,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af]"
+                    className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af] autofill:!bg-white autofill:!text-[#101011] autofill:shadow-[inset_0_0_0px_1000px_white]"
                     required
                   />
                 </div>
@@ -221,7 +221,7 @@ export default function LoginPage() {
                       placeholder="you@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af]"
+                      className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af] autofill:!bg-white autofill:!text-[#101011] autofill:shadow-[inset_0_0_0px_1000px_white]"
                       required
                     />
                   </div>
