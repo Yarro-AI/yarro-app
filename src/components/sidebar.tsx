@@ -179,7 +179,8 @@ export function Sidebar() {
             Resources
           </p>
           {dataManagementItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            // Use exact match only - prevents /guide highlighting when on /guide/import
+            const isActive = pathname === item.href
             const Icon = item.icon
 
             return (

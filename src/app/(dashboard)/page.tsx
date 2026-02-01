@@ -383,13 +383,13 @@ export default function DashboardPage() {
             <DateFilter value={dateRange} onChange={setDateRange} />
           </div>
 
-          {/* Main Two-Column Layout with true 50/50 vertical split */}
+          {/* Main Two-Column Layout - Midline at ~38% from top */}
           <div className="flex-1 min-h-0 grid grid-cols-2 gap-4">
             {/* LEFT COLUMN */}
             <div className="flex flex-col gap-3 min-h-0">
-              {/* TOP HALF: By Status + By Category */}
-              <div className="flex flex-col gap-3 h-1/2">
-                {/* By Status */}
+              {/* TOP SECTION (38%): By Status + By Category */}
+              <div className="flex flex-col gap-3" style={{ height: '38%' }}>
+                {/* By Status - compact */}
                 <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -430,24 +430,24 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* By Category (fills remaining top half) */}
-                <div className="bg-card rounded-xl border border-border p-3 flex-1 min-h-0 flex flex-col">
+                {/* By Category - fills remaining top section */}
+                <div className="bg-card rounded-xl border border-border p-3 flex-1 min-h-0 flex flex-col overflow-hidden">
                   <h3 className="text-sm font-semibold text-card-foreground mb-2 flex-shrink-0">By Category</h3>
                   {categoryChartData.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2 flex-1 overflow-y-auto">
-                      {categoryChartData.slice(0, 8).map((item) => (
+                    <div className="grid grid-cols-2 gap-1.5 flex-1 overflow-y-auto">
+                      {categoryChartData.slice(0, 6).map((item) => (
                         <div
                           key={item.fullName}
-                          className="flex items-center gap-2 p-2 rounded-lg"
+                          className="flex items-center gap-2 p-1.5 rounded-lg"
                           style={{ backgroundColor: `${item.color}15` }}
                         >
                           <div
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            className="w-2 h-2 rounded-full flex-shrink-0"
                             style={{ backgroundColor: item.color }}
                           />
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 flex items-center justify-between">
                             <p className="text-xs text-muted-foreground truncate">{item.name}</p>
-                            <p className="text-sm font-bold text-card-foreground">{item.value}</p>
+                            <p className="text-xs font-bold text-card-foreground ml-1">{item.value}</p>
                           </div>
                         </div>
                       ))}
@@ -460,8 +460,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* BOTTOM HALF: Recent Tickets */}
-              <div className="bg-card rounded-xl border border-border flex flex-col h-1/2 min-h-0">
+              {/* BOTTOM SECTION (62%): Recent Tickets */}
+              <div className="bg-card rounded-xl border border-border flex flex-col min-h-0" style={{ height: '62%' }}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border flex-shrink-0">
                   <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
                   <Link href="/tickets">
@@ -508,35 +508,35 @@ export default function DashboardPage() {
 
             {/* RIGHT COLUMN */}
             <div className="flex flex-col gap-3 min-h-0">
-              {/* TOP HALF: Awaiting Action (includes Handoff) */}
+              {/* TOP SECTION (38%): Awaiting Action - compact, no scroll */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
                 const hasHandoffs = totalHandoffs > 0
                 return (
-                  <div className="bg-card rounded-xl border border-border flex flex-col h-1/2 min-h-0">
-                    <div className="px-4 py-2.5 border-b border-border flex-shrink-0">
+                  <div className="bg-card rounded-xl border border-border flex flex-col" style={{ height: '38%' }}>
+                    <div className="px-4 py-2 border-b border-border flex-shrink-0">
                       <h3 className="text-sm font-semibold text-card-foreground">Awaiting Action</h3>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    <div className="flex-1 p-2 space-y-1.5 overflow-hidden">
                       {/* Handoff Review row */}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => hasHandoffs ? showAwaitingTickets('handoff') : undefined}
-                            className={`w-full flex items-center justify-between p-2.5 rounded-lg transition-colors text-left ${
+                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors text-left ${
                               hasHandoffs
                                 ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40'
                                 : 'bg-muted/30 hover:bg-muted/50'
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <AlertTriangle className={`h-4 w-4 ${hasHandoffs ? 'text-red-500' : 'text-muted-foreground'}`} />
+                              <AlertTriangle className={`h-3.5 w-3.5 ${hasHandoffs ? 'text-red-500' : 'text-muted-foreground'}`} />
                               <span className={`text-sm ${hasHandoffs ? 'text-red-700 dark:text-red-300 font-medium' : 'text-card-foreground'}`}>
                                 Handoff Review
                               </span>
                             </div>
-                            <span className={`text-base font-bold ${hasHandoffs ? 'text-red-500' : 'text-card-foreground'}`}>
+                            <span className={`text-sm font-bold ${hasHandoffs ? 'text-red-500' : 'text-card-foreground'}`}>
                               {totalHandoffs}
                             </span>
                           </button>
@@ -551,13 +551,13 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => showAwaitingTickets('contractor')}
-                            className="w-full flex items-center justify-between p-2.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                            className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="text-sm text-card-foreground">Awaiting Contractor</span>
                             </div>
-                            <span className="text-base font-bold text-card-foreground">{stats?.awaitingContractor || 0}</span>
+                            <span className="text-sm font-bold text-card-foreground">{stats?.awaitingContractor || 0}</span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[200px]">
@@ -570,13 +570,13 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => showAwaitingTickets('manager')}
-                            className="w-full flex items-center justify-between p-2.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                            className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
                             <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4 text-muted-foreground" />
+                              <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="text-sm text-card-foreground">Awaiting Manager</span>
                             </div>
-                            <span className="text-base font-bold text-card-foreground">{stats?.awaitingManager || 0}</span>
+                            <span className="text-sm font-bold text-card-foreground">{stats?.awaitingManager || 0}</span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[200px]">
@@ -589,13 +589,13 @@ export default function DashboardPage() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => showAwaitingTickets('landlord')}
-                            className="w-full flex items-center justify-between p-2.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                            className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
                             <div className="flex items-center gap-2">
-                              <Hourglass className="h-4 w-4 text-muted-foreground" />
+                              <Hourglass className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="text-sm text-card-foreground">Awaiting Landlord</span>
                             </div>
-                            <span className="text-base font-bold text-card-foreground">{stats?.awaitingLandlord || 0}</span>
+                            <span className="text-sm font-bold text-card-foreground">{stats?.awaitingLandlord || 0}</span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[200px]">
@@ -607,73 +607,123 @@ export default function DashboardPage() {
                 )
               })()}
 
-              {/* BOTTOM HALF: Scheduled + Declined side by side */}
-              <div className="grid grid-cols-2 gap-3 h-1/2 min-h-0">
-                {/* Scheduled */}
-                <div className="bg-card rounded-xl border border-blue-200 dark:border-blue-900 flex flex-col min-h-0">
-                  <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CalendarClock className="h-4 w-4 text-blue-500" />
-                      <h3 className="text-sm font-semibold text-card-foreground">Scheduled</h3>
+              {/* BOTTOM SECTION (62%): Scheduled/Declined + Quick Actions */}
+              <div className="flex flex-col gap-3 min-h-0" style={{ height: '62%' }}>
+                {/* Scheduled + Declined row */}
+                <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
+                  {/* Scheduled */}
+                  <div className="bg-card rounded-xl border border-blue-200 dark:border-blue-900 flex flex-col min-h-0">
+                    <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4 text-blue-500" />
+                        <h3 className="text-sm font-semibold text-card-foreground">Scheduled</h3>
+                      </div>
+                      <span className="text-lg font-bold text-blue-500">{stats?.scheduledJobs || 0}</span>
                     </div>
-                    <span className="text-lg font-bold text-blue-500">{stats?.scheduledJobs || 0}</span>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                      {(() => {
+                        const scheduledTickets = allTickets.filter((t) => {
+                          if (t.status?.toLowerCase() === 'closed') return false
+                          const jobStage = (t.job_stage || '').toLowerCase()
+                          return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
+                        })
+                        return scheduledTickets.length > 0 ? (
+                          scheduledTickets.slice(0, 6).map((ticket) => (
+                            <Link
+                              key={ticket.id}
+                              href={`/tickets?id=${ticket.id}`}
+                              className="block p-1.5 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors"
+                            >
+                              <p className="text-xs font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                              <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+                            </Link>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center py-4">No scheduled jobs</p>
+                        )
+                      })()}
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {(() => {
-                      const scheduledTickets = allTickets.filter((t) => {
-                        if (t.status?.toLowerCase() === 'closed') return false
-                        const jobStage = (t.job_stage || '').toLowerCase()
-                        return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
-                      })
-                      return scheduledTickets.length > 0 ? (
-                        scheduledTickets.slice(0, 6).map((ticket) => (
-                          <Link
-                            key={ticket.id}
-                            href={`/tickets?id=${ticket.id}`}
-                            className="block p-1.5 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors"
-                          >
-                            <p className="text-xs font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                            <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
-                          </Link>
-                        ))
-                      ) : (
-                        <p className="text-xs text-muted-foreground text-center py-4">No scheduled jobs</p>
-                      )
-                    })()}
+
+                  {/* Declined */}
+                  <div className={`bg-card rounded-xl border flex flex-col min-h-0 ${stats?.landlordDeclined ? 'border-orange-300 dark:border-orange-800' : 'border-border'}`}>
+                    <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <XCircle className={`h-4 w-4 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                        <h3 className="text-sm font-semibold text-card-foreground">Declined</h3>
+                      </div>
+                      <span className={`text-lg font-bold ${stats?.landlordDeclined ? 'text-orange-500' : 'text-card-foreground'}`}>{stats?.landlordDeclined || 0}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                      {(() => {
+                        const declinedTickets = allTickets.filter(() => {
+                          // Placeholder - declined needs message data
+                          return false
+                        })
+                        return declinedTickets.length > 0 ? (
+                          declinedTickets.slice(0, 6).map((ticket) => (
+                            <Link
+                              key={ticket.id}
+                              href={`/tickets?id=${ticket.id}`}
+                              className="block p-1.5 bg-orange-50/50 dark:bg-orange-950/20 rounded-lg hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-colors"
+                            >
+                              <p className="text-xs font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
+                              <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+                            </Link>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center py-4">No declined quotes</p>
+                        )
+                      })()}
+                    </div>
                   </div>
                 </div>
 
-                {/* Declined */}
-                <div className={`bg-card rounded-xl border flex flex-col min-h-0 ${stats?.landlordDeclined ? 'border-orange-300 dark:border-orange-800' : 'border-border'}`}>
-                  <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <XCircle className={`h-4 w-4 ${stats?.landlordDeclined ? 'text-orange-500' : 'text-muted-foreground'}`} />
-                      <h3 className="text-sm font-semibold text-card-foreground">Declined</h3>
+                {/* Quick Actions row */}
+                <div className="grid grid-cols-3 gap-3 flex-shrink-0">
+                  {/* Create Manual Ticket */}
+                  <Link
+                    href="/tickets?create=true"
+                    className="bg-card rounded-xl border border-primary/30 p-3 flex items-center gap-3 hover:bg-primary/5 hover:border-primary/50 transition-colors group"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Plus className="h-5 w-5 text-primary" />
                     </div>
-                    <span className={`text-lg font-bold ${stats?.landlordDeclined ? 'text-orange-500' : 'text-card-foreground'}`}>{stats?.landlordDeclined || 0}</span>
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">Create Ticket</p>
+                      <p className="text-xs text-muted-foreground">Manual entry</p>
+                    </div>
+                  </Link>
+
+                  {/* Completion Rate */}
+                  <div className="bg-card rounded-xl border border-border p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Completion Rate</span>
+                      <span className="text-lg font-bold text-emerald-500">
+                        {stats && stats.totalTickets > 0 ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '—'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500"
+                        style={{ width: stats ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '0%' }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {(() => {
-                      const declinedTickets = allTickets.filter(() => {
-                        // Placeholder - declined needs message data
-                        return false
-                      })
-                      return declinedTickets.length > 0 ? (
-                        declinedTickets.slice(0, 6).map((ticket) => (
-                          <Link
-                            key={ticket.id}
-                            href={`/tickets?id=${ticket.id}`}
-                            className="block p-1.5 bg-orange-50/50 dark:bg-orange-950/20 rounded-lg hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-colors"
-                          >
-                            <p className="text-xs font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                            <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
-                          </Link>
-                        ))
-                      ) : (
-                        <p className="text-xs text-muted-foreground text-center py-4">No declined quotes</p>
-                      )
-                    })()}
-                  </div>
+
+                  {/* Active Conversations */}
+                  <Link
+                    href="/conversations"
+                    className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-cyan-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">Conversations</p>
+                      <p className="text-xs text-muted-foreground">View active chats</p>
+                    </div>
+                  </Link>
                 </div>
               </div>
             </div>
