@@ -33,9 +33,9 @@ export function StepLandlords({ landlords, onChange }: StepLandlordsProps) {
   const handleRowsChange = (newRows: Record<string, string>[]) => {
     const updated: LandlordPersona[] = newRows.map((row, i) => ({
       tempId: landlords[i]?.tempId || crypto.randomUUID(),
-      name: row.name || '',
-      email: row.email || '',
-      phone: row.phone || '',
+      name: (row.name || '').trim(),
+      email: (row.email || '').trim(),
+      phone: (row.phone || '').trim(),
     }))
     onChange(updated)
   }
@@ -43,11 +43,11 @@ export function StepLandlords({ landlords, onChange }: StepLandlordsProps) {
   const handleCsvParsed = (csvRows: Record<string, string>[]) => {
     const newLandlords: LandlordPersona[] = csvRows.map((row) => ({
       tempId: crypto.randomUUID(),
-      name: row.name || '',
-      email: row.email || '',
-      phone: row.phone || '',
+      name: (row.name || '').trim(),
+      email: (row.email || '').trim(),
+      phone: (row.phone || '').trim(),
     }))
-    onChange([...landlords.filter((l) => l.name), ...newLandlords])
+    onChange([...landlords.filter((l) => l.name.trim()), ...newLandlords])
   }
 
   return (

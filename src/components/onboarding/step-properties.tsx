@@ -65,7 +65,7 @@ export function StepProperties({ properties, landlords, onChange }: StepProperti
       let landlordTempId = ''
       if (row.landlord_name) {
         const match = landlords.find(
-          (l) => l.name.toLowerCase() === row.landlord_name.toLowerCase()
+          (l) => l.name.trim().toLowerCase() === row.landlord_name.trim().toLowerCase()
         )
         if (match) landlordTempId = match.tempId
       }
