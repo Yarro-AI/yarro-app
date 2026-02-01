@@ -3,24 +3,18 @@
 import { EditableTable, ColumnDef } from './editable-table'
 import { CsvUpload } from './csv-upload'
 import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
-import { X } from 'lucide-react'
+import { Info } from 'lucide-react'
 
 export interface ContractorEntry {
   contractor_name: string
   category: string
   contractor_phone: string
   contractor_email: string
-  property_ids: string[]
-}
-
-interface PropertyOption {
-  id: string
-  address: string
+  property_ids: string[] | null // null = all properties
 }
 
 interface StepContractorsProps {
   contractors: ContractorEntry[]
-  properties: PropertyOption[]
   onChange: (contractors: ContractorEntry[]) => void
 }
 
@@ -31,7 +25,7 @@ const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
   label: c,
 }))
 
-export function StepContractors({ contractors, properties, onChange }: StepContractorsProps) {
+export function StepContractors({ contractors, onChange }: StepContractorsProps) {
   const columns: ColumnDef[] = [
     { key: 'contractor_name', label: 'Name', required: true, placeholder: 'QuickFix Plumbing Ltd' },
     { key: 'category', label: 'Category', required: true, type: 'select', options: CATEGORY_OPTIONS },
@@ -47,12 +41,12 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
   }))
 
   const handleRowsChange = (newRows: Record<string, string>[]) => {
-    const updated: ContractorEntry[] = newRows.map((row, i) => ({
+    const updated: ContractorEntry[] = newRows.map((row) => ({
       contractor_name: row.contractor_name || '',
       category: row.category || '',
       contractor_phone: row.contractor_phone || '',
       contractor_email: row.contractor_email || '',
-      property_ids: contractors[i]?.property_ids || [],
+      property_ids: null, // null = available for all properties
     }))
     onChange(updated)
   }
@@ -73,30 +67,12 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         category,
         contractor_phone: row.contractor_phone || '',
         contractor_email: row.contractor_email || '',
-        property_ids: [],
+        property_ids: null, // null = available for all properties
       }
     })
     onChange([...contractors.filter((c) => c.contractor_name), ...newContractors])
   }
 
-  const toggleProperty = (contractorIdx: number, propertyId: string) => {
-    const updated = [...contractors]
-    const current = updated[contractorIdx].property_ids
-    if (current.includes(propertyId)) {
-      updated[contractorIdx] = {
-        ...updated[contractorIdx],
-        property_ids: current.filter((id) => id !== propertyId),
-      }
-    } else {
-      updated[contractorIdx] = {
-        ...updated[contractorIdx],
-        property_ids: [...current, propertyId],
-      }
-    }
-    onChange(updated)
-  }
-
-  const namedContractors = contractors.filter((c) => c.contractor_name)
 
   return (
     <div className="space-y-4">
@@ -118,43 +94,18 @@ export function StepContractors({ contractors, properties, onChange }: StepContr
         <strong>Tip:</strong> Use exact category names in your CSV (e.g. &quot;Plumber&quot;, &quot;Electrician&quot;). Non-matching categories will need manual selection.
       </p>
 
-      {/* Property Assignment */}
-      {namedContractors.length > 0 && properties.length > 0 && (
-        <div className="space-y-3 pt-4 border-t">
-          <div>
-            <h3 className="text-sm font-medium">Assign Properties</h3>
-            <p className="text-xs text-muted-foreground">Select which properties each contractor serves.</p>
-          </div>
-          {namedContractors.map((contractor, origIdx) => {
-            const realIdx = contractors.indexOf(contractor)
-            return (
-              <div key={realIdx} className="p-3 bg-muted/50 rounded-lg space-y-2">
-                <p className="text-sm font-medium">{contractor.contractor_name}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {properties.map((p) => {
-                    const selected = contractor.property_ids.includes(p.id)
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => toggleProperty(realIdx, p.id)}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                          selected
-                            ? 'bg-primary/10 text-primary border border-primary/30'
-                            : 'bg-background border border-border text-muted-foreground hover:border-primary/30'
-                        }`}
-                      >
-                        {selected && <X className="h-3 w-3" />}
-                        <span className="truncate max-w-[120px]">{p.address}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+      {/* Info about property assignment */}
+      <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-blue-900 dark:text-blue-100">
+            Contractors are available for all your properties by default
+          </p>
+          <p className="text-blue-700 dark:text-blue-300 mt-1">
+            Add your main contractors here. You can restrict specific contractors to certain properties later from the Contractors page, or add additional contractors as needed.
+          </p>
         </div>
-      )}
+      </div>
     </div>
   )
 }

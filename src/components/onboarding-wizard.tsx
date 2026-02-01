@@ -52,7 +52,7 @@ export function OnboardingWizard() {
     landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
     properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
     tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
-    contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', property_ids: [] }],
+    contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', property_ids: null }],
     batchId: crypto.randomUUID(),
     insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
     existingProperties: [],
@@ -491,7 +491,7 @@ export function OnboardingWizard() {
             category: contractor.category,
             contractor_phone: contractor.contractor_phone,
             contractor_email: contractor.contractor_email || null,
-            property_ids: contractor.property_ids.length > 0 ? contractor.property_ids : null,
+            property_ids: contractor.property_ids && contractor.property_ids.length > 0 ? contractor.property_ids : null,
             active: true,
             property_manager_id: propertyManager.id,
             _import_batch_id: state.batchId,
@@ -541,7 +541,7 @@ export function OnboardingWizard() {
       landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
       properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '' }],
       tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
-      contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', property_ids: [] }],
+      contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', property_ids: null }],
       batchId: crypto.randomUUID(),
       insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
       existingProperties: state.existingProperties,
@@ -597,7 +597,6 @@ export function OnboardingWizard() {
         {state.step === 'contractors' && (
           <StepContractors
             contractors={state.contractors}
-            properties={allPropertyOptions}
             onChange={(contractors) => setState((prev) => ({ ...prev, contractors }))}
           />
         )}
