@@ -58,8 +58,8 @@ export default function ContractorGuidePage() {
 
               {/* Two column grid - all 4 steps on left, tips on right */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-                {/* Left column - 4 steps filling height */}
-                <div className="flex flex-col justify-between h-full">
+                {/* Left column - 4 steps with fixed spacing */}
+                <div className="flex flex-col gap-8">
                   {/* Step 1 */}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">

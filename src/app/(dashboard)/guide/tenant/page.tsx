@@ -2,7 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
-import { MessageSquare, ClipboardList, Bell, CheckCircle } from 'lucide-react'
+import { MessageSquare, ClipboardList, Bell } from 'lucide-react'
 
 const TENANT_GUIDE_TEXT = `HOW TO REPORT MAINTENANCE ISSUES
 
@@ -21,10 +21,6 @@ Our assistant will ask for:
 You'll automatically hear when:
 - A contractor is assigned
 - A visit is scheduled
-
-4. JOB COMPLETE
-You'll get a confirmation when the work is done.
-Let us know if anything needs a follow-up.
 
 That's it! Just follow the conversation, send one message at a time, and wait for replies. We handle the rest.`
 
@@ -55,8 +51,8 @@ export default function TenantGuidePage() {
 
               {/* Two column grid - steps on left, summary on right */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-                {/* Left column - 4 steps filling height */}
-                <div className="flex flex-col justify-between h-full">
+                {/* Left column - 3 steps with fixed spacing */}
+                <div className="flex flex-col gap-8">
                   {/* Step 1 */}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -92,8 +88,8 @@ export default function TenantGuidePage() {
 
                   {/* Step 3 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                      <Bell className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <Bell className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">3. Wait for Updates</h3>
@@ -102,19 +98,6 @@ export default function TenantGuidePage() {
                         <li>A contractor is assigned</li>
                         <li>A visit is scheduled</li>
                       </ul>
-                    </div>
-                  </div>
-
-                  {/* Step 4 */}
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-card-foreground">4. Job Complete</h3>
-                      <p className="text-sm text-muted-foreground mt-1.5">
-                        You'll get a confirmation when the work is done. Let us know if anything needs a follow-up.
-                      </p>
                     </div>
                   </div>
                 </div>

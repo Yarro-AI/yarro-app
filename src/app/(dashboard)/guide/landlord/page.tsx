@@ -2,7 +2,7 @@
 
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
-import { Bell, ThumbsUp, CheckCircle, Settings } from 'lucide-react'
+import { Bell, ThumbsUp, Settings } from 'lucide-react'
 
 const LANDLORD_GUIDE_TEXT = `HOW YARRO WORKS FOR LANDLORDS
 
@@ -20,12 +20,7 @@ If the quoted cost is ABOVE your auto-approve limit:
 
 If the quote is BELOW your limit, work proceeds automatically.
 
-3. JOB COMPLETE
-You'll receive confirmation when work is finished, including:
-- Final cost
-- Completion photos
-
-4. THAT'S IT!
+3. THAT'S IT!
 Your property manager handles everything else.
 You only get involved for costs above your set limit.
 
@@ -59,8 +54,8 @@ export default function LandlordGuidePage() {
 
               {/* Two column grid - steps on left, info on right */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-                {/* Left column - 4 steps filling height */}
-                <div className="flex flex-col justify-between h-full">
+                {/* Left column - 3 steps with fixed spacing */}
+                <div className="flex flex-col gap-8">
                   {/* Step 1 */}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -98,25 +93,10 @@ export default function LandlordGuidePage() {
                   {/* Step 3 */}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                      <CheckCircle className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                      <Settings className="h-6 w-6 text-violet-600 dark:text-violet-400" />
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold text-card-foreground">3. Job Complete</h3>
-                      <p className="text-sm text-muted-foreground mt-1.5">You'll receive confirmation when work is finished:</p>
-                      <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
-                        <li>Final cost</li>
-                        <li>Completion photos</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Step 4 */}
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                      <Settings className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-card-foreground">4. That's It!</h3>
+                      <h3 className="text-base font-semibold text-card-foreground">3. That's It!</h3>
                       <p className="text-sm text-muted-foreground mt-1.5">
                         Your property manager handles everything else. You only get involved for costs above your set limit.
                       </p>
