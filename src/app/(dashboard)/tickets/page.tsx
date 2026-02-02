@@ -264,15 +264,29 @@ export default function TicketsPage() {
   const handleArchive = async () => {
     if (!selectedTicketBasic) return
 
-    const { error } = await supabase
+    const archivedAt = new Date().toISOString()
+
+    // Archive the ticket
+    const { error: ticketError } = await supabase
       .from('c1_tickets')
-      .update({
-        archived: true,
-        archived_at: new Date().toISOString(),
-      })
+      .update({ archived: true, archived_at: archivedAt })
       .eq('id', selectedTicketBasic.id)
 
-    if (error) throw error
+    if (ticketError) throw ticketError
+
+    // Archive related messages
+    await supabase
+      .from('c1_messages')
+      .update({ archived: true, archived_at: archivedAt })
+      .eq('ticket_id', selectedTicketBasic.id)
+
+    // Archive related conversation (if exists)
+    if (selectedTicketBasic.conversation_id) {
+      await supabase
+        .from('c1_conversations')
+        .update({ archived: true, archived_at: archivedAt })
+        .eq('id', selectedTicketBasic.conversation_id)
+    }
 
     toast.success('Ticket archived')
     setArchiveDialogOpen(false)
