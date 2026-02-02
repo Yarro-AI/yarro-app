@@ -119,8 +119,23 @@ export function MultiCombobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+          <CommandList className="max-h-[300px] overflow-y-auto">
             <CommandEmpty>{emptyText}</CommandEmpty>
+            {onAddNew && (
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    setOpen(false)
+                    onAddNew()
+                  }}
+                  className="text-primary"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {addNewLabel}
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {onAddNew && <CommandSeparator />}
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = values.includes(option.value)
@@ -162,23 +177,6 @@ export function MultiCombobox({
                 )
               })}
             </CommandGroup>
-            {onAddNew && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => {
-                      setOpen(false)
-                      onAddNew()
-                    }}
-                    className="text-primary"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {addNewLabel}
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
           </CommandList>
         </Command>
       </PopoverContent>
