@@ -1,65 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { toast } from 'sonner'
-import { User, Mail, Building2, Lock, Settings2 } from 'lucide-react'
-
-// Timeout options: value in minutes, label for display
-const TIMEOUT_OPTIONS = [
-  { value: '1', label: '1 minute (testing)' },
-  { value: '120', label: '2 hours' },
-  { value: '240', label: '4 hours' },
-  { value: '360', label: '6 hours (default)' },
-  { value: '720', label: '12 hours' },
-  { value: '1440', label: '24 hours' },
-]
+import { User, Mail, Building2, Lock } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { propertyManager, refreshPM } = usePM()
+  const { propertyManager } = usePM()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
-  const [savingTimeout, setSavingTimeout] = useState(false)
-  const [timeoutMinutes, setTimeoutMinutes] = useState<string>('360')
   const supabase = createClient()
-
-  // Initialize timeout from PM settings
-  useEffect(() => {
-    if (propertyManager?.contractor_timeout_minutes) {
-      setTimeoutMinutes(propertyManager.contractor_timeout_minutes.toString())
-    }
-  }, [propertyManager?.contractor_timeout_minutes])
-
-  const handleTimeoutChange = async (value: string) => {
-    setTimeoutMinutes(value)
-    setSavingTimeout(true)
-
-    const { error } = await supabase
-      .from('c1_property_managers')
-      .update({ contractor_timeout_minutes: parseInt(value) })
-      .eq('id', propertyManager?.id)
-
-    if (error) {
-      toast.error('Failed to update timeout setting')
-      // Revert to previous value
-      setTimeoutMinutes(propertyManager?.contractor_timeout_minutes?.toString() ?? '360')
-    } else {
-      toast.success('Contractor timeout updated')
-      refreshPM?.()
-    }
-    setSavingTimeout(false)
-  }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,40 +70,6 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Rules & Preferences */}
-      <div className="bg-card rounded-xl border p-6 mb-6">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-          <Settings2 className="h-4 w-4 inline mr-1" />
-          Rules & Preferences
-        </h2>
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <p className="text-sm font-medium">Contractor Response Timeout</p>
-              <p className="text-xs text-muted-foreground">
-                Time to wait before contacting the next contractor if no response
-              </p>
-            </div>
-            <Select
-              value={timeoutMinutes}
-              onValueChange={handleTimeoutChange}
-              disabled={savingTimeout}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select timeout" />
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEOUT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
