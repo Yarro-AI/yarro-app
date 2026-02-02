@@ -314,7 +314,7 @@ export type Database = {
       }
       c1_property_managers: {
         Row: {
-          business_name: string | null
+          business_name: string
           contractor_timeout_minutes: number | null
           created_at: string
           email: string
@@ -324,7 +324,7 @@ export type Database = {
           phone: string | null
         }
         Insert: {
-          business_name?: string | null
+          business_name: string
           contractor_timeout_minutes?: number | null
           created_at?: string
           email: string
@@ -334,7 +334,7 @@ export type Database = {
           phone?: string | null
         }
         Update: {
-          business_name?: string | null
+          business_name?: string
           contractor_timeout_minutes?: number | null
           created_at?: string
           email?: string

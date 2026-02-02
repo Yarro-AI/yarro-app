@@ -43,9 +43,11 @@ export function StepPMDetails({ details, email, onChange }: StepPMDetailsProps) 
           />
         </div>
 
-        {/* Business Name - Optional */}
+        {/* Business Name - Required */}
         <div className="space-y-2">
-          <label htmlFor="pm-business" className="text-sm font-medium">Business Name</label>
+          <label htmlFor="pm-business" className="text-sm font-medium">
+            Business Name <span className="text-destructive">*</span>
+          </label>
           <Input
             id="pm-business"
             value={details.business_name}

@@ -164,6 +164,11 @@ export function OnboardingWizard() {
           setSaving(false)
           return
         }
+        if (!state.pmDetails.business_name.trim()) {
+          setError('Business name is required')
+          setSaving(false)
+          return
+        }
         if (!state.pmDetails.phone.trim()) {
           setError('Your phone number is required')
           setSaving(false)
@@ -181,7 +186,7 @@ export function OnboardingWizard() {
             .from('c1_property_managers')
             .update({
               name: state.pmDetails.name.trim(),
-              business_name: state.pmDetails.business_name.trim() || null,
+              business_name: state.pmDetails.business_name.trim(),
               phone: normalizePhone(state.pmDetails.phone),
               emergency_contact: state.pmDetails.emergency_contact.trim() || null,
             })
@@ -202,7 +207,7 @@ export function OnboardingWizard() {
               user_id: authUser.id,
               email: authUser.email,
               name: state.pmDetails.name.trim(),
-              business_name: state.pmDetails.business_name.trim() || null,
+              business_name: state.pmDetails.business_name.trim(),
               phone: normalizePhone(state.pmDetails.phone),
               emergency_contact: state.pmDetails.emergency_contact.trim() || null,
             })
