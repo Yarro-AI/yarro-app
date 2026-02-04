@@ -772,7 +772,7 @@ export default function DashboardPage() {
                         >
                           <Button variant="outline" size="sm" className="h-7 text-xs">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Complete
+                            Review
                           </Button>
                         </Link>
                       )}

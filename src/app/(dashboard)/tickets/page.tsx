@@ -386,7 +386,7 @@ export default function TicketsPage() {
             }}
           >
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Complete
+            Review
           </Button>
         ) : null
       ),
@@ -536,7 +536,7 @@ export default function TicketsPage() {
                   setDrawerOpen(false)
                 }}
               >
-                Complete Ticket Details
+                Review Ticket Details
               </Button>
             )}
 
