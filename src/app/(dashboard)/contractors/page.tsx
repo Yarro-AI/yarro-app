@@ -302,12 +302,13 @@ export default function ContractorsPage() {
   const handleDelete = async () => {
     if (!selectedContractor) return
 
-    // Check for open tickets assigned to this contractor
+    // Check for open tickets assigned to this contractor (exclude archived)
     const { count } = await supabase
       .from('c1_tickets')
       .select('id', { count: 'exact', head: true })
       .eq('contractor_id', selectedContractor.id)
       .neq('status', 'closed')
+      .neq('archived', true)
 
     if (count && count > 0) {
       throw new Error(`Cannot deactivate contractor with ${count} open ticket(s). Close or reassign tickets first.`)

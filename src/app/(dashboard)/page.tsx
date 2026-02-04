@@ -133,6 +133,7 @@ export default function DashboardPage() {
         .eq('property_manager_id', propertyManager.id)
         .gte('date_logged', dateRange.from.toISOString())
         .lte('date_logged', dateRange.to.toISOString())
+        .neq('archived', true)
         .order('date_logged', { ascending: false }),
       // Fetch handoff conversations that need ticket creation
       supabase

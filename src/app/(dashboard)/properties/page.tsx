@@ -293,12 +293,13 @@ export default function PropertiesPage() {
       throw new Error(`Cannot delete property with ${tenantCount} tenant(s). Remove or reassign tenants first.`)
     }
 
-    // Check for open tickets
+    // Check for open tickets (exclude archived)
     const { count: ticketCount } = await supabase
       .from('c1_tickets')
       .select('id', { count: 'exact', head: true })
       .eq('property_id', selectedProperty.property_id)
       .neq('status', 'closed')
+      .neq('archived', true)
 
     if (ticketCount && ticketCount > 0) {
       throw new Error(`Cannot delete property with ${ticketCount} open ticket(s). Close tickets first.`)

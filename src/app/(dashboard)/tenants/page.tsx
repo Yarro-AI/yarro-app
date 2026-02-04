@@ -280,12 +280,13 @@ export default function TenantsPage() {
   const handleDelete = async () => {
     if (!selectedTenant) return
 
-    // Check for open tickets first
+    // Check for open tickets first (exclude archived)
     const { count } = await supabase
       .from('c1_tickets')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', selectedTenant.id)
       .neq('status', 'closed')
+      .neq('archived', true)
 
     if (count && count > 0) {
       throw new Error(`Cannot delete tenant with ${count} open ticket(s). Close or reassign tickets first.`)
