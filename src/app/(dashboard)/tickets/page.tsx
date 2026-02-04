@@ -100,6 +100,7 @@ export default function TicketsPage() {
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
+  const action = searchParams.get('action')
 
   useEffect(() => {
     if (!propertyManager) return
@@ -111,11 +112,19 @@ export default function TicketsPage() {
       const basicTicket = tickets.find((t) => t.id === selectedId)
       if (basicTicket) {
         setSelectedTicketBasic(basicTicket)
+        // Auto-open complete drawer if action=complete and ticket is handoff
+        if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
+          setHandoffTicketId(basicTicket.id)
+          setCreateDrawerOpen(true)
+          // Clear the action param from URL
+          router.replace(`/tickets?id=${selectedId}`)
+          return
+        }
       }
       fetchTicketDetail(selectedId)
       setDrawerOpen(true)
     }
-  }, [selectedId, tickets])
+  }, [selectedId, tickets, action])
 
   const fetchTickets = async () => {
     let query = supabase
@@ -359,6 +368,28 @@ export default function TicketsPage() {
       header: 'Priority',
       sortable: true,
       render: (ticket) => ticket.priority ? <StatusBadge status={ticket.priority} /> : '-',
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '80px',
+      render: (ticket) => (
+        ticket.handoff && ticket.status === 'open' ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={(e) => {
+              e.stopPropagation()
+              setHandoffTicketId(ticket.id)
+              setCreateDrawerOpen(true)
+            }}
+          >
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Complete
+          </Button>
+        ) : null
+      ),
     },
   ]
 

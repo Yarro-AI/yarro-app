@@ -16,6 +16,7 @@ import {
   BarChart3,
   MessageSquare,
   Plus,
+  CheckCircle2,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -743,27 +744,40 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground py-8 text-center">No tickets in this category</p>
               ) : (
                 awaitingTickets.map((ticket) => (
-                  <Link
+                  <div
                     key={ticket.id}
-                    href={`/tickets?id=${ticket.id}`}
-                    className="block p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
-                    onClick={() => setAwaitingType(null)}
+                    className="p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-card-foreground leading-snug">{ticket.issue_description || 'No description'}</p>
-                        <p className="text-sm text-muted-foreground mt-1.5 truncate">{ticket.address}</p>
+                    <Link
+                      href={`/tickets?id=${ticket.id}`}
+                      className="block"
+                      onClick={() => setAwaitingType(null)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-card-foreground leading-snug">{ticket.issue_description || 'No description'}</p>
+                          <p className="text-sm text-muted-foreground mt-1.5 truncate">{ticket.address}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground/70 whitespace-nowrap flex-shrink-0">
+                          {formatDate(ticket.date_logged)}
+                        </span>
                       </div>
-                      <span className="text-xs text-muted-foreground/70 whitespace-nowrap flex-shrink-0">
-                        {formatDate(ticket.date_logged)}
-                      </span>
+                    </Link>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      {ticket.job_stage && <StatusBadge status={ticket.job_stage} />}
+                      {awaitingType === 'handoff' && ticket.handoff && (
+                        <Link
+                          href={`/tickets?id=${ticket.id}&action=complete`}
+                          onClick={() => setAwaitingType(null)}
+                        >
+                          <Button variant="outline" size="sm" className="h-7 text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Complete
+                          </Button>
+                        </Link>
+                      )}
                     </div>
-                    {ticket.job_stage && (
-                      <div className="mt-3">
-                        <StatusBadge status={ticket.job_stage} />
-                      </div>
-                    )}
-                  </Link>
+                  </div>
                 ))
               )}
             </div>
