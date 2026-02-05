@@ -38,14 +38,20 @@ export default function LoginPage() {
     }
   }, [pmLoading, propertyManager, authSuccess, error, mode, router])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    // Read from form directly to handle browser auto-fill
+    // (auto-fill doesn't trigger React onChange, so state may be empty)
+    const formData = new FormData(e.currentTarget)
+    const emailValue = (formData.get('email') as string || '').toLowerCase().trim()
+    const passwordValue = formData.get('password') as string || ''
+
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
-      password,
+      email: emailValue,
+      password: passwordValue,
     })
 
     if (authError) {
@@ -134,6 +140,7 @@ export default function LoginPage() {
                   </label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="you@company.com"
                     value={email}
@@ -158,6 +165,7 @@ export default function LoginPage() {
                   </div>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     placeholder="Enter your password"
                     value={password}
