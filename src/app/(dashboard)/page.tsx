@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
 import { StatusBadge } from '@/components/status-badge'
+import { KanbanBoard } from '@/components/kanban-board'
 import {
   Clock,
   UserCheck,
@@ -17,6 +19,8 @@ import {
   MessageSquare,
   Plus,
   CheckCircle2,
+  LayoutGrid,
+  Columns3,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -76,8 +80,10 @@ interface TicketSummary {
   job_stage: string | null
   message_stage?: string | null
   category: string | null
+  priority: string | null
   date_logged: string
   scheduled_date?: string | null
+  final_amount?: number | null
   address?: string
   handoff?: boolean
 }
@@ -95,9 +101,18 @@ const ACTION_DESCRIPTIONS = {
   declined: 'Tickets where the landlord declined the quoted price — these need follow-up',
 }
 
+type ViewMode = 'stats' | 'board'
+
 export default function DashboardPage() {
+  const router = useRouter()
   const { propertyManager } = usePM()
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('dashboard-view') as ViewMode) || 'stats'
+    }
+    return 'stats'
+  })
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentTickets, setRecentTickets] = useState<TicketSummary[]>([])
   const [allTickets, setAllTickets] = useState<TicketSummary[]>([])
@@ -108,6 +123,12 @@ export default function DashboardPage() {
   const [createTicketOpen, setCreateTicketOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+
+  // Persist view mode
+  const handleViewChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem('dashboard-view', mode)
+  }
 
   const fetchData = useCallback(async () => {
     if (!propertyManager) return
@@ -123,8 +144,10 @@ export default function DashboardPage() {
           status,
           job_stage,
           category,
+          priority,
           date_logged,
           scheduled_date,
+          final_amount,
           handoff,
           conversation_id,
           c1_properties(address),
@@ -245,8 +268,10 @@ export default function DashboardPage() {
           job_stage: t.job_stage,
           message_stage: messageStage || null,
           category: t.category,
+          priority: t.priority,
           date_logged: t.date_logged,
           scheduled_date: t.scheduled_date,
+          final_amount: t.final_amount,
           address: (t.c1_properties as unknown as { address: string } | null)?.address,
           handoff: t.handoff,
         }
@@ -382,10 +407,47 @@ export default function DashboardPage() {
                 Manage and monitor all property maintenance activity
               </p>
             </div>
-            <DateFilter value={dateRange} onChange={setDateRange} />
+            <div className="flex items-center gap-2">
+              {/* View Toggle */}
+              <div className="flex items-center bg-muted rounded-lg p-0.5">
+                <button
+                  onClick={() => handleViewChange('stats')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    viewMode === 'stats'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Stats
+                </button>
+                <button
+                  onClick={() => handleViewChange('board')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    viewMode === 'board'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Columns3 className="h-3.5 w-3.5" />
+                  Board
+                </button>
+              </div>
+              <DateFilter value={dateRange} onChange={setDateRange} />
+            </div>
           </div>
 
-          {/* Main Two-Column Layout - Midline at ~38% from top */}
+          {/* Main Content - Stats or Board view */}
+          {viewMode === 'board' ? (
+            <div className="flex-1 min-h-0">
+              <KanbanBoard
+                tickets={allTickets}
+                onTicketClick={(id) => router.push(`/tickets?id=${id}`)}
+                onHandoffReview={(id) => router.push(`/tickets?id=${id}&action=complete`)}
+              />
+            </div>
+          ) : (
+          /* Main Two-Column Layout - Midline at ~38% from top */
           <div className="flex-1 min-h-0 grid grid-cols-2 gap-4">
             {/* LEFT COLUMN */}
             <div className="flex flex-col gap-3 min-h-0">
@@ -730,6 +792,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Awaiting Tickets Sheet */}
