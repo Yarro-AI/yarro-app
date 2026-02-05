@@ -150,6 +150,7 @@ export default function TicketsPage() {
         contractor_id,
         conversation_id,
         archived,
+        images,
         c1_properties(address),
         c1_tenants(full_name),
         c1_contractors(contractor_name)
@@ -693,7 +694,9 @@ export default function TicketsPage() {
                 contractor_id: selectedTicketBasic.contractor_id || null,
                 availability: selectedTicketBasic.availability || '',
                 access: selectedTicketBasic.access || '',
+                images: (selectedTicketBasic as { images?: string[] }).images || [],
               } : undefined}
+              isHandoff={!!handoffTicketId}
               onSubmit={handleCreateTicket}
               onCancel={() => { setCreateDrawerOpen(false); setHandoffTicketId(null) }}
               submitLabel={handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
