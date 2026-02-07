@@ -29,7 +29,8 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isPublicPage = pathname.startsWith('/login') ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/update-password')
+    pathname.startsWith('/update-password') ||
+    pathname.startsWith('/i/')
 
   // No valid user + protected page → redirect to login
   if (!user && !isPublicPage) {

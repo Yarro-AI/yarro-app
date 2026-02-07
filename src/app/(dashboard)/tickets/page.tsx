@@ -213,6 +213,17 @@ export default function TicketsPage() {
     setSelectedTicketBasic(null)
   }
 
+  const handleCloseCreateDrawer = () => {
+    setCreateDrawerOpen(false)
+    setHandoffTicketId(null)
+    // Clean up URL so clicking the same ticket row works again
+    if (selectedId) {
+      router.push('/tickets')
+      setSelectedTicket(null)
+      setSelectedTicketBasic(null)
+    }
+  }
+
   const handleCreateTicket = async (data: {
     property_id: string
     tenant_id: string
@@ -263,11 +274,29 @@ export default function TicketsPage() {
         throw new Error(error.message)
       }
 
+      // Notify landlord about the new manual ticket
+      try {
+        await fetch('https://yarro.app.n8n.cloud/webhook/manual-ll-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket_id: ticketId }),
+        })
+      } catch (webhookErr) {
+        console.error('Landlord notification webhook failed:', webhookErr)
+        // Don't fail the whole operation if webhook fails
+      }
+
       toast.success('Ticket created - contractor notified')
     }
 
     setCreateDrawerOpen(false)
     setHandoffTicketId(null)
+    // Clean up URL after ticket creation/completion
+    if (selectedId) {
+      router.push('/tickets')
+      setSelectedTicket(null)
+      setSelectedTicketBasic(null)
+    }
     fetchTickets()
   }
 
@@ -675,7 +704,7 @@ export default function TicketsPage() {
       </DetailDrawer>
 
       {/* Create / Complete Ticket Modal */}
-      <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) { setCreateDrawerOpen(false); setHandoffTicketId(null) } }}>
+      <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{handoffTicketId ? 'Complete Ticket' : 'New Ticket'}</DialogTitle>
@@ -698,7 +727,7 @@ export default function TicketsPage() {
               } : undefined}
               isHandoff={!!handoffTicketId}
               onSubmit={handleCreateTicket}
-              onCancel={() => { setCreateDrawerOpen(false); setHandoffTicketId(null) }}
+              onCancel={handleCloseCreateDrawer}
               submitLabel={handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
             />
           </DialogBody>
