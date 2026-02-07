@@ -724,6 +724,7 @@ export default function TicketsPage() {
                 availability: selectedTicketBasic.availability || '',
                 access: selectedTicketBasic.access || '',
                 images: (selectedTicketBasic as { images?: string[] }).images || [],
+                conversation_id: selectedTicketBasic.conversation_id || undefined,
               } : undefined}
               isHandoff={!!handoffTicketId}
               onSubmit={handleCreateTicket}

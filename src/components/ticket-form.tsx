@@ -26,7 +26,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
-import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail } from 'lucide-react'
 
 interface Property {
   id: string
@@ -36,7 +36,16 @@ interface Property {
 interface Tenant {
   id: string
   full_name: string
+  phone: string | null
+  email: string | null
   property_id: string
+}
+
+interface ConversationMessage {
+  direction: 'in' | 'out'
+  message: string
+  timestamp: string
+  label?: string
 }
 
 interface Contractor {
@@ -134,6 +143,8 @@ export function TicketForm({
   const [savingNew, setSavingNew] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
   const [fileInputKey, setFileInputKey] = useState(0) // Force input reset
+  const [conversationLog, setConversationLog] = useState<ConversationMessage[]>([])
+  const [loadingConversation, setLoadingConversation] = useState(false)
 
   // Fetch properties, tenants, and contractors
   useEffect(() => {
@@ -150,7 +161,7 @@ export function TicketForm({
           .order('address'),
         supabase
           .from('c1_tenants')
-          .select('id, full_name, property_id')
+          .select('id, full_name, phone, email, property_id')
           .eq('property_manager_id', propertyManager.id)
           .order('full_name'),
         supabase
@@ -210,6 +221,29 @@ export function TicketForm({
     })
     setFilteredContractors(sorted)
   }, [contractors, formData.property_id, formData.category])
+
+  // Fetch conversation log for handoff tickets
+  useEffect(() => {
+    const convId = mergedPrefill?.conversation_id
+    if (!isHandoff || !convId) return
+
+    const fetchConversation = async () => {
+      setLoadingConversation(true)
+      const { data } = await supabase
+        .from('c1_conversations')
+        .select('log')
+        .eq('id', convId)
+        .single()
+
+      if (data?.log) {
+        setConversationLog(
+          (data.log as ConversationMessage[]).filter((m) => m.message)
+        )
+      }
+      setLoadingConversation(false)
+    }
+    fetchConversation()
+  }, [isHandoff, mergedPrefill?.conversation_id, supabase])
 
   // Helper to check if contractor is assigned to current property
   const isAssignedToProperty = (c: Contractor) =>
@@ -327,9 +361,11 @@ export function TicketForm({
       if (insertError) throw insertError
 
       // Add to local state and select it
-      const newT = {
+      const newT: Tenant = {
         id: data.id,
         full_name: newTenant.full_name,
+        phone: newTenant.phone || null,
+        email: newTenant.email || null,
         property_id: formData.property_id,
       }
       setTenants((prev) => [...prev, newT])
@@ -540,6 +576,45 @@ export function TicketForm({
         </div>
       )}
 
+      {/* Conversation thread for handoff tickets */}
+      {isHandoff && conversationLog.length > 0 && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            WhatsApp Conversation
+          </label>
+          <div className="max-h-48 overflow-y-auto rounded-lg border bg-muted/30 p-3 space-y-2">
+            {conversationLog.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.direction === 'in' ? 'justify-start' : 'justify-end'}`}
+              >
+                {msg.label === 'HANDOFF' ? (
+                  <div className="text-xs text-amber-600 font-medium py-1 w-full text-center">
+                    — Handed off —
+                  </div>
+                ) : (
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3 py-1.5 text-xs ${
+                      msg.direction === 'in'
+                        ? 'bg-white border text-foreground'
+                        : 'bg-primary/10 text-foreground'
+                    }`}
+                  >
+                    {msg.message}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {isHandoff && loadingConversation && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Loading conversation...
+        </div>
+      )}
+
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
           {error}
@@ -582,6 +657,26 @@ export function TicketForm({
             {formData.property_id && filteredTenants.length === 0 && (
               <p className="text-xs text-amber-600">No tenants at this property. Click to add one.</p>
             )}
+            {isHandoff && formData.tenant_id && (() => {
+              const tenant = tenants.find(t => t.id === formData.tenant_id)
+              if (!tenant) return null
+              return (
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  {tenant.phone && (
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {tenant.phone}
+                    </span>
+                  )}
+                  {tenant.email && (
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      {tenant.email}
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -650,7 +745,7 @@ export function TicketForm({
                   <img
                     src={url}
                     alt={`Upload ${idx + 1}`}
-                    className="w-16 h-16 object-cover rounded-lg border"
+                    className={`object-cover rounded-lg border ${isHandoff ? 'w-28 h-28' : 'w-16 h-16'}`}
                   />
                   <button
                     type="button"
