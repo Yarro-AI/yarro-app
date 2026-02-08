@@ -1,12 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .blue *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -58,7 +58,7 @@
 :root {
   --radius: 0.625rem;
 
-  /* Yarro Brand - from yarro.ai */
+  /* Yarro Brand */
   --yarro: #0059FF;
   --yarro-dark: #101011;
   --yarro-light: #a6e1ff;
@@ -69,46 +69,83 @@
   --warning: #f59e0b;
   --danger: #ef4444;
 
-  /* Light Theme - White background with Yarro blue accents */
-  --background: #ffffff;
-  --foreground: #101011;
-  --card: #ffffff;
-  --card-foreground: #101011;
-  --popover: #ffffff;
-  --popover-foreground: #101011;
+  /* Light Theme — Apple Zinc + Yarro Blue */
+  --background: #FAFAFA;
+  --foreground: #18181B;
+  --card: #FFFFFF;
+  --card-foreground: #18181B;
+  --popover: #FFFFFF;
+  --popover-foreground: #18181B;
   --primary: #0059FF;
-  --primary-foreground: #ffffff;
-  --secondary: #e8f4ff;
-  --secondary-foreground: #0059FF;
-  --muted: #f0f7ff;
-  --muted-foreground: #606266;
-  --accent: #e8f4ff;
-  --accent-foreground: #0059FF;
-  --destructive: #ef4444;
-  --border: #e0e7ef;
-  --input: #e0e7ef;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #18181B;
+  --muted: #F4F4F5;
+  --muted-foreground: #71717A;
+  --accent: #F4F4F5;
+  --accent-foreground: #18181B;
+  --destructive: #EF4444;
+  --border: #E4E4E7;
+  --input: #E4E4E7;
   --ring: #0059FF;
 
-  /* Chart colors - Yarro inspired */
+  /* Chart colors */
   --chart-1: #0059FF;
   --chart-2: #00cdd4;
   --chart-3: #a6e1ff;
   --chart-4: #01375e;
   --chart-5: #fa710f;
 
-  /* Sidebar - Light theme (subtle gray, differentiated from white main) */
-  --sidebar: #f8fafc;
-  --sidebar-foreground: #1e293b;
+  /* Sidebar — Light */
+  --sidebar: #FAFAFA;
+  --sidebar-foreground: #18181B;
   --sidebar-primary: #0059FF;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e2e8f0;
-  --sidebar-accent-foreground: #1e293b;
-  --sidebar-border: #e2e8f0;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F4F4F5;
+  --sidebar-accent-foreground: #18181B;
+  --sidebar-border: #E4E4E7;
   --sidebar-ring: #0059FF;
 }
 
+/* Dark Theme — True dark, Zinc scale */
 .dark {
-  /* Yarro-style dark theme - dark navy blue, not pure black */
+  --background: #09090B;
+  --foreground: #FAFAFA;
+  --card: #18181B;
+  --card-foreground: #FAFAFA;
+  --popover: #18181B;
+  --popover-foreground: #FAFAFA;
+  --primary: #3B82F6;
+  --primary-foreground: #FFFFFF;
+  --secondary: #27272A;
+  --secondary-foreground: #FAFAFA;
+  --muted: #27272A;
+  --muted-foreground: #A1A1AA;
+  --accent: #27272A;
+  --accent-foreground: #FAFAFA;
+  --destructive: #EF4444;
+  --border: #27272A;
+  --input: #27272A;
+  --ring: #3B82F6;
+  --chart-1: #3B82F6;
+  --chart-2: #00cdd4;
+  --chart-3: #a6e1ff;
+  --chart-4: #60a5fa;
+  --chart-5: #fa710f;
+
+  /* Sidebar — Dark */
+  --sidebar: #09090B;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #3B82F6;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #27272A;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: #27272A;
+  --sidebar-ring: #3B82F6;
+}
+
+/* Yarro Blue Theme — Navy blue */
+.blue {
   --background: #0a1628;
   --foreground: #f1f5f9;
   --card: #0f2136;
@@ -133,7 +170,7 @@
   --chart-4: #60a5fa;
   --chart-5: #fa710f;
 
-  /* Sidebar - Dark navy theme */
+  /* Sidebar — Yarro Blue */
   --sidebar: #071525;
   --sidebar-foreground: #f1f5f9;
   --sidebar-primary: #3b82f6;
@@ -154,7 +191,7 @@
   }
 }
 
-/* Custom scrollbar - minimal */
+/* Custom scrollbar — minimal */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -165,39 +202,37 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c0d4e8;
+  background: #D4D4D8;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94b8d8;
+  background: #A1A1AA;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #1e3a5f;
+  background: #3F3F46;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525B;
+}
+
+.blue ::-webkit-scrollbar-thumb {
+  background: #1e3a5f;
+}
+
+.blue ::-webkit-scrollbar-thumb:hover {
   background: #2d4a6f;
 }
 
-/* Fix browser autofill styling - prevent grey/yellow backgrounds */
+/* Fix browser autofill styling */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px white inset !important;
-  -webkit-text-fill-color: #101011 !important;
-  box-shadow: 0 0 0 1000px white inset !important;
-  caret-color: #101011 !important;
-}
-
-.dark input:-webkit-autofill,
-.dark input:-webkit-autofill:hover,
-.dark input:-webkit-autofill:focus,
-.dark input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #0f2136 inset !important;
-  -webkit-text-fill-color: #f1f5f9 !important;
-  box-shadow: 0 0 0 1000px #0f2136 inset !important;
-  caret-color: #f1f5f9 !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--card) inset !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  box-shadow: 0 0 0 1000px var(--card) inset !important;
+  caret-color: var(--foreground) !important;
 }

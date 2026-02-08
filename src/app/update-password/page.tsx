@@ -58,7 +58,7 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 bg-white">
+    <div className="min-h-screen flex items-center justify-center p-8 bg-background">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <Image
@@ -66,7 +66,15 @@ export default function UpdatePasswordPage() {
             alt="Yarro"
             width={120}
             height={40}
-            className="mx-auto"
+            className="mx-auto dark:hidden"
+            priority
+          />
+          <Image
+            src="/logo-white.png"
+            alt="Yarro"
+            width={120}
+            height={40}
+            className="mx-auto hidden dark:block"
             priority
           />
         </div>
@@ -74,18 +82,18 @@ export default function UpdatePasswordPage() {
         {success ? (
           <div className="text-center space-y-4">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-            <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Password updated</h1>
-            <p className="text-[#606266]">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Password updated</h1>
+            <p className="text-muted-foreground">
               Redirecting to dashboard...
             </p>
           </div>
         ) : (
           <>
             <div className="space-y-2 mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Set your password</h1>
-              <p className="text-[#606266]">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Set your password</h1>
+              <p className="text-muted-foreground">
                 {userEmail ? (
-                  <>Create a password for <span className="font-medium text-[#101011]">{userEmail}</span></>
+                  <>Create a password for <span className="font-medium text-foreground">{userEmail}</span></>
                 ) : (
                   'Create your account password'
                 )}
@@ -94,7 +102,7 @@ export default function UpdatePasswordPage() {
 
             <form onSubmit={handleUpdatePassword} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-[#101011]">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
                   New password
                 </label>
                 <Input
@@ -103,14 +111,14 @@ export default function UpdatePasswordPage() {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
+                  className="h-11"
                   required
                   minLength={6}
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="confirm-password" className="text-sm font-medium text-[#101011]">
+                <label htmlFor="confirm-password" className="text-sm font-medium text-foreground">
                   Confirm password
                 </label>
                 <Input
@@ -119,21 +127,21 @@ export default function UpdatePasswordPage() {
                   placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-11 bg-white dark:bg-white border-[#e0e7ef] dark:border-[#e0e7ef] text-[#101011] dark:text-[#101011] placeholder:text-[#9ca3af]"
+                  className="h-11"
                   required
                   minLength={6}
                 />
               </div>
 
               {error && (
-                <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
                   {error}
                 </div>
               )}
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-[#0059FF] hover:bg-[#0047cc] text-white font-medium"
+                className="w-full h-11 font-medium"
                 disabled={loading}
               >
                 {loading ? (

@@ -112,7 +112,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - login form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 text-center">
@@ -121,7 +121,15 @@ export default function LoginPage() {
               alt="Yarro"
               width={120}
               height={40}
-              className="mx-auto"
+              className="mx-auto dark:hidden"
+              priority
+            />
+            <Image
+              src="/logo-white.png"
+              alt="Yarro"
+              width={120}
+              height={40}
+              className="mx-auto hidden dark:block"
               priority
             />
           </div>
@@ -129,15 +137,15 @@ export default function LoginPage() {
           {mode === 'login' ? (
             <>
               <div className="space-y-2 mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Welcome back</h1>
-                <p className="text-[#606266]">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Welcome back</h1>
+                <p className="text-muted-foreground">
                   Sign in to your account to continue
                 </p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-[#101011]">
+                  <label htmlFor="email" className="text-sm font-medium text-foreground">
                     Email
                   </label>
                   <Input
@@ -147,20 +155,20 @@ export default function LoginPage() {
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af] autofill:!bg-white autofill:!text-[#101011] autofill:shadow-[inset_0_0_0px_1000px_white]"
+                    className="h-11"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="password" className="text-sm font-medium text-[#101011]">
+                    <label htmlFor="password" className="text-sm font-medium text-foreground">
                       Password
                     </label>
                     <button
                       type="button"
                       onClick={() => { setMode('forgot'); setError(null) }}
-                      className="text-sm text-[#0059FF] hover:underline"
+                      className="text-sm text-primary hover:underline"
                     >
                       Forgot password?
                     </button>
@@ -172,20 +180,20 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af] autofill:!bg-white autofill:!text-[#101011] autofill:shadow-[inset_0_0_0px_1000px_white]"
+                    className="h-11"
                     required
                   />
                 </div>
 
                 {error && (
-                  <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                  <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
                     {error}
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-[#0059FF] hover:bg-[#0047cc] text-white font-medium"
+                  className="w-full h-11 font-medium"
                   disabled={loading}
                 >
                   {loading ? (
@@ -204,25 +212,25 @@ export default function LoginPage() {
               <div className="space-y-2 mb-8">
                 <button
                   onClick={() => { setMode('login'); setError(null); setResetSent(false) }}
-                  className="flex items-center text-sm text-[#606266] hover:text-[#101011] mb-4"
+                  className="flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
                 >
                   <ArrowLeft className="h-4 w-4 mr-1" />
                   Back to sign in
                 </button>
-                <h1 className="text-2xl font-semibold tracking-tight text-[#101011]">Reset password</h1>
-                <p className="text-[#606266]">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Reset password</h1>
+                <p className="text-muted-foreground">
                   Enter your email and we&apos;ll send you a reset link
                 </p>
               </div>
 
               {resetSent ? (
-                <div className="text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg">
+                <div className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-4 py-3 rounded-lg">
                   Check your email for a password reset link. It may take a minute to arrive.
                 </div>
               ) : (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="reset-email" className="text-sm font-medium text-[#101011]">
+                    <label htmlFor="reset-email" className="text-sm font-medium text-foreground">
                       Email
                     </label>
                     <Input
@@ -231,20 +239,20 @@ export default function LoginPage() {
                       placeholder="you@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 !bg-white !border-[#e0e7ef] !text-[#101011] placeholder:text-[#9ca3af] autofill:!bg-white autofill:!text-[#101011] autofill:shadow-[inset_0_0_0px_1000px_white]"
+                      className="h-11"
                       required
                     />
                   </div>
 
                   {error && (
-                    <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                    <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
                       {error}
                     </div>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-[#0059FF] hover:bg-[#0047cc] text-white font-medium"
+                    className="w-full h-11 font-medium"
                     disabled={loading}
                   >
                     {loading ? (
@@ -261,7 +269,7 @@ export default function LoginPage() {
             </>
           )}
 
-          <p className="mt-8 text-center text-sm text-[#606266]">
+          <p className="mt-8 text-center text-sm text-muted-foreground">
             Need help? Contact your administrator.
           </p>
         </div>

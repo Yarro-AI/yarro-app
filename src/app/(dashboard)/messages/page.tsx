@@ -391,9 +391,9 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Messages</h1>
           <p className="text-muted-foreground mt-1">
@@ -404,17 +404,20 @@ export default function MessagesPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable
-        data={messages}
-        columns={columns}
-        searchPlaceholder="Search messages..."
-        searchKeys={['issue_description', 'address']}
-        onRowClick={handleRowClick}
-        onViewClick={handleRowClick}
-        getRowId={(m) => m.ticket_id}
-        emptyMessage="No messages found"
-        loading={loading}
-      />
+      <div className="flex-1 min-h-0">
+        <DataTable
+          data={messages}
+          columns={columns}
+          searchPlaceholder="Search messages..."
+          searchKeys={['issue_description', 'address']}
+          onRowClick={handleRowClick}
+          onViewClick={handleRowClick}
+          getRowId={(m) => m.ticket_id}
+          emptyMessage="No messages found"
+          loading={loading}
+          fillHeight
+        />
+      </div>
 
       {/* Detail Drawer */}
       <DetailDrawer

@@ -35,6 +35,7 @@ type DataTableProps<T> = {
   emptyMessage?: ReactNode
   loading?: boolean
   maxHeight?: string
+  fillHeight?: boolean
 }
 
 export function DataTable<T>({
@@ -49,6 +50,7 @@ export function DataTable<T>({
   emptyMessage = 'No data found',
   loading = false,
   maxHeight = 'calc(100vh - 280px)',
+  fillHeight = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -109,11 +111,11 @@ export function DataTable<T>({
 
   if (loading) {
     return (
-      <div className="bg-card rounded-xl border">
-        <div className="p-4 border-b">
+      <div className={cn("bg-card rounded-xl border", fillHeight && "flex flex-col h-full")}>
+        <div className={cn("p-4 border-b", fillHeight && "flex-shrink-0")}>
           <div className="h-10 w-64 bg-muted animate-pulse rounded-lg" />
         </div>
-        <div className="divide-y">
+        <div className={cn("divide-y", fillHeight && "flex-1 min-h-0 overflow-hidden")}>
           {[...Array(5)].map((_, i) => (
             <div key={i} className="p-4">
               <div className="h-5 w-full bg-muted animate-pulse rounded" />
@@ -125,9 +127,9 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="bg-card rounded-xl border">
+    <div className={cn("bg-card rounded-xl border", fillHeight && "flex flex-col h-full")}>
       {/* Search */}
-      <div className="p-4 border-b">
+      <div className={cn("p-4 border-b", fillHeight && "flex-shrink-0")}>
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -140,7 +142,10 @@ export function DataTable<T>({
       </div>
 
       {/* Table */}
-      <div className="overflow-auto" style={{ maxHeight }}>
+      <div
+        className={cn("overflow-auto", fillHeight && "flex-1 min-h-0")}
+        style={fillHeight ? undefined : { maxHeight }}
+      >
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -224,7 +229,7 @@ export function DataTable<T>({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t text-sm text-muted-foreground">
+      <div className={cn("px-4 py-3 border-t text-sm text-muted-foreground", fillHeight && "flex-shrink-0")}>
         {filteredData.length} of {data.length} results
       </div>
     </div>

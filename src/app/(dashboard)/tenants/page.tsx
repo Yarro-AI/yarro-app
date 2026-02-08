@@ -452,9 +452,9 @@ export default function TenantsPage() {
   )
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Tenants</h1>
           <p className="text-muted-foreground mt-1">
@@ -468,26 +468,29 @@ export default function TenantsPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable
-        data={tenants}
-        columns={columns}
-        searchPlaceholder="Search tenants..."
-        searchKeys={['full_name', 'phone', 'email', 'address']}
-        onRowClick={handleRowClick}
-        onViewClick={handleRowClick}
-        getRowId={(t) => t.id}
-        emptyMessage={
-          <div className="text-center py-8">
-            <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="font-medium">No tenants yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add tenants manually or use the{' '}
-              <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
-            </p>
-          </div>
-        }
-        loading={loading}
-      />
+      <div className="flex-1 min-h-0">
+        <DataTable
+          data={tenants}
+          columns={columns}
+          searchPlaceholder="Search tenants..."
+          searchKeys={['full_name', 'phone', 'email', 'address']}
+          onRowClick={handleRowClick}
+          onViewClick={handleRowClick}
+          getRowId={(t) => t.id}
+          fillHeight
+          emptyMessage={
+            <div className="text-center py-8">
+              <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="font-medium">No tenants yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add tenants manually or use the{' '}
+                <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
+              </p>
+            </div>
+          }
+          loading={loading}
+        />
+      </div>
 
       {/* Detail Drawer - View/Edit Mode */}
       {selectedTenant && !isCreating && (

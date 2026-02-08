@@ -493,9 +493,9 @@ export default function PropertiesPage() {
   )
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Properties</h1>
           <p className="text-muted-foreground mt-1">
@@ -509,17 +509,20 @@ export default function PropertiesPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable
-        data={properties}
-        columns={columns}
-        searchPlaceholder="Search properties..."
-        searchKeys={['address', 'landlord_name']}
-        onRowClick={handleRowClick}
-        onViewClick={handleRowClick}
-        getRowId={(p) => p.property_id || ''}
-        emptyMessage="No properties found"
-        loading={loading}
-      />
+      <div className="flex-1 min-h-0">
+        <DataTable
+          data={properties}
+          columns={columns}
+          searchPlaceholder="Search properties..."
+          searchKeys={['address', 'landlord_name']}
+          onRowClick={handleRowClick}
+          onViewClick={handleRowClick}
+          getRowId={(p) => p.property_id || ''}
+          emptyMessage="No properties found"
+          loading={loading}
+          fillHeight
+        />
+      </div>
 
       {/* Detail Drawer - View/Edit Mode */}
       {selectedProperty && !isCreating && (

@@ -96,7 +96,7 @@ export function Sidebar() {
   }, [fetchCounts])
 
   // Use wordmark logo for light mode, white logo for dark mode
-  const logoSrc = mounted && resolvedTheme === 'dark' ? '/logo-white.png' : '/logo-wordmark.png'
+  const logoSrc = mounted && (resolvedTheme === 'dark' || resolvedTheme === 'blue') ? '/logo-white.png' : '/logo-wordmark.png'
 
   return (
     <div className="flex flex-col h-full w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">

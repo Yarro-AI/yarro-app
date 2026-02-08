@@ -539,9 +539,9 @@ export default function ContractorsPage() {
   )
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Contractors</h1>
           <p className="text-muted-foreground mt-1">
@@ -555,26 +555,29 @@ export default function ContractorsPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable
-        data={contractors}
-        columns={columns}
-        searchPlaceholder="Search contractors..."
-        searchKeys={['contractor_name', 'category', 'contractor_email']}
-        onRowClick={handleRowClick}
-        onViewClick={handleRowClick}
-        getRowId={(c) => c.id}
-        emptyMessage={
-          <div className="text-center py-8">
-            <Wrench className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="font-medium">No contractors yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add contractors manually or use the{' '}
-              <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
-            </p>
-          </div>
-        }
-        loading={loading}
-      />
+      <div className="flex-1 min-h-0">
+        <DataTable
+          data={contractors}
+          columns={columns}
+          searchPlaceholder="Search contractors..."
+          searchKeys={['contractor_name', 'category', 'contractor_email']}
+          onRowClick={handleRowClick}
+          onViewClick={handleRowClick}
+          getRowId={(c) => c.id}
+          fillHeight
+          emptyMessage={
+            <div className="text-center py-8">
+              <Wrench className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="font-medium">No contractors yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add contractors manually or use the{' '}
+                <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
+              </p>
+            </div>
+          }
+          loading={loading}
+        />
+      </div>
 
       {/* Detail Drawer - View/Edit Mode */}
       {selectedContractor && !isCreating && (

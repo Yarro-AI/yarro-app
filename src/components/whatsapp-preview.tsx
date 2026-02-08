@@ -16,7 +16,7 @@ export function WhatsAppPreview({
   return (
     <div className="rounded-xl overflow-hidden border border-border">
       {/* Header bar — Yarro blue */}
-      <div className="bg-[#0059FF] dark:bg-[#003bb5] px-3 py-2 flex items-center gap-2">
+      <div className="bg-primary px-3 py-2 flex items-center gap-2">
         <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center">
           <span className="text-white text-[10px] font-bold">Y</span>
         </div>
@@ -50,7 +50,7 @@ export function WhatsAppPreview({
                   {msg.actions.map((action, j) => (
                     <div
                       key={j}
-                      className="flex-1 text-center py-1.5 text-[11px] font-medium text-[#0059FF] dark:text-blue-400"
+                      className="flex-1 text-center py-1.5 text-[11px] font-medium text-primary"
                     >
                       {action}
                     </div>

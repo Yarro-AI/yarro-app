@@ -17,6 +17,7 @@ import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-fi
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { Building2, Phone, User, Ticket } from 'lucide-react'
+import { formatPhoneDisplay } from '@/lib/normalize'
 import type { Json } from '@/types/database'
 
 interface LogEntry {
@@ -132,13 +133,7 @@ export default function ConversationsPage() {
     return format(new Date(date), 'dd MMM, HH:mm')
   }
 
-  const formatPhone = (phone: string) => {
-    // Format UK numbers nicely
-    if (phone.startsWith('+44')) {
-      return phone.replace(/^\+44(\d{4})(\d{6})$/, '+44 $1 $2')
-    }
-    return phone
-  }
+  const formatPhone = (phone: string) => formatPhoneDisplay(phone) || phone
 
   const getLogEntries = (log: Json): { role: string; text: string; timestamp?: string }[] => {
     if (!log) return []
@@ -237,9 +232,9 @@ export default function ConversationsPage() {
   ]
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Conversations</h1>
           <p className="text-muted-foreground mt-1">
@@ -250,17 +245,20 @@ export default function ConversationsPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable
-        data={conversations}
-        columns={columns}
-        searchPlaceholder="Search by phone or name..."
-        searchKeys={['phone', 'caller_name', 'address']}
-        onRowClick={handleRowClick}
-        onViewClick={handleRowClick}
-        getRowId={(c) => c.id || ''}
-        emptyMessage="No conversations found"
-        loading={loading}
-      />
+      <div className="flex-1 min-h-0">
+        <DataTable
+          data={conversations}
+          columns={columns}
+          searchPlaceholder="Search by phone or name..."
+          searchKeys={['phone', 'caller_name', 'address']}
+          onRowClick={handleRowClick}
+          onViewClick={handleRowClick}
+          getRowId={(c) => c.id || ''}
+          emptyMessage="No conversations found"
+          loading={loading}
+          fillHeight
+        />
+      </div>
 
       {/* Detail Drawer */}
       <DetailDrawer
