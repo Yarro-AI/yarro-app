@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   XCircle,
   BarChart3,
-  MessageSquare,
   Plus,
   CheckCircle2,
   LayoutGrid,
@@ -374,15 +373,13 @@ export default function DashboardPage() {
       <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
         <div className="animate-pulse space-y-3">
           <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-[72px] bg-muted rounded-xl" />
-          <div className="flex-1 grid grid-cols-5 gap-3">
-            <div className="col-span-2 h-[160px] bg-muted rounded-xl" />
-            <div className="col-span-3 h-[160px] bg-muted rounded-xl" />
+          <div className="h-[88px] bg-muted rounded-xl" />
+          <div className="h-[52px] bg-muted rounded-xl" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-[140px] bg-muted rounded-xl" />
+            <div className="h-[140px] bg-muted rounded-xl" />
           </div>
-          <div className="flex-1 grid grid-cols-5 gap-3">
-            <div className="col-span-3 h-[200px] bg-muted rounded-xl" />
-            <div className="col-span-2 h-[200px] bg-muted rounded-xl" />
-          </div>
+          <div className="flex-1 bg-muted rounded-xl min-h-[200px]" />
         </div>
       </div>
     )
@@ -442,231 +439,223 @@ export default function DashboardPage() {
               />
             </div>
           ) : (
-          /* Dashboard Bento Layout */
+          /* Dashboard — Vertical Flow */
           <div className="flex-1 min-h-0 flex flex-col gap-3">
-            {/* By Status — full width hero */}
-            <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
-              <div className="flex items-center justify-between mb-2">
+            {/* Ticket Status — big segmented bar with numbers inside */}
+            <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-blue-500" />
-                  <h3 className="text-sm font-semibold text-card-foreground">By Status</h3>
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-card-foreground">Ticket Status</h3>
                 </div>
-                <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium">
-                  {stats?.totalTickets || 0} total
-                </Link>
+                <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
               </div>
-              <div className="h-2.5 bg-muted rounded-full overflow-hidden flex mb-2">
-                {stats && stats.totalTickets > 0 ? (
-                  <>
+              {stats && stats.totalTickets > 0 ? (
+                <>
+                  <div className="h-10 rounded-lg overflow-hidden flex">
                     <div
-                      className="h-full bg-blue-500 transition-all duration-500"
-                      style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
-                    />
+                      className="h-full bg-blue-500 flex items-center justify-center transition-all duration-500"
+                      style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%`, minWidth: stats.openTickets > 0 ? '60px' : '0' }}
+                    >
+                      <span className="text-xs font-bold text-white">{stats.openTickets} Open</span>
+                    </div>
                     <div
-                      className="h-full bg-emerald-400 transition-all duration-500"
-                      style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
-                    />
-                  </>
-                ) : (
-                  <div className="h-full w-full bg-muted" />
-                )}
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-1 flex items-center gap-2 p-1.5 bg-blue-500/10 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-xs text-muted-foreground">Open</span>
-                  <span className="text-sm font-bold text-card-foreground ml-auto">{stats?.openTickets || 0}</span>
+                      className="h-full bg-emerald-500 flex items-center justify-center transition-all duration-500"
+                      style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%`, minWidth: stats.closedTickets > 0 ? '60px' : '0' }}
+                    >
+                      <span className="text-xs font-bold text-white">{stats.closedTickets} Closed</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-muted-foreground">
+                      {getPercentage(stats.closedTickets, stats.totalTickets)}% completion rate
+                    </span>
+                    <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium">
+                      View all →
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="h-10 bg-muted rounded-lg flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">No tickets yet</span>
                 </div>
-                <div className="flex-1 flex items-center gap-2 p-1.5 bg-emerald-500/10 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span className="text-xs text-muted-foreground">Closed</span>
-                  <span className="text-sm font-bold text-card-foreground ml-auto">{stats?.closedTickets || 0}</span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Bento Grid — asymmetric 5-col layout */}
-            <div className="flex-1 min-h-0 grid grid-cols-5 grid-rows-[2fr_3fr] gap-3">
-              {/* By Category — top-left (2 cols) */}
-              <div className="col-span-2 bg-card rounded-xl border border-border p-3 flex flex-col min-h-0">
-                <h3 className="text-sm font-semibold text-card-foreground mb-2 flex-shrink-0">By Category</h3>
-                {categoryChartData.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-1.5 flex-1 overflow-y-auto">
-                    {categoryChartData.slice(0, 6).map((item) => (
-                      <div
-                        key={item.fullName}
-                        className="flex items-center gap-2 p-1.5 rounded-lg"
-                        style={{ backgroundColor: `${item.color}15` }}
-                      >
+            {/* By Category — horizontal stacked bar */}
+            {categoryChartData.length > 0 && (
+              <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
+                <h3 className="text-sm font-semibold text-card-foreground mb-3">By Category</h3>
+                <div className="h-6 rounded-lg overflow-hidden flex">
+                  {categoryChartData.map((item) => (
+                    <Tooltip key={item.fullName}>
+                      <TooltipTrigger asChild>
                         <div
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: item.color }}
+                          className="h-full transition-all duration-500"
+                          style={{
+                            width: `${getPercentage(item.value, stats?.totalTickets || 0)}%`,
+                            backgroundColor: item.color,
+                            minWidth: '2px',
+                          }}
                         />
-                        <div className="flex-1 min-w-0 flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground truncate">{item.name}</p>
-                          <p className="text-xs font-bold text-card-foreground ml-1">{item.value}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-                    No category data
-                  </div>
-                )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs font-medium">{item.fullName}: {item.value}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                  {categoryChartData.map((item) => (
+                    <div key={item.fullName} className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-muted-foreground">{item.name}</span>
+                      <span className="text-xs font-semibold text-card-foreground">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
 
-              {/* Action Required — top-right (3 cols) */}
+            {/* Needs Attention + Pipeline — two columns */}
+            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+              {/* Needs Attention — true user actions */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
-                const hasHandoffs = totalHandoffs > 0
-
-                const actionItems = [
-                  { key: 'handoff', label: 'Handoff', count: totalHandoffs, barColor: '#ef4444', dotClass: 'bg-red-500', activeBg: 'bg-red-500/10', activeText: 'text-red-500', active: hasHandoffs },
-                  { key: 'contractor', label: 'Contractor', count: stats?.awaitingContractor || 0, barColor: '#fbbf24', dotClass: 'bg-amber-400', activeBg: 'bg-amber-400/10', activeText: 'text-amber-500', active: (stats?.awaitingContractor || 0) > 0 },
-                  { key: 'manager', label: 'Manager', count: stats?.awaitingManager || 0, barColor: '#60a5fa', dotClass: 'bg-blue-400', activeBg: 'bg-blue-400/10', activeText: 'text-blue-500', active: (stats?.awaitingManager || 0) > 0 },
-                  { key: 'landlord', label: 'Landlord', count: stats?.awaitingLandlord || 0, barColor: '#a78bfa', dotClass: 'bg-violet-400', activeBg: 'bg-violet-400/10', activeText: 'text-violet-500', active: (stats?.awaitingLandlord || 0) > 0 },
-                  { key: 'scheduled', label: 'Scheduled', count: stats?.scheduledJobs || 0, barColor: '#22d3ee', dotClass: 'bg-cyan-400', activeBg: 'bg-cyan-400/10', activeText: 'text-cyan-500', active: (stats?.scheduledJobs || 0) > 0 },
-                  { key: 'declined', label: 'Declined', count: stats?.landlordDeclined || 0, barColor: '#fb923c', dotClass: 'bg-orange-400', activeBg: 'bg-orange-400/10', activeText: 'text-orange-500', active: (stats?.landlordDeclined || 0) > 0 },
-                ]
-                const actionTotal = actionItems.reduce((sum, item) => sum + item.count, 0)
-
                 return (
-                  <div className="col-span-3 bg-card rounded-xl border border-border p-3 flex flex-col min-h-0">
-                    <h3 className="text-sm font-semibold text-card-foreground mb-2 flex-shrink-0">Action Required</h3>
-                    {/* Stacked bar — mirrors By Status visual */}
-                    <div className="h-2 bg-muted rounded-full overflow-hidden flex mb-3 flex-shrink-0">
-                      {actionTotal > 0 ? (
-                        actionItems.filter(i => i.count > 0).map((item) => (
-                          <div
-                            key={item.key}
-                            className="h-full transition-all duration-500"
-                            style={{ width: `${getPercentage(item.count, actionTotal)}%`, backgroundColor: item.barColor }}
-                          />
-                        ))
-                      ) : (
-                        <div className="h-full w-full bg-muted" />
-                      )}
+                  <div className="bg-card rounded-xl border border-border p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-card-foreground">Needs Attention</h3>
+                      <Link href="/tickets?create=true">
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+                          <Plus className="h-3 w-3 mr-1" />
+                          Create
+                        </Button>
+                      </Link>
                     </div>
-                    {/* Action rows */}
-                    <div className="space-y-1 flex-1 overflow-y-auto">
-                      {actionItems.map((item) => (
-                        <Tooltip key={item.key}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                              className={`w-full flex items-center gap-2.5 p-2 rounded-lg transition-colors text-left ${
-                                item.active ? item.activeBg : 'hover:bg-muted/50'
-                              }`}
-                            >
-                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.active ? item.dotClass : 'bg-muted-foreground/30'}`} />
-                              <span className="text-xs text-muted-foreground flex-1">{item.label}</span>
-                              <span className={`text-sm font-bold ${item.active ? item.activeText : 'text-card-foreground'}`}>
-                                {item.count}
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-[200px]">
-                            <p className="text-xs">{ACTION_DESCRIPTIONS[item.key as keyof typeof ACTION_DESCRIPTIONS]}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
+                    <div className="space-y-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left ${
+                              totalHandoffs > 0 ? 'bg-red-500/10 hover:bg-red-500/15' : 'bg-muted/50'
+                            }`}
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-red-500/20' : 'bg-muted'}`}>
+                              <AlertTriangle className={`h-4 w-4 ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-card-foreground">Handoff Review</p>
+                              <p className="text-xs text-muted-foreground">AI needs your help</p>
+                            </div>
+                            <span className={`text-lg font-bold ${totalHandoffs > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                              {totalHandoffs}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => (stats?.awaitingManager || 0) > 0 ? showAwaitingTickets('manager') : undefined}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left ${
+                              (stats?.awaitingManager || 0) > 0 ? 'bg-blue-400/10 hover:bg-blue-400/15' : 'bg-muted/50'
+                            }`}
+                          >
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${(stats?.awaitingManager || 0) > 0 ? 'bg-blue-400/20' : 'bg-muted'}`}>
+                              <UserCheck className={`h-4 w-4 ${(stats?.awaitingManager || 0) > 0 ? 'text-blue-400' : 'text-muted-foreground'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-card-foreground">Manager Approval</p>
+                              <p className="text-xs text-muted-foreground">Needs your decision</p>
+                            </div>
+                            <span className={`text-lg font-bold ${(stats?.awaitingManager || 0) > 0 ? 'text-blue-400' : 'text-muted-foreground'}`}>
+                              {stats?.awaitingManager || 0}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 )
               })()}
 
-              {/* Recent Tickets — bottom-left (3 cols) */}
-              <div className="col-span-3 bg-card rounded-xl border border-border flex flex-col min-h-0">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-                  <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
-                  <Link href="/tickets">
-                    <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-                      View all
-                      <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </Link>
-                </div>
-                <div className="divide-y divide-border flex-1 overflow-y-auto">
-                  {recentTickets.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No tickets found for this period
-                    </div>
-                  ) : (
-                    recentTickets.map((ticket) => (
-                      <Link
-                        key={ticket.id}
-                        href={`/tickets?id=${ticket.id}`}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-card-foreground truncate">
-                            {ticket.issue_description || 'No description'}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {ticket.address}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 ml-3">
-                          {ticket.job_stage && (
-                            <StatusBadge status={ticket.job_stage} />
-                          )}
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatDate(ticket.date_logged)}
-                          </span>
-                        </div>
-                      </Link>
-                    ))
-                  )}
+              {/* Pipeline Status — informational, not actionable */}
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h3 className="text-sm font-semibold text-card-foreground mb-3">Pipeline</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: 'contractor' as const, label: 'Contractor', count: stats?.awaitingContractor || 0, icon: Clock, iconColor: 'text-amber-500' },
+                    { key: 'landlord' as const, label: 'Landlord', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconColor: 'text-violet-500' },
+                    { key: 'scheduled' as const, label: 'Scheduled', count: stats?.scheduledJobs || 0, icon: CalendarClock, iconColor: 'text-cyan-500' },
+                    { key: 'declined' as const, label: 'Declined', count: stats?.landlordDeclined || 0, icon: XCircle, iconColor: 'text-orange-500' },
+                  ].map((item) => (
+                    <Tooltip key={item.key}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
+                          className="flex flex-col items-center gap-1 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                        >
+                          <item.icon className={`h-4 w-4 ${item.iconColor}`} />
+                          <span className="text-lg font-bold text-card-foreground">{item.count}</span>
+                          <span className="text-[10px] text-muted-foreground">{item.label}</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
                 </div>
               </div>
+            </div>
 
-              {/* Quick Actions — bottom-right (2 cols) */}
-              <div className="col-span-2 flex flex-col gap-2 min-h-0">
-                {/* Create Ticket */}
-                <Link
-                  href="/tickets?create=true"
-                  className="bg-card rounded-xl border border-primary/30 p-3 flex items-center gap-3 hover:bg-primary/5 hover:border-primary/50 transition-colors group"
-                >
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors flex-shrink-0">
-                    <Plus className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-card-foreground">Create Ticket</p>
-                    <p className="text-xs text-muted-foreground">Manual entry</p>
-                  </div>
+            {/* Recent Tickets — fills remaining space */}
+            <div className="flex-1 min-h-0 bg-card rounded-xl border border-border flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border flex-shrink-0">
+                <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
+                <Link href="/tickets">
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
+                    View all
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
                 </Link>
-
-                {/* Completion Rate */}
-                <div className="bg-card rounded-xl border border-border p-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-muted-foreground">Completion Rate</span>
-                    <span className="text-lg font-bold text-emerald-500">
-                      {stats && stats.totalTickets > 0 ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '—'}
-                    </span>
+              </div>
+              <div className="divide-y divide-border flex-1 overflow-y-auto">
+                {recentTickets.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No tickets found for this period
                   </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-500"
-                      style={{ width: stats ? `${getPercentage(stats.closedTickets, stats.totalTickets)}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Conversations */}
-                <Link
-                  href="/conversations"
-                  className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="h-8 w-8 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="h-4 w-4 text-cyan-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-card-foreground">Conversations</p>
-                    <p className="text-xs text-muted-foreground">Active chats</p>
-                  </div>
-                </Link>
+                ) : (
+                  recentTickets.map((ticket) => (
+                    <Link
+                      key={ticket.id}
+                      href={`/tickets?id=${ticket.id}`}
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-card-foreground truncate">
+                          {ticket.issue_description || 'No description'}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {ticket.address}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-3">
+                        {ticket.job_stage && (
+                          <StatusBadge status={ticket.job_stage} />
+                        )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate(ticket.date_logged)}
+                        </span>
+                      </div>
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
           </div>
