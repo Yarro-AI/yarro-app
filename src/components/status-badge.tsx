@@ -25,9 +25,13 @@ const statusColors: Record<string, { bg: string; text: string; dot: string; hide
   reminder_sent: { bg: 'bg-indigo-500/10 dark:bg-indigo-400/15', text: 'text-indigo-700 dark:text-indigo-400', dot: 'bg-indigo-500' },
   completed: { bg: 'bg-green-500/10 dark:bg-green-400/15', text: 'text-green-700 dark:text-green-400', dot: 'bg-green-500', hideDot: true },
 
-  // Priority
-  urgent: { bg: 'bg-red-500/10 dark:bg-red-400/15', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
+  // Priority (new v2 values)
   emergency: { bg: 'bg-red-500/10 dark:bg-red-400/15', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
+  urgent: { bg: 'bg-red-500/10 dark:bg-red-400/15', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
+  destructive: { bg: 'bg-orange-500/10 dark:bg-orange-400/15', text: 'text-orange-700 dark:text-orange-400', dot: 'bg-orange-500' },
+  damaging: { bg: 'bg-yellow-500/10 dark:bg-yellow-400/15', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-500' },
+  cosmetic: { bg: 'bg-gray-500/10 dark:bg-gray-400/15', text: 'text-gray-600 dark:text-gray-400', dot: 'bg-gray-400' },
+  // Legacy (old tickets still in DB)
   high: { bg: 'bg-red-500/10 dark:bg-red-400/15', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' },
   medium: { bg: 'bg-yellow-500/10 dark:bg-yellow-400/15', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-500' },
   low: { bg: 'bg-gray-500/10 dark:bg-gray-400/15', text: 'text-gray-600 dark:text-gray-400', dot: 'bg-gray-400' },

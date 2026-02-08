@@ -20,8 +20,8 @@ export const CONTRACTOR_CATEGORIES = [
 
 export type ContractorCategory = (typeof CONTRACTOR_CATEGORIES)[number]
 
-// Ticket priorities
-export const TICKET_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const
+// Ticket priorities (matches IssueAI v2 classification)
+export const TICKET_PRIORITIES = ['Cosmetic', 'Damaging', 'Destructive', 'Urgent', 'Emergency'] as const
 export type TicketPriority = (typeof TICKET_PRIORITIES)[number]
 
 // Tenant roles

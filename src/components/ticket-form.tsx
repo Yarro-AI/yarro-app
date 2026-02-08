@@ -119,7 +119,7 @@ export function TicketForm({
     tenant_id: mergedPrefill?.tenant_id || '',
     issue_description: mergedPrefill?.issue_description || '',
     category: mergedPrefill?.category || '',
-    priority: mergedPrefill?.priority || 'MEDIUM',
+    priority: mergedPrefill?.priority || 'Damaging',
     contractor_ids: initialContractorIds,
     availability: mergedPrefill?.availability || '',
     access: mergedPrefill?.access || '',

@@ -719,7 +719,7 @@ export default function TicketsPage() {
                 tenant_id: selectedTicketBasic.tenant_id || '',
                 issue_description: selectedTicketBasic.issue_description || '',
                 category: selectedTicketBasic.category || '',
-                priority: selectedTicketBasic.priority || 'MEDIUM',
+                priority: selectedTicketBasic.priority || 'Damaging',
                 contractor_id: selectedTicketBasic.contractor_id || null,
                 availability: selectedTicketBasic.availability || '',
                 access: selectedTicketBasic.access || '',
