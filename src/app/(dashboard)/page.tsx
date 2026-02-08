@@ -350,7 +350,7 @@ export default function DashboardPage() {
   const categoryChartData = Object.entries(categoryData)
     .sort((a, b) => b[1] - a[1])
     .map(([name, value], i) => ({
-      name: name.length > 12 ? name.substring(0, 12) + '...' : name,
+      name,
       fullName: name,
       value,
       color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
@@ -469,12 +469,12 @@ export default function DashboardPage() {
                   {stats && stats.totalTickets > 0 ? (
                     <>
                       <div
-                        className="h-full bg-blue-500 rounded-l-full transition-all duration-500 ease-out"
-                        style={{ width: `${getPercentage(stats.openTickets, stats.totalTickets)}%` }}
+                        className="h-full bg-blue-500 transition-all duration-500 ease-out"
+                        style={{ flex: stats.openTickets }}
                       />
                       <div
-                        className="h-full bg-emerald-500 rounded-r-full transition-all duration-500 ease-out"
-                        style={{ width: `${getPercentage(stats.closedTickets, stats.totalTickets)}%` }}
+                        className="h-full bg-emerald-500 transition-all duration-500 ease-out"
+                        style={{ flex: stats.closedTickets }}
                       />
                     </>
                   ) : null}
@@ -500,15 +500,14 @@ export default function DashboardPage() {
               <div>
                 <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Category</span>
                 <div className="h-3 rounded-full overflow-hidden flex bg-muted mt-1.5">
-                  {categoryChartData.map((item, i) => (
+                  {categoryChartData.map((item) => (
                     <Tooltip key={item.fullName}>
                       <TooltipTrigger asChild>
                         <div
-                          className="h-full transition-all duration-500 ease-out first:rounded-l-full last:rounded-r-full"
+                          className="h-full transition-all duration-500 ease-out"
                           style={{
-                            width: `${getPercentage(item.value, stats?.totalTickets || 0)}%`,
+                            flex: item.value,
                             backgroundColor: item.color,
-                            minWidth: item.value > 0 ? '4px' : '0',
                           }}
                         />
                       </TooltipTrigger>
@@ -523,7 +522,7 @@ export default function DashboardPage() {
                     categoryChartData.map((item) => (
                       <div key={item.fullName} className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                        <span className="text-xs text-muted-foreground">{item.name}</span>
+                        <span className="text-xs text-muted-foreground">{item.fullName}</span>
                         <span className="text-xs font-semibold text-card-foreground">{item.value}</span>
                       </div>
                     ))
