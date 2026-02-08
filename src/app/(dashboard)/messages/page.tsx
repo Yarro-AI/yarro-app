@@ -12,7 +12,8 @@ import {
 } from '@/components/detail-drawer'
 import { ChatHistory } from '@/components/chat-message'
 import { StatusBadge } from '@/components/status-badge'
-import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
+import { DateFilter } from '@/components/date-filter'
+import { useDateRange } from '@/contexts/date-range-context'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -69,7 +70,7 @@ export default function MessagesPage() {
   const [openContractors, setOpenContractors] = useState<number[]>([])
   const [openManager, setOpenManager] = useState(false)
   const [openLandlord, setOpenLandlord] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const { dateRange, setDateRange } = useDateRange()
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')

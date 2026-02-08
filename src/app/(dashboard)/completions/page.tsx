@@ -13,7 +13,8 @@ import {
   DetailDivider,
 } from '@/components/detail-drawer'
 import { Badge } from '@/components/ui/badge'
-import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
+import { DateFilter } from '@/components/date-filter'
+import { useDateRange } from '@/contexts/date-range-context'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { CheckCircle, XCircle, Building2, Wrench, Ticket, Image, PoundSterling, Calendar, Users, Mail } from 'lucide-react'
@@ -52,7 +53,7 @@ export default function CompletionsPage() {
   const [hasMessage, setHasMessage] = useState(false)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const { dateRange, setDateRange } = useDateRange()
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')

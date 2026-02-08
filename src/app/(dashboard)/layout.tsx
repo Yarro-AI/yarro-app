@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { usePM } from '@/contexts/pm-context'
+import { DateRangeProvider } from '@/contexts/date-range-context'
 import { createClient } from '@/lib/supabase/client'
 import { ErrorBoundary } from '@/components/error-boundary'
 
@@ -93,9 +94,11 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <DateRangeProvider>
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </DateRangeProvider>
       </main>
     </div>
   )

@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
-import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
+import { DateFilter } from '@/components/date-filter'
+import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
 import { KanbanBoard } from '@/components/kanban-board'
 import {
@@ -106,7 +107,7 @@ type ViewMode = 'stats' | 'board'
 export default function DashboardPage() {
   const router = useRouter()
   const { propertyManager } = usePM()
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const { dateRange, setDateRange } = useDateRange()
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('dashboard-view') as ViewMode) || 'stats'
@@ -370,7 +371,7 @@ export default function DashboardPage() {
 
   if (loading && !stats) {
     return (
-      <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-white to-cyan-50/30 overflow-hidden">
+      <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-muted rounded" />
           <div className="grid grid-cols-2 gap-4 flex-1">
@@ -396,7 +397,7 @@ export default function DashboardPage() {
   return (
     <TooltipProvider>
       <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
-        <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:from-blue-500/[0.05]" />
+        <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:hidden" />
 
         <div className="relative p-4 h-full flex flex-col gap-4">
           {/* Header */}
@@ -572,97 +573,74 @@ export default function DashboardPage() {
 
             {/* RIGHT COLUMN */}
             <div className="flex flex-col gap-3 min-h-0">
-              {/* TOP SECTION (38%): Awaiting Action - compact, no scroll */}
+              {/* Awaiting Action - compact, auto height */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
                 const hasHandoffs = totalHandoffs > 0
                 return (
-                  <div className="bg-card rounded-xl border border-border flex flex-col" style={{ height: '38%' }}>
-                    <div className="px-4 py-2 border-b border-border flex-shrink-0">
-                      <h3 className="text-sm font-semibold text-card-foreground">Awaiting Action</h3>
-                    </div>
-                    <div className="flex-1 p-2 space-y-1.5 overflow-hidden">
-                      {/* Handoff Review row */}
+                  <div className="bg-card rounded-xl border border-border p-3 flex-shrink-0">
+                    <h3 className="text-sm font-semibold text-card-foreground mb-2">Awaiting Action</h3>
+                    <div className="grid grid-cols-2 gap-1.5">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => hasHandoffs ? showAwaitingTickets('handoff') : undefined}
-                            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors text-left ${
-                              hasHandoffs
-                                ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-muted/30 hover:bg-muted/50'
+                            className={`flex items-center gap-2 p-1.5 rounded-lg transition-colors text-left ${
+                              hasHandoffs ? 'bg-red-500/10' : 'bg-muted/30 hover:bg-muted/50'
                             }`}
                           >
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className={`h-3.5 w-3.5 ${hasHandoffs ? 'text-red-500' : 'text-muted-foreground'}`} />
-                              <span className={`text-sm ${hasHandoffs ? 'text-red-700 dark:text-red-300 font-medium' : 'text-card-foreground'}`}>
-                                Handoff Review
-                              </span>
-                            </div>
-                            <span className={`text-sm font-bold ${hasHandoffs ? 'text-red-500' : 'text-card-foreground'}`}>
-                              {totalHandoffs}
-                            </span>
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${hasHandoffs ? 'bg-red-500' : 'bg-muted-foreground/30'}`} />
+                            <span className="text-xs text-muted-foreground flex-1">Handoff</span>
+                            <span className={`text-sm font-bold ${hasHandoffs ? 'text-red-500' : 'text-card-foreground'}`}>{totalHandoffs}</span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-[200px]">
+                        <TooltipContent side="bottom" className="max-w-[200px]">
                           <p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p>
                         </TooltipContent>
                       </Tooltip>
-
-                      {/* Awaiting Contractor */}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => showAwaitingTickets('contractor')}
-                            className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                            className="flex items-center gap-2 p-1.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-sm text-card-foreground">Awaiting Contractor</span>
-                            </div>
+                            <div className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" />
+                            <span className="text-xs text-muted-foreground flex-1">Contractor</span>
                             <span className="text-sm font-bold text-card-foreground">{stats?.awaitingContractor || 0}</span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-[200px]">
+                        <TooltipContent side="bottom" className="max-w-[200px]">
                           <p className="text-xs">{ACTION_DESCRIPTIONS.contractor}</p>
                         </TooltipContent>
                       </Tooltip>
-
-                      {/* Awaiting Manager */}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => showAwaitingTickets('manager')}
-                            className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                            className="flex items-center gap-2 p-1.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-sm text-card-foreground">Awaiting Manager</span>
-                            </div>
+                            <div className="w-2 h-2 rounded-full flex-shrink-0 bg-blue-400" />
+                            <span className="text-xs text-muted-foreground flex-1">Manager</span>
                             <span className="text-sm font-bold text-card-foreground">{stats?.awaitingManager || 0}</span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-[200px]">
+                        <TooltipContent side="bottom" className="max-w-[200px]">
                           <p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p>
                         </TooltipContent>
                       </Tooltip>
-
-                      {/* Awaiting Landlord */}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => showAwaitingTickets('landlord')}
-                            className="w-full flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                            className="flex items-center gap-2 p-1.5 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
                           >
-                            <div className="flex items-center gap-2">
-                              <Hourglass className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-sm text-card-foreground">Awaiting Landlord</span>
-                            </div>
+                            <div className="w-2 h-2 rounded-full flex-shrink-0 bg-violet-400" />
+                            <span className="text-xs text-muted-foreground flex-1">Landlord</span>
                             <span className="text-sm font-bold text-card-foreground">{stats?.awaitingLandlord || 0}</span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-[200px]">
+                        <TooltipContent side="bottom" className="max-w-[200px]">
                           <p className="text-xs">{ACTION_DESCRIPTIONS.landlord}</p>
                         </TooltipContent>
                       </Tooltip>
@@ -671,8 +649,8 @@ export default function DashboardPage() {
                 )
               })()}
 
-              {/* BOTTOM SECTION (62%): Quick Actions + Scheduled/Declined */}
-              <div className="flex flex-col gap-3 min-h-0" style={{ height: '62%' }}>
+              {/* Quick Actions + Scheduled/Declined */}
+              <div className="flex flex-col gap-3 flex-1 min-h-0">
                 {/* Quick Actions row - at top, starting from midline */}
                 <div className="grid grid-cols-3 gap-3 flex-shrink-0">
                   {/* Create Manual Ticket */}

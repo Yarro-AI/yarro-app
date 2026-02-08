@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
-import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
+import { DateFilter } from '@/components/date-filter'
+import { useDateRange } from '@/contexts/date-range-context'
 import {
   DetailDrawer,
   DetailSection,
@@ -94,7 +95,7 @@ export default function TicketsPage() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all')
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const supabase = createClient()

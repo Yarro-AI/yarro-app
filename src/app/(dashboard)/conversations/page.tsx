@@ -13,7 +13,8 @@ import {
 } from '@/components/detail-drawer'
 import { ChatHistory } from '@/components/chat-message'
 import { StatusBadge } from '@/components/status-badge'
-import { DateFilter, DateRange, getDefaultDateRange } from '@/components/date-filter'
+import { DateFilter } from '@/components/date-filter'
+import { useDateRange } from '@/contexts/date-range-context'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { Building2, Phone, User, Ticket } from 'lucide-react'
@@ -60,7 +61,7 @@ export default function ConversationsPage() {
   const [relatedTicket, setRelatedTicket] = useState<RelatedTicket | null>(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange())
+  const { dateRange, setDateRange } = useDateRange()
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')

@@ -47,7 +47,7 @@ export function CopyableGuide({ title, content, children }: CopyableGuideProps) 
           )}
         </Button>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden">{children}</CardContent>
+      <CardContent className="flex-1 overflow-y-auto">{children}</CardContent>
     </Card>
   )
 }
