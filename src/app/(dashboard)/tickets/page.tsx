@@ -102,11 +102,19 @@ export default function TicketsPage() {
 
   const selectedId = searchParams.get('id')
   const action = searchParams.get('action')
+  const shouldCreate = searchParams.get('create')
 
   useEffect(() => {
     if (!propertyManager) return
     fetchTickets()
   }, [propertyManager, dateRange, showArchived])
+
+  useEffect(() => {
+    if (shouldCreate === 'true') {
+      setCreateDrawerOpen(true)
+      router.replace('/tickets')
+    }
+  }, [shouldCreate])
 
   useEffect(() => {
     if (selectedId && tickets.length > 0) {
