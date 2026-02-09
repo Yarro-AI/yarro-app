@@ -806,8 +806,8 @@ export function TicketForm({
                   value: c.id,
                   label: c.contractor_name,
                   description: c.category,
-                  badge: isCategoryMatch ? 'Match' : (!isPropertyAssigned && formData.property_id ? 'Other' : undefined),
-                  badgeVariant: isCategoryMatch ? 'success' as const : 'default' as const,
+                  badge: isCategoryMatch ? 'Match' : (!isPropertyAssigned && formData.property_id ? 'Not assigned' : undefined),
+                  badgeVariant: isCategoryMatch ? 'success' as const : (!isPropertyAssigned && formData.property_id ? 'warning' as const : 'default' as const),
                 }
               })}
               values={formData.contractor_ids}
@@ -830,12 +830,12 @@ export function TicketForm({
               .filter(c => c && c.category !== formData.category) as Contractor[]
             if (mismatchedContractors.length === 0) return null
             return (
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="font-medium text-amber-800">Category mismatch</p>
-                    <p className="text-xs text-amber-700 mt-1">
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Category mismatch</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                       Job category is <span className="font-medium">&quot;{formData.category}&quot;</span> but{' '}
                       {mismatchedContractors.length === 1 ? (
                         <>
@@ -854,7 +854,7 @@ export function TicketForm({
                         </>
                       )}.
                     </p>
-                    <p className="text-xs text-amber-600 mt-1">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                       Check this is intentional before proceeding.
                     </p>
                   </div>

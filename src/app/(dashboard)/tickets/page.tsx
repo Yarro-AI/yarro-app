@@ -554,12 +554,12 @@ export default function TicketsPage() {
 
             {/* Double-quote warning */}
             {previouslyApprovedContractor && selectedTicketBasic?.contractor_id && (
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="font-medium text-amber-800">Previous contractor already approved</p>
-                    <p className="text-xs text-amber-700 mt-1">
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Previous contractor already approved</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                       <span className="font-medium">{previouslyApprovedContractor}</span> was previously approved for this ticket.
                       Make sure to cancel the previous arrangement before proceeding with a new contractor.
                     </p>

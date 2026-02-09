@@ -59,8 +59,8 @@ const roleConfig: Record<string, {
   },
   system: {
     label: 'System',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-900',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+    textColor: 'text-amber-900 dark:text-amber-200',
     align: 'left',
     icon: Bot,
   },
