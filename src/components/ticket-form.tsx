@@ -756,7 +756,8 @@ export function TicketForm({
                   <img
                     src={url}
                     alt={`Upload ${idx + 1}`}
-                    className={`object-cover rounded-lg border ${isHandoff ? 'w-28 h-28' : 'w-16 h-16'}`}
+                    className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${isHandoff ? 'w-28 h-28' : 'w-16 h-16'}`}
+                    onClick={() => window.open(url, '_blank')}
                   />
                   <button
                     type="button"
