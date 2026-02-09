@@ -191,7 +191,7 @@ export function TicketForm({
       setFilteredTenants([])
     }
     // Reset tenant if property changes
-    if (formData.tenant_id) {
+    if (formData.tenant_id && tenants.length > 0) {
       const validTenant = tenants.find(
         (t) => t.id === formData.tenant_id && t.property_id === formData.property_id
       )
