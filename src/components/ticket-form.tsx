@@ -563,7 +563,18 @@ export function TicketForm({
   return (
     <div className="space-y-6">
       {/* Handoff indicator */}
-      {isHandoff && (
+      {isHandoff && formData.priority === 'Emergency' && (
+        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-bold text-red-800 dark:text-red-300 uppercase tracking-wide">EMERGENCY</p>
+            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
+              This conversation was flagged as an emergency. Review urgently and dispatch immediately.
+            </p>
+          </div>
+        </div>
+      )}
+      {isHandoff && formData.priority !== 'Emergency' && (
         <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
@@ -596,7 +607,7 @@ export function TicketForm({
                   <div
                     className={`max-w-[80%] rounded-lg px-3 py-1.5 text-xs ${
                       msg.direction === 'in'
-                        ? 'bg-white border text-foreground'
+                        ? 'bg-white dark:bg-zinc-800 border text-gray-900 dark:text-gray-100'
                         : 'bg-primary/10 text-foreground'
                     }`}
                   >
