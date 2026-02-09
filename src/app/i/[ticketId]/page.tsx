@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
@@ -6,25 +6,27 @@ export const metadata: Metadata = {
   title: 'Ticket Photos — Yarro',
 }
 
+// Public anon client — no cookies/auth needed
+// The SECURITY DEFINER RPC handles data access
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
 export default async function TicketImagesPage({
   params,
 }: {
   params: Promise<{ ticketId: string }>
 }) {
   const { ticketId } = await params
-  const supabase = await createClient()
 
-  const { data: ticket } = await supabase
-    .from('c1_tickets')
-    .select('id, images, issue_description, category, c1_properties(address)')
-    .eq('id', ticketId)
-    .single()
+  const { data } = await supabase.rpc('c1_public_ticket_images', {
+    p_ticket_id: ticketId,
+  })
 
-  if (!ticket?.images?.length) {
+  if (!data?.images?.length) {
     notFound()
   }
-
-  const address = (ticket.c1_properties as { address?: string } | null)?.address
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -33,18 +35,18 @@ export default async function TicketImagesPage({
           <h1 className="text-lg font-semibold tracking-tight text-gray-900">
             Yarro
           </h1>
-          {address && (
-            <p className="mt-1 text-sm text-gray-500">{address}</p>
+          {data.address && (
+            <p className="mt-1 text-sm text-gray-500">{data.address}</p>
           )}
-          {ticket.issue_description && (
+          {data.issue_description && (
             <p className="mt-2 text-sm text-gray-700">
-              {ticket.issue_description}
+              {data.issue_description}
             </p>
           )}
         </div>
 
         <div className="space-y-3">
-          {(ticket.images as string[]).map((url, i) => (
+          {(data.images as string[]).map((url: string, i: number) => (
             <div
               key={i}
               className="overflow-hidden rounded-lg bg-white shadow-sm"
