@@ -117,7 +117,7 @@ export function TicketDetailModal({
             <>
               {/* Double-quote warning */}
               {previouslyApprovedContractor && basic.contractor_id && (
-                <div className="p-3 mb-3 bg-muted/50 rounded-lg border flex-shrink-0">
+                <div className="p-3 mt-2 mb-3 bg-muted/50 rounded-lg border flex-shrink-0">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">

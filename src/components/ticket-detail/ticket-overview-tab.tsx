@@ -28,10 +28,10 @@ function DetailRow({ label, value, mono, highlight }: {
   const isEmpty = !value
 
   return (
-    <div className="flex items-center justify-between px-3 py-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex items-start justify-between gap-4 px-3 py-2">
+      <span className="text-xs text-muted-foreground shrink-0 pt-0.5">{label}</span>
       <span className={cn(
-        'text-sm',
+        'text-xs text-right',
         isEmpty && 'text-muted-foreground/40 italic',
         !isEmpty && 'font-medium',
         mono && !isEmpty && 'font-mono',
