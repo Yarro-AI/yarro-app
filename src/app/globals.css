@@ -72,7 +72,7 @@
   /* Light Theme — Apple Zinc + Yarro Blue */
   --background: #FAFAFA;
   --foreground: #18181B;
-  --card: #FFFFFF;
+  --card: #FAFAFA;
   --card-foreground: #18181B;
   --popover: #FFFFFF;
   --popover-foreground: #18181B;
@@ -111,7 +111,7 @@
 .dark {
   --background: #09090B;
   --foreground: #FAFAFA;
-  --card: #18181B;
+  --card: #09090B;
   --card-foreground: #FAFAFA;
   --popover: #18181B;
   --popover-foreground: #FAFAFA;
@@ -148,7 +148,7 @@
 .blue {
   --background: #0a1628;
   --foreground: #f1f5f9;
-  --card: #0f2136;
+  --card: #0a1628;
   --card-foreground: #f1f5f9;
   --popover: #0f2136;
   --popover-foreground: #f1f5f9;
