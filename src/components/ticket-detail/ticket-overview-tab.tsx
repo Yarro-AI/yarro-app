@@ -28,7 +28,7 @@ function DetailRow({ label, value, mono, highlight }: {
   const isEmpty = !value
 
   return (
-    <div className="flex items-center justify-between gap-4 px-3 py-2 bg-muted/30 rounded-lg">
+    <div className="flex items-center justify-between gap-4 px-3 py-2 border rounded-lg">
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <span className={cn(
         'text-sm text-right truncate max-w-[60%]',
@@ -49,7 +49,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
   return (
     <div className="space-y-5">
       {/* Issue Description */}
-      <div className="p-3 bg-muted/30 rounded-lg">
+      <div className="p-3 border rounded-lg">
         <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Issue</p>
         <p className="text-sm leading-relaxed">
           {context.issue_description || 'No description provided'}
@@ -80,7 +80,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
           {context.tenant_name && (
             <Link
               href={basic.tenant_id ? `/tenants?id=${basic.tenant_id}` : '#'}
-              className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -95,7 +95,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
           {/* Property */}
           <Link
             href={`/properties?id=${context.property_id}`}
-            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+            className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
           >
             <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
               <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
@@ -110,7 +110,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
           {basic.contractor_name && basic.contractor_id && (
             <Link
               href={`/contractors?id=${basic.contractor_id}`}
-              className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
                 <Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
@@ -126,7 +126,7 @@ export function TicketOverviewTab({ context, basic }: TicketOverviewTabProps) {
           {context.landlord_name && (
             <Link
               href={`/properties?id=${context.property_id}`}
-              className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
                 <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />

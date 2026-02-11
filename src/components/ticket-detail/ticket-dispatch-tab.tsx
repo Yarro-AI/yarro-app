@@ -55,7 +55,7 @@ export function TicketDispatchTab({ messages }: TicketDispatchTabProps) {
     <div className="space-y-4">
       {/* Multi-contractor warning banner */}
       {contactedCount > 1 && approvedCount === 0 && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border">
+        <div className="flex items-start gap-2 p-3 rounded-lg border">
           <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 shrink-0" />
           <div className="text-sm">
             <p className="font-medium">
