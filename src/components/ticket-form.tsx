@@ -27,7 +27,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
-import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertTriangle, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
 
 interface Property {
   id: string
@@ -148,6 +148,7 @@ export function TicketForm({
   const [fileInputKey, setFileInputKey] = useState(0) // Force input reset
   const [conversationLog, setConversationLog] = useState<ConversationMessage[]>([])
   const [loadingConversation, setLoadingConversation] = useState(false)
+  const [showConversation, setShowConversation] = useState(false)
 
   // Fetch properties, tenants, and contractors
   useEffect(() => {
@@ -590,42 +591,50 @@ export function TicketForm({
         </div>
       )}
 
-      {/* Conversation thread for handoff tickets */}
-      {isHandoff && conversationLog.length > 0 && (
+      {/* Conversation thread for handoff tickets — collapsible */}
+      {isHandoff && (conversationLog.length > 0 || loadingConversation) && (
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            WhatsApp Conversation
-          </label>
-          <div className="max-h-48 overflow-y-auto rounded-lg border bg-muted/30 p-3 space-y-2">
-            {conversationLog.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${msg.direction === 'in' ? 'justify-start' : 'justify-end'}`}
-              >
-                {msg.label === 'HANDOFF' ? (
-                  <div className="text-xs text-amber-600 font-medium py-1 w-full text-center">
-                    — Handed off —
-                  </div>
-                ) : (
-                  <div
-                    className={`max-w-[80%] rounded-lg px-3 py-1.5 text-xs ${
-                      msg.direction === 'in'
-                        ? 'bg-white dark:bg-zinc-800 border text-gray-900 dark:text-gray-100'
-                        : 'bg-primary/10 text-foreground'
-                    }`}
-                  >
-                    {msg.message}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {isHandoff && loadingConversation && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Loading conversation...
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 text-xs"
+            onClick={() => setShowConversation(!showConversation)}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            {showConversation ? 'Hide Conversation' : 'View Conversation'}
+          </Button>
+          {showConversation && loadingConversation && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Loading conversation...
+            </div>
+          )}
+          {showConversation && conversationLog.length > 0 && (
+            <div className="max-h-48 overflow-y-auto rounded-lg border bg-muted/30 p-3 space-y-2">
+              {conversationLog.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.direction === 'in' ? 'justify-start' : 'justify-end'}`}
+                >
+                  {msg.label === 'HANDOFF' ? (
+                    <div className="text-xs text-amber-600 font-medium py-1 w-full text-center">
+                      — Handed off —
+                    </div>
+                  ) : (
+                    <div
+                      className={`max-w-[80%] rounded-lg px-3 py-1.5 text-xs ${
+                        msg.direction === 'in'
+                          ? 'bg-white dark:bg-zinc-800 border text-gray-900 dark:text-gray-100'
+                          : 'bg-primary/10 text-foreground'
+                      }`}
+                    >
+                      {msg.message}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -893,9 +902,6 @@ export function TicketForm({
 
       {/* Footer */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button variant="outline" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </Button>
         {isHandoff && onDismiss && (
           <InteractiveHoverButton
             text="Dismiss"
