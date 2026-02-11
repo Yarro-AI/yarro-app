@@ -22,8 +22,9 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Plus, Ticket, CheckCircle2 } from 'lucide-react'
+import { Plus, Ticket, CheckCircle2, Filter, Check, X } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
 
@@ -58,6 +59,17 @@ interface TicketRow {
 
 type TicketFilter = 'all' | 'system' | 'manual'
 
+const STAGE_OPTIONS = [
+  'Completed',
+  'Handoff',
+  'Awaiting Manager',
+  'Awaiting Landlord',
+  'Awaiting Contractor',
+  'Not Completed',
+  'Scheduled',
+  'Awaiting Booking',
+] as const
+
 export default function TicketsPage() {
   const { propertyManager } = usePM()
   const searchParams = useSearchParams()
@@ -72,6 +84,7 @@ export default function TicketsPage() {
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [stageFilter, setStageFilter] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -164,7 +177,7 @@ export default function TicketsPage() {
 
       const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
         const isClosed = t.status?.toLowerCase() === 'closed'
-        if (isClosed) return 'closed'
+        if (isClosed) return 'Completed'
         if (t.handoff) return 'handoff'
         const ms = (msgStage || '').toLowerCase()
         if (ms === 'awaiting_manager') return 'Awaiting Manager'
@@ -426,11 +439,20 @@ export default function TicketsPage() {
   // Open handoffs only show in the banner, not in the table
   const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open'
 
+  const toggleStageFilter = (stage: string) => {
+    setStageFilter(prev => {
+      const next = new Set(prev)
+      if (next.has(stage)) next.delete(stage)
+      else next.add(stage)
+      return next
+    })
+  }
+
   const filteredTickets = tickets.filter((t) => {
     if (isOpenHandoff(t)) return false // always excluded from table — banner handles these
-    if (activeFilter === 'all') return true
-    if (activeFilter === 'manual') return t.is_manual === true
-    if (activeFilter === 'system') return !t.handoff && !t.is_manual
+    if (activeFilter === 'manual' && t.is_manual !== true) return false
+    if (activeFilter === 'system' && (t.handoff || t.is_manual)) return false
+    if (stageFilter.size > 0 && !stageFilter.has(t.display_stage || '')) return false
     return true
   })
 
@@ -518,6 +540,53 @@ export default function TicketsPage() {
           getRowId={(ticket) => ticket.id}
           getRowClassName={getRowClassName}
           fillHeight
+          headerExtra={
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10 gap-2 text-xs font-medium">
+                  <Filter className="h-3.5 w-3.5" />
+                  Stage
+                  {stageFilter.size > 0 && (
+                    <span className="ml-0.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                      {stageFilter.size}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-52 p-2">
+                <div className="space-y-0.5">
+                  {STAGE_OPTIONS.map((stage) => {
+                    const active = stageFilter.has(stage)
+                    return (
+                      <button
+                        key={stage}
+                        onClick={() => toggleStageFilter(stage)}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                          active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          active ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                        }`}>
+                          {active && <Check className="h-3 w-3 text-primary-foreground" />}
+                        </div>
+                        <StatusBadge status={stage} size="sm" />
+                      </button>
+                    )
+                  })}
+                </div>
+                {stageFilter.size > 0 && (
+                  <button
+                    onClick={() => setStageFilter(new Set())}
+                    className="w-full mt-2 pt-2 border-t text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1.5"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear filters
+                  </button>
+                )}
+              </PopoverContent>
+            </Popover>
+          }
           emptyMessage={
             <div className="text-center py-8">
               <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />

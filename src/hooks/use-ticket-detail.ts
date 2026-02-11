@@ -488,7 +488,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const displayStage = (() => {
     if (!basic) return null
     const isClosed = basic.status?.toLowerCase() === 'closed'
-    if (isClosed) return 'closed'
+    if (isClosed) return 'Completed'
     if (basic.handoff) return 'handoff'
     const msgStage = (messages?.stage || '').toLowerCase()
     if (msgStage === 'awaiting_manager') return 'Awaiting Manager'

@@ -36,6 +36,7 @@ type DataTableProps<T> = {
   loading?: boolean
   maxHeight?: string
   fillHeight?: boolean
+  headerExtra?: ReactNode
 }
 
 export function DataTable<T>({
@@ -51,6 +52,7 @@ export function DataTable<T>({
   loading = false,
   maxHeight = 'calc(100vh - 280px)',
   fillHeight = false,
+  headerExtra,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -128,16 +130,19 @@ export function DataTable<T>({
 
   return (
     <div className={cn("bg-card rounded-xl border", fillHeight && "flex flex-col h-full")}>
-      {/* Search */}
+      {/* Search + Filters */}
       <div className={cn("p-4 border-b", fillHeight && "flex-shrink-0")}>
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-10"
-          />
+        <div className="flex items-center gap-3">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10"
+            />
+          </div>
+          {headerExtra}
         </div>
       </div>
 
