@@ -395,9 +395,7 @@ export default function TicketsPage() {
       key: 'priority',
       header: 'Priority',
       sortable: true,
-      render: (ticket) => ticket.priority ? (
-        <span className="text-xs text-muted-foreground font-medium capitalize">{ticket.priority}</span>
-      ) : '-',
+      render: (ticket) => ticket.priority ? <StatusBadge status={ticket.priority} /> : '-',
     },
     {
       key: 'type',
