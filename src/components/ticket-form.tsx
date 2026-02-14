@@ -60,6 +60,7 @@ interface TicketFormData {
   property_id: string
   tenant_id: string
   issue_description: string
+  issue_title: string            // Short embeddable phrase e.g. "a blocked shower"
   category: string
   priority: string
   contractor_ids: string[]       // Array, required, ORDERED
@@ -121,6 +122,7 @@ export function TicketForm({
     property_id: mergedPrefill?.property_id || '',
     tenant_id: mergedPrefill?.tenant_id || '',
     issue_description: mergedPrefill?.issue_description || '',
+    issue_title: mergedPrefill?.issue_title || '',
     category: mergedPrefill?.category || '',
     priority: mergedPrefill?.priority || 'Damaging',
     contractor_ids: initialContractorIds,
@@ -481,6 +483,7 @@ export function TicketForm({
           property_id: formData.property_id,
           tenant_id: formData.tenant_id,
           issue_description: formData.issue_description,
+          issue_title: formData.issue_title || null,
           category: formData.category,
           priority: formData.priority,
           availability: formData.availability || null,
@@ -525,7 +528,7 @@ export function TicketForm({
       const tenant = tenants.find(t => t.id === formData.tenant_id)
 
       try {
-        await fetch('https://n8n.antigravitygroup.co.uk/webhook/dispatcher', {
+        await fetch('https://yarro.app.n8n.cloud/webhook/yarro-dispatcher', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -534,6 +537,7 @@ export function TicketForm({
             contractor_id: formData.contractor_ids[0],
             contractor_name: firstContractor?.contractor_name,
             issue_description: formData.issue_description,
+            issue_title: formData.issue_title,
             category: formData.category,
             priority: formData.priority,
             address: property?.address,
@@ -670,9 +674,20 @@ export function TicketForm({
             value={formData.issue_description}
             onChange={(e) => updateField('issue_description', e.target.value)}
             placeholder="Describe the maintenance issue..."
-            className="min-h-[120px] h-full"
-            rows={5}
+            className="min-h-[100px]"
+            rows={4}
           />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Short phrase
+            </label>
+            <Input
+              value={formData.issue_title}
+              onChange={(e) => updateField('issue_title', e.target.value)}
+              placeholder='e.g. "a blocked shower"'
+              className="h-8 text-sm"
+            />
+          </div>
         </div>
 
         {/* Row 2 left: Tenant */}

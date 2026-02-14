@@ -322,8 +322,11 @@ export type Database = {
           email: string
           emergency_contact: string | null
           id: string
+          landlord_followup_hours: number | null
+          landlord_timeout_hours: number | null
           name: string
           phone: string | null
+          user_id: string | null
         }
         Insert: {
           business_name: string
@@ -334,8 +337,11 @@ export type Database = {
           email: string
           emergency_contact?: string | null
           id?: string
+          landlord_followup_hours?: number | null
+          landlord_timeout_hours?: number | null
           name: string
           phone?: string | null
+          user_id?: string | null
         }
         Update: {
           business_name?: string
@@ -346,8 +352,11 @@ export type Database = {
           email?: string
           emergency_contact?: string | null
           id?: string
+          landlord_followup_hours?: number | null
+          landlord_timeout_hours?: number | null
           name?: string
           phone?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -416,6 +425,7 @@ export type Database = {
           images: Json | null
           is_manual: boolean | null
           issue_description: string | null
+          issue_title: string | null
           job_stage: string | null
           landlord_approved_on: string | null
           priority: string | null
@@ -447,6 +457,7 @@ export type Database = {
           images?: Json | null
           is_manual?: boolean | null
           issue_description?: string | null
+          issue_title?: string | null
           job_stage?: string | null
           landlord_approved_on?: string | null
           priority?: string | null
@@ -478,6 +489,7 @@ export type Database = {
           images?: Json | null
           is_manual?: boolean | null
           issue_description?: string | null
+          issue_title?: string | null
           job_stage?: string | null
           landlord_approved_on?: string | null
           priority?: string | null
