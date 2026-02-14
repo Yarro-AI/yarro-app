@@ -84,6 +84,7 @@ interface TicketSummary {
   issue_description: string | null
   status: string
   job_stage: string | null
+  display_stage: string | null
   message_stage?: string | null
   category: string | null
   priority: string | null
@@ -286,6 +287,21 @@ export default function DashboardPage() {
         jobNotCompleted,
       })
 
+      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
+        const isClosed = t.status?.toLowerCase() === 'closed'
+        if (isClosed) return 'Completed'
+        if (t.handoff) return 'Handoff'
+        const ms = (msgStage || '').toLowerCase()
+        if (ms === 'awaiting_manager') return 'Awaiting Manager'
+        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
+        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
+        if (ncIds.has(t.id)) return 'Not Completed'
+        const js = (t.job_stage || '').toLowerCase()
+        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
+        if (js === 'sent') return 'Awaiting Booking'
+        return 'Created'
+      }
+
       const mappedTickets = tickets.map((t) => {
         const messages = t.c1_messages as MessageData | MessageData[] | null
         const messageStage = messages
@@ -296,6 +312,7 @@ export default function DashboardPage() {
           issue_description: t.issue_description,
           status: t.status,
           job_stage: t.job_stage,
+          display_stage: deriveDisplayStage(t, messageStage),
           message_stage: messageStage || null,
           category: t.category,
           priority: t.priority,
@@ -764,8 +781,8 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 ml-3">
-                        {ticket.job_stage && (
-                          <StatusBadge status={ticket.job_stage} />
+                        {ticket.display_stage && (
+                          <StatusBadge status={ticket.display_stage} />
                         )}
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDate(ticket.date_logged)}
@@ -813,7 +830,7 @@ export default function DashboardPage() {
                       </div>
                     </Link>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      {ticket.job_stage && <StatusBadge status={ticket.job_stage} />}
+                      {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
                       {awaitingType === 'handoff' && ticket.handoff && (
                         <Link
                           href={`/tickets?id=${ticket.id}&action=complete`}
