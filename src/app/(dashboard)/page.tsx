@@ -636,7 +636,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Requires Action + In Progress — two columns */}
-            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+            <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
               {/* Requires Action */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
@@ -650,8 +650,8 @@ export default function DashboardPage() {
                 const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-4">
-                    <div className="flex items-center justify-between mb-3">
+                  <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0 overflow-hidden">
+                    <div className="flex items-center justify-between mb-3 flex-shrink-0">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
                         {totalAction > 0 && (
@@ -659,7 +659,7 @@ export default function DashboardPage() {
                         )}
                       </div>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0">
                       {/* Primary actions */}
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -799,8 +799,8 @@ export default function DashboardPage() {
               })()}
 
               {/* In Progress */}
-              <div className="bg-card rounded-xl border border-border p-4">
-                <div className="flex items-center gap-2 mb-3">
+              <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0 overflow-hidden">
+                <div className="flex items-center gap-2 mb-3 flex-shrink-0">
                   <h3 className="text-sm font-semibold text-card-foreground">In Progress</h3>
                   {(() => {
                     const totalProgress = (stats?.awaitingContractor || 0) + (stats?.awaitingBooking || 0) + (stats?.scheduledJobs || 0) + (stats?.awaitingLandlord || 0)
@@ -809,7 +809,7 @@ export default function DashboardPage() {
                     ) : null
                   })()}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0">
                   {[
                     { key: 'contractor' as const, label: 'Awaiting Contractor', desc: 'Waiting for quote or availability', count: stats?.awaitingContractor || 0, icon: Clock, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
                     { key: 'booking' as const, label: 'Awaiting Booking', desc: 'Booking sent, waiting for confirmation', count: stats?.awaitingBooking || 0, icon: Send, iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500' },
