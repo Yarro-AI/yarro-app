@@ -283,7 +283,7 @@ export function getRecipientMessages(entry: RecipientEntry | null, title: string
   if (entry.last_outbound_body) {
     messages.push({
       role: 'assistant',
-      text: `<strong>To ${title}</strong>${entry.name ? ` <span style="opacity:0.7">(${entry.name})</span>` : ''}<br/><br/>${entry.last_outbound_body}`,
+      text: entry.last_outbound_body,
       timestamp: entry.review_request_sent_at,
       allowHtml: true,
     })

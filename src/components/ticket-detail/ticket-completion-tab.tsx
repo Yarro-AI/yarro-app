@@ -1,7 +1,7 @@
 'use client'
 
 import { CollapsibleSection } from '@/components/collapsible-section'
-import { CheckCircle, XCircle, Wrench, Calendar } from 'lucide-react'
+import { CheckCircle, XCircle, Wrench } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -16,7 +16,7 @@ function DashedLine() {
   return <div className="w-full border-t-2 border-dashed border-border/60" aria-hidden="true" />
 }
 
-function DetailRow({ label, value, mono, highlight }: {
+function DetailCell({ label, value, mono, highlight }: {
   label: string
   value: string | null | undefined
   mono?: boolean
@@ -24,15 +24,15 @@ function DetailRow({ label, value, mono, highlight }: {
 }) {
   if (!value) return null
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
-      <span className={cn(
-        'text-sm text-right',
+    <div className="space-y-0.5">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className={cn(
+        'text-sm',
         mono && 'font-mono',
         highlight ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-medium text-foreground',
       )}>
         {value}
-      </span>
+      </p>
     </div>
   )
 }
@@ -70,12 +70,16 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
 
       <DashedLine />
 
-      {/* Financial details */}
-      <div className="px-1 space-y-0">
-        <DetailRow label="Quote" value={formatCurrency(completion.quote_amount)} mono />
-        <DetailRow label="Markup" value={formatCurrency(completion.markup_amount)} mono />
-        <DetailRow label="Total" value={formatCurrency(completion.total_amount)} mono highlight />
-        <DetailRow label="Received" value={format(new Date(completion.received_at), 'dd MMM yyyy, HH:mm')} />
+      {/* Two-column: Left = amounts, Right = meta */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <div className="space-y-4">
+          <DetailCell label="Quote" value={formatCurrency(completion.quote_amount)} mono />
+          <DetailCell label="Markup" value={formatCurrency(completion.markup_amount)} mono />
+          <DetailCell label="Total" value={formatCurrency(completion.total_amount)} mono highlight />
+        </div>
+        <div className="space-y-4">
+          <DetailCell label="Received" value={format(new Date(completion.received_at), 'dd MMM yyyy, HH:mm')} />
+        </div>
       </div>
 
       {/* Notes */}

@@ -635,7 +635,7 @@ export default function DashboardPage() {
                             </span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p></TooltipContent>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.handoff}</p></TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -656,7 +656,7 @@ export default function DashboardPage() {
                             </span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.manager}</p></TooltipContent>
                       </Tooltip>
 
                       {/* Separator */}
@@ -684,7 +684,7 @@ export default function DashboardPage() {
                             </span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p></TooltipContent>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.declined}</p></TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -705,7 +705,7 @@ export default function DashboardPage() {
                             </span>
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom"><p className="text-xs">{ACTION_DESCRIPTIONS.notCompleted}</p></TooltipContent>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS.notCompleted}</p></TooltipContent>
                       </Tooltip>
                     </div>
                   </div>

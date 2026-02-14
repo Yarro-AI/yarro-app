@@ -1,10 +1,9 @@
 'use client'
 
 import { format } from 'date-fns'
-import { Building2, Users, Wrench, MapPin, Crown } from 'lucide-react'
+import { Users, Wrench, MapPin, Crown } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { StatusBadge } from '@/components/status-badge'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import { formatCurrency, getContractors, getRecipient } from '@/hooks/use-ticket-detail'
 
@@ -19,29 +18,33 @@ function formatDate(date: string | null) {
   return format(new Date(date), 'dd MMM yyyy')
 }
 
-/** Dashed separator — receipt style */
 function DashedLine() {
   return <div className="w-full border-t-2 border-dashed border-border/60" aria-hidden="true" />
 }
 
-/** Single detail row — label left, value right, clean receipt style */
-function DetailRow({ label, value, mono, highlight }: {
+/** Detail cell — label above value, stacked vertically */
+function DetailCell({ label, value, mono, highlight, waiting }: {
   label: string
   value: string | null | undefined
   mono?: boolean
   highlight?: boolean
+  waiting?: boolean
 }) {
-  if (!value) return null
+  const display = value || (waiting ? 'Awaiting' : null)
+  if (!display && !waiting) return null
+
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className="text-xs text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
-      <span className={cn(
-        'text-sm text-right',
-        mono && 'font-mono',
-        highlight ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-medium text-foreground',
+    <div className="space-y-0.5">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className={cn(
+        'text-sm',
+        !value && waiting && 'text-muted-foreground/40 italic text-xs',
+        value && mono && 'font-mono',
+        value && highlight && 'font-semibold text-emerald-600 dark:text-emerald-400',
+        value && !highlight && 'font-medium text-foreground',
       )}>
-        {value}
-      </span>
+        {display}
+      </p>
     </div>
   )
 }
@@ -71,7 +74,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
 
   return (
     <div className="space-y-4">
-      {/* Issue Description — prominent */}
+      {/* Issue Description */}
       <div className="bg-muted/30 rounded-xl p-4">
         <p className="text-sm leading-relaxed">
           {context.issue_description || 'No description provided'}
@@ -80,46 +83,34 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
 
       <DashedLine />
 
-      {/* Details Grid — receipt rows */}
-      <div className="px-1 space-y-0">
-        <DetailRow label="Category" value={context.category} />
-        <DetailRow label="Priority" value={basic.priority || null} />
-        <DetailRow label="Logged" value={formatDate(context.date_logged)} />
-        <DetailRow label="Reporter" value={context.reporter_role ? context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1) : null} />
-        <DetailRow label="Availability" value={context.availability} />
-        <DetailRow label="Access" value={context.access} />
+      {/* Two-column layout: Left = known details, Right = progressing/financial */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+        {/* LEFT — details we always have */}
+        <div className="space-y-4">
+          <DetailCell label="Category" value={context.category} />
+          <DetailCell label="Priority" value={basic.priority} />
+          <DetailCell label="Date Logged" value={formatDate(context.date_logged)} />
+          <DetailCell label="Reporter" value={context.reporter_role ? context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1) : null} />
+          <DetailCell label="Availability" value={context.availability} />
+          <DetailCell label="Access" value={context.access} />
+        </div>
+
+        {/* RIGHT — progressing / financial (always visible so we know what's pending) */}
+        <div className="space-y-4">
+          <DetailCell label="Quote" value={basic.contractor_quote ? formatCurrency(basic.contractor_quote) : null} mono waiting />
+          {contractorNotes && <DetailCell label="Quote Notes" value={contractorNotes} />}
+          <DetailCell label="Markup" value={markup} mono waiting />
+          <DetailCell label="Final Amount" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight waiting />
+          <DetailCell label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight waiting />
+        </div>
       </div>
-
-      {/* Financial section — only if we have quote data */}
-      {basic.contractor_quote && (
-        <>
-          <DashedLine />
-          <div className="px-1 space-y-0">
-            <DetailRow label="Quote" value={formatCurrency(basic.contractor_quote)} mono />
-            {contractorNotes && <DetailRow label="Notes" value={contractorNotes} />}
-            <DetailRow label="Markup" value={markup} mono />
-            <DetailRow label="Total" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight />
-          </div>
-        </>
-      )}
-
-      {/* Scheduled — highlighted if present */}
-      {basic.scheduled_date && (
-        <>
-          <DashedLine />
-          <div className="px-1">
-            <DetailRow label="Scheduled" value={formatDate(basic.scheduled_date)} highlight />
-          </div>
-        </>
-      )}
 
       <DashedLine />
 
-      {/* Linked Parties — tenant, address, contractor, landlord */}
+      {/* Linked Parties */}
       <div className="space-y-2">
         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Linked</p>
 
-        {/* Tenant */}
         {context.tenant_name && (
           <Link
             href={basic.tenant_id ? `/tenants?id=${basic.tenant_id}` : '#'}
@@ -135,7 +126,6 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
           </Link>
         )}
 
-        {/* Property / Address */}
         <Link
           href={`/properties?id=${context.property_id}`}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
@@ -149,7 +139,6 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
           </div>
         </Link>
 
-        {/* Contractor */}
         {basic.contractor_name && basic.contractor_id && (
           <Link
             href={`/contractors?id=${basic.contractor_id}`}
@@ -165,7 +154,6 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
           </Link>
         )}
 
-        {/* Landlord */}
         {context.landlord_name && (
           <Link
             href={`/properties?id=${context.property_id}`}
