@@ -13,7 +13,7 @@ interface TicketCompletionTabProps {
 }
 
 function DashedLine() {
-  return <div className="w-full border-t-2 border-dashed border-border/60" aria-hidden="true" />
+  return <div className="w-full border-t border-dashed border-border/40" aria-hidden="true" />
 }
 
 function DetailCell({ label, value, mono, highlight }: {
@@ -24,10 +24,10 @@ function DetailCell({ label, value, mono, highlight }: {
 }) {
   if (!value) return null
   return (
-    <div className="space-y-0.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+    <div className="space-y-1">
+      <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">{label}</p>
       <p className={cn(
-        'text-sm',
+        'text-[15px]',
         mono && 'font-mono',
         highlight ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-medium text-foreground',
       )}>
@@ -41,7 +41,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
   const mediaUrls = getMediaUrls(completion.media_urls)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Status + Contractor */}
       <div className="flex items-center gap-3">
         <span className={cn(
@@ -87,7 +87,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
         <>
           <DashedLine />
           <div>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">Notes</p>
+            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mb-2 px-1">Notes</p>
             <div className="bg-muted/30 rounded-xl p-4">
               <p className="text-sm whitespace-pre-wrap leading-relaxed">
                 {completion.notes || completion.completion_text}
@@ -115,7 +115,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
         <>
           <DashedLine />
           <div>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mb-2 px-1">
               Photos ({mediaUrls.length})
             </p>
             {mediaUrls.length > 6 ? (

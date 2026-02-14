@@ -19,7 +19,7 @@ function formatDate(date: string | null) {
 }
 
 function DashedLine() {
-  return <div className="w-full border-t-2 border-dashed border-border/60" aria-hidden="true" />
+  return <div className="w-full border-t border-dashed border-border/40" aria-hidden="true" />
 }
 
 /** Detail cell — label above value, stacked vertically */
@@ -34,11 +34,11 @@ function DetailCell({ label, value, mono, highlight, waiting }: {
   if (!display && !waiting) return null
 
   return (
-    <div className="space-y-0.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+    <div className="space-y-1">
+      <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">{label}</p>
       <p className={cn(
-        'text-sm',
-        !value && waiting && 'text-muted-foreground/40 italic text-xs',
+        'text-[15px]',
+        !value && waiting && 'text-muted-foreground/40 italic text-sm',
         value && mono && 'font-mono',
         value && highlight && 'font-semibold text-emerald-600 dark:text-emerald-400',
         value && !highlight && 'font-medium text-foreground',
@@ -73,7 +73,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
   })()
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Issue Description */}
       <div className="bg-muted/30 rounded-xl p-4">
         <p className="text-sm leading-relaxed">
@@ -109,7 +109,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
 
       {/* Linked Parties */}
       <div className="space-y-2">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Linked</p>
+        <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Linked</p>
 
         {context.tenant_name && (
           <Link
@@ -175,7 +175,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
         <>
           <DashedLine />
           <div>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mb-2 px-1">
               Photos ({images.length})
             </p>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
