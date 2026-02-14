@@ -403,7 +403,11 @@ export default function TicketsPage() {
       sortable: true,
       render: (ticket) => {
         const type = ticket.was_handoff ? 'Reviewed' : ticket.is_manual ? 'Manual' : 'Auto'
-        return <span className="text-xs text-muted-foreground">{type}</span>
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-muted/50 text-muted-foreground">
+            {type}
+          </span>
+        )
       },
       getValue: (ticket) => ticket.was_handoff ? 'Reviewed' : ticket.is_manual ? 'Manual' : 'Auto',
     },

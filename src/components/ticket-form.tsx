@@ -752,9 +752,8 @@ export function TicketForm({
               </SelectTrigger>
               <SelectContent>
                 {PRIORITY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} textValue={opt.label}>
-                    <span>{opt.label}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{PRIORITY_DESCRIPTIONS[opt.value]}</span>
+                  <SelectItem key={opt.value} value={opt.value} description={PRIORITY_DESCRIPTIONS[opt.value]}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
