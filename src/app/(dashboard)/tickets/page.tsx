@@ -22,7 +22,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Plus, Ticket, CheckCircle2, Filter, Check, X } from 'lucide-react'
+import { Ticket, Filter, Check, X } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
@@ -473,7 +473,7 @@ export default function TicketsPage() {
   return (
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
+      <div className="flex-shrink-0 flex items-center justify-between mb-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Tickets</h1>
           <p className="text-muted-foreground mt-1">
@@ -487,50 +487,6 @@ export default function TicketsPage() {
             className="w-24 text-xs h-7"
             onClick={() => setCreateDrawerOpen(true)}
           />
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex-shrink-0 flex items-center justify-between border-b mb-6">
-        <div className="flex items-center gap-1">
-          {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-                activeFilter === filter
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {filter === 'system' ? 'Automated' : filter}
-              <span className="ml-1.5 text-xs text-muted-foreground">
-                {filterCounts[filter]}
-              </span>
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-4 pb-2">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-closed"
-              checked={showClosed}
-              onCheckedChange={setShowClosed}
-            />
-            <label htmlFor="show-closed" className="text-sm text-muted-foreground cursor-pointer">
-              Show closed
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-archived"
-              checked={showArchived}
-              onCheckedChange={setShowArchived}
-            />
-            <label htmlFor="show-archived" className="text-sm text-muted-foreground cursor-pointer">
-              Show archived
-            </label>
-          </div>
         </div>
       </div>
 
@@ -560,51 +516,82 @@ export default function TicketsPage() {
           getRowClassName={getRowClassName}
           fillHeight
           headerExtra={
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10 gap-2 text-xs font-medium">
-                  <Filter className="h-3.5 w-3.5" />
-                  Stage
-                  {stageFilter.size > 0 && (
-                    <span className="ml-0.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
-                      {stageFilter.size}
-                    </span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-52 p-2">
-                <div className="space-y-0.5">
-                  {STAGE_OPTIONS.map((stage) => {
-                    const active = stageFilter.has(stage)
-                    return (
-                      <button
-                        key={stage}
-                        onClick={() => toggleStageFilter(stage)}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-                          active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
-                        }`}
-                      >
-                        <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                          active ? 'bg-primary border-primary' : 'border-muted-foreground/30'
-                        }`}>
-                          {active && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                        <StatusBadge status={stage} size="sm" />
-                      </button>
-                    )
-                  })}
-                </div>
-                {stageFilter.size > 0 && (
+            <div className="flex items-center gap-3 flex-1 justify-end">
+              {/* Type sub-tabs */}
+              <div className="flex items-center bg-muted rounded-lg p-0.5">
+                {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
                   <button
-                    onClick={() => setStageFilter(new Set())}
-                    className="w-full mt-2 pt-2 border-t text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1.5"
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize ${
+                      activeFilter === filter
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   >
-                    <X className="h-3 w-3" />
-                    Clear filters
+                    {filter === 'system' ? 'Auto' : filter}
+                    <span className="ml-1 text-[10px] opacity-60">{filterCounts[filter]}</span>
                   </button>
-                )}
-              </PopoverContent>
-            </Popover>
+                ))}
+              </div>
+
+              {/* Stage filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-medium">
+                    <Filter className="h-3 w-3" />
+                    Stage
+                    {stageFilter.size > 0 && (
+                      <span className="ml-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                        {stageFilter.size}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-52 p-2">
+                  <div className="space-y-0.5">
+                    {STAGE_OPTIONS.map((stage) => {
+                      const active = stageFilter.has(stage)
+                      return (
+                        <button
+                          key={stage}
+                          onClick={() => toggleStageFilter(stage)}
+                          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                          }`}
+                        >
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                            active ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                          }`}>
+                            {active && <Check className="h-3 w-3 text-primary-foreground" />}
+                          </div>
+                          <StatusBadge status={stage} size="sm" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {stageFilter.size > 0 && (
+                    <button
+                      onClick={() => setStageFilter(new Set())}
+                      className="w-full mt-2 pt-2 border-t text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1.5"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear filters
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              {/* Toggles */}
+              <div className="flex items-center gap-1.5">
+                <Switch id="show-closed" checked={showClosed} onCheckedChange={setShowClosed} className="scale-90" />
+                <label htmlFor="show-closed" className="text-xs text-muted-foreground cursor-pointer">Closed</label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} className="scale-90" />
+                <label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">Archived</label>
+              </div>
+            </div>
           }
           emptyMessage={
             <div className="text-center py-8">
