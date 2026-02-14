@@ -245,12 +245,14 @@ export default function RulesPage() {
               </div>
             )}
 
-            {/* Reminder — only for sequential */}
-            {draft.dispatch_mode === 'sequential' && canEnableReminder && (
+            {/* Reminder — available in both modes */}
+            {(draft.dispatch_mode === 'broadcast' || canEnableReminder) && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Reminder Before Timeout</span>
+                  <span className="text-sm font-medium">
+                    {draft.dispatch_mode === 'sequential' ? 'Reminder Before Timeout' : 'Follow-up Reminder'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Switch checked={draft.contractor_reminder_enabled} onCheckedChange={handleReminderToggle} />
@@ -259,19 +261,26 @@ export default function RulesPage() {
                   </span>
                 </div>
                 {draft.contractor_reminder_enabled && (
-                  <Select
-                    value={draft.contractor_reminder_minutes}
-                    onValueChange={(v) => updateDraft({ contractor_reminder_minutes: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableReminderOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select
+                      value={draft.contractor_reminder_minutes}
+                      onValueChange={(v) => updateDraft({ contractor_reminder_minutes: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(draft.dispatch_mode === 'broadcast' ? ALL_REMINDER_OPTIONS : availableReminderOptions).map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {draft.dispatch_mode === 'broadcast' && (
+                      <p className="text-xs text-muted-foreground">
+                        Nudge all contractors who haven&apos;t responded after this time.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )}
