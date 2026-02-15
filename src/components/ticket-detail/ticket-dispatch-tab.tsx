@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import { ChatHistory } from '@/components/chat-message'
 import {
   Wrench,
   User,
@@ -13,63 +12,228 @@ import {
   AlertTriangle,
   Bell,
   MessageCircle,
+  ArrowDownLeft,
 } from 'lucide-react'
 import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
-import {
-  getContractors,
-  getRecipient,
-  getContractorStatus,
-  getContractorMessages,
-  getRecipientMessages,
-  formatAmount,
-} from '@/hooks/use-ticket-detail'
+import { getContractors, getRecipient } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
 
-// ─── Outbound log config ───
+// ─── Config ───
 
-interface MessageTypeConfig {
+const ROLE_ICONS: Record<string, typeof Wrench> = {
+  contractor: Wrench,
+  manager: User,
+  landlord: Building2,
+  tenant: Phone,
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  contractor: 'text-blue-500',
+  manager: 'text-violet-500',
+  landlord: 'text-amber-500',
+  tenant: 'text-emerald-500',
+}
+
+const ROLE_DOT_BG: Record<string, string> = {
+  contractor: 'bg-blue-500/10',
+  manager: 'bg-violet-500/10',
+  landlord: 'bg-amber-500/10',
+  tenant: 'bg-emerald-500/10',
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  contractor_dispatch: 'Contractor Dispatched',
+  contractor_reminder: 'Contractor Reminder',
+  no_contractors_left: 'No Contractors Available',
+  pm_quote: 'Quote Sent to Manager',
+  landlord_quote: 'Quote Sent to Landlord',
+  landlord_followup: 'Landlord Follow-up',
+  pm_landlord_timeout: 'Landlord Timeout Alert',
+  pm_landlord_approved: 'Landlord Approved — PM Notified',
+  tenant_job_booked: 'Job Booked — Tenant',
+  pm_job_booked: 'Job Booked — Manager',
+  landlord_job_booked: 'Job Booked — Landlord',
+  contractor_job_reminder: 'Job Reminder',
+  contractor_completion_reminder: 'Completion Reminder',
+  pm_completion_overdue: 'Completion Overdue',
+  contractor_reply: 'Contractor Quoted',
+  manager_reply: 'Manager Responded',
+  landlord_reply: 'Landlord Responded',
+}
+
+const INTERACTION_TYPES = new Set(['contractor_dispatch', 'pm_quote', 'landlord_quote'])
+const FOLLOWUP_TYPES = new Set(['contractor_reminder', 'landlord_followup', 'contractor_completion_reminder'])
+const ESCALATION_TYPES = new Set(['pm_landlord_timeout', 'pm_completion_overdue', 'no_contractors_left'])
+
+// ─── Timeline types ───
+
+interface TimelineItem {
+  id: string
+  timestamp: string
+  direction: 'outbound' | 'inbound'
+  messageType: string
+  role: string
   label: string
-  phase: 'dispatch' | 'approval' | 'booking' | 'completion'
-  isFollowUp?: boolean
-  isEscalation?: boolean
+  sublabel?: string
+  body?: string | null
+  status?: string | null
+  isInteraction: boolean
+  isFollowUp: boolean
+  isEscalation: boolean
+  badge?: { text: string; color: string }
 }
 
-const MESSAGE_TYPES: Record<string, MessageTypeConfig> = {
-  contractor_dispatch: { label: 'Contractor Dispatched', phase: 'dispatch' },
-  contractor_reminder: { label: 'Contractor Reminder', phase: 'dispatch', isFollowUp: true },
-  no_contractors_left: { label: 'No Contractors Available', phase: 'dispatch' },
-  pm_quote: { label: 'Quote Sent to Manager', phase: 'approval' },
-  landlord_quote: { label: 'Quote Sent to Landlord', phase: 'approval' },
-  landlord_followup: { label: 'Landlord Follow-up', phase: 'approval', isFollowUp: true },
-  pm_landlord_timeout: { label: 'Landlord Timeout Alert', phase: 'approval', isEscalation: true },
-  pm_landlord_approved: { label: 'Landlord Approved', phase: 'approval' },
-  tenant_job_booked: { label: 'Job Booked — Tenant', phase: 'booking' },
-  pm_job_booked: { label: 'Job Booked — Manager', phase: 'booking' },
-  landlord_job_booked: { label: 'Job Booked — Landlord', phase: 'booking' },
-  contractor_job_reminder: { label: 'Job Reminder', phase: 'completion' },
-  contractor_completion_reminder: { label: 'Completion Reminder', phase: 'completion', isFollowUp: true },
-  pm_completion_overdue: { label: 'Completion Overdue', phase: 'completion', isEscalation: true },
-}
+// ─── Build unified timeline ───
 
-interface RoleConfig {
-  icon: typeof Wrench
-  color: string
-  dotBg: string
-  label: string
-}
+function buildTimeline(messages: MessageData | null, outboundLog: OutboundLogEntry[]): TimelineItem[] {
+  const items: TimelineItem[] = []
+  const logTypePhones = new Set(outboundLog.map(e => `${e.message_type}:${e.recipient_phone}`))
 
-const ROLE_CONFIG: Record<string, RoleConfig> = {
-  contractor: { icon: Wrench, color: 'text-blue-600 dark:text-blue-400', dotBg: 'bg-blue-500/10 dark:bg-blue-400/15', label: 'Contractor' },
-  manager: { icon: User, color: 'text-violet-600 dark:text-violet-400', dotBg: 'bg-violet-500/10 dark:bg-violet-400/15', label: 'Manager' },
-  landlord: { icon: Building2, color: 'text-amber-600 dark:text-amber-400', dotBg: 'bg-amber-500/10 dark:bg-amber-400/15', label: 'Landlord' },
-  tenant: { icon: Phone, color: 'text-emerald-600 dark:text-emerald-400', dotBg: 'bg-emerald-500/10 dark:bg-emerald-400/15', label: 'Tenant' },
-}
+  // 1. All outbound log entries
+  for (const entry of outboundLog) {
+    const item: TimelineItem = {
+      id: entry.id,
+      timestamp: entry.sent_at,
+      direction: 'outbound',
+      messageType: entry.message_type,
+      role: entry.recipient_role,
+      label: TYPE_LABELS[entry.message_type] || entry.message_type.replace(/_/g, ' '),
+      body: entry.body,
+      status: entry.status,
+      isInteraction: INTERACTION_TYPES.has(entry.message_type),
+      isFollowUp: FOLLOWUP_TYPES.has(entry.message_type),
+      isEscalation: ESCALATION_TYPES.has(entry.message_type),
+    }
 
-const PHASE_BADGE: Record<string, { label: string; className: string }> = {
-  dispatch: { label: 'dispatch', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
-  approval: { label: 'approval', className: 'bg-violet-500/10 text-violet-700 dark:text-violet-400' },
-  booking: { label: 'booking', className: 'bg-green-500/10 text-green-700 dark:text-green-400' },
-  completion: { label: 'completion', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400' },
+    // Enrich contractor entries with name from JSONB
+    if (messages && entry.recipient_role === 'contractor') {
+      const contractors = getContractors(messages.contractors)
+      const match = contractors.find(c => c.phone === entry.recipient_phone)
+      if (match) {
+        item.sublabel = `${match.name}${match.category ? ` · ${match.category}` : ''}`
+      }
+    }
+
+    items.push(item)
+  }
+
+  // 2. Synthetic entries from JSONB (where not in outbound log)
+  if (messages) {
+    const contractors = getContractors(messages.contractors)
+    for (const c of contractors) {
+      // Synthetic dispatch
+      if (c.sent_at && !logTypePhones.has(`contractor_dispatch:${c.phone}`)) {
+        items.push({
+          id: `synth-dispatch-${c.id}`,
+          timestamp: c.sent_at,
+          direction: 'outbound',
+          messageType: 'contractor_dispatch',
+          role: 'contractor',
+          label: 'Contractor Dispatched',
+          sublabel: `${c.name}${c.category ? ` · ${c.category}` : ''}`,
+          body: c.body || null,
+          isInteraction: true,
+          isFollowUp: false,
+          isEscalation: false,
+        })
+      }
+
+      // Contractor reply (always synthetic — inbound)
+      if (c.replied_at) {
+        items.push({
+          id: `synth-reply-${c.id}`,
+          timestamp: c.replied_at,
+          direction: 'inbound',
+          messageType: 'contractor_reply',
+          role: 'contractor',
+          label: `${c.name} quoted${c.quote_amount ? ` ${c.quote_amount}` : ''}`,
+          sublabel: c.quote_notes || undefined,
+          isInteraction: false,
+          isFollowUp: false,
+          isEscalation: false,
+          badge: c.manager_decision === 'approved'
+            ? { text: `Approved${c.quote_amount ? ` ${c.quote_amount}` : ''}`, color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' }
+            : { text: `Quoted${c.quote_amount ? ` ${c.quote_amount}` : ''}`, color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
+        })
+      }
+    }
+
+    const manager = getRecipient(messages.manager)
+    if (manager) {
+      if (manager.review_request_sent_at && !logTypePhones.has(`pm_quote:${manager.phone}`)) {
+        items.push({
+          id: 'synth-pm-quote',
+          timestamp: manager.review_request_sent_at,
+          direction: 'outbound',
+          messageType: 'pm_quote',
+          role: 'manager',
+          label: 'Quote Sent to Manager',
+          body: manager.last_outbound_body || null,
+          isInteraction: true,
+          isFollowUp: false,
+          isEscalation: false,
+        })
+      }
+      if (manager.replied_at) {
+        items.push({
+          id: 'synth-manager-reply',
+          timestamp: manager.replied_at,
+          direction: 'inbound',
+          messageType: 'manager_reply',
+          role: 'manager',
+          label: manager.approval ? 'Manager Approved' : manager.approval === false ? 'Manager Declined' : 'Manager Replied',
+          isInteraction: false,
+          isFollowUp: false,
+          isEscalation: false,
+          badge: manager.approval
+            ? { text: `Approved${manager.approval_amount ? ` ${manager.approval_amount}` : ''}`, color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' }
+            : manager.approval === false
+            ? { text: 'Declined', color: 'bg-red-500/10 text-red-700 dark:text-red-400' }
+            : { text: 'Replied', color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
+        })
+      }
+    }
+
+    const landlord = getRecipient(messages.landlord)
+    if (landlord) {
+      if (landlord.review_request_sent_at && !logTypePhones.has(`landlord_quote:${landlord.phone}`)) {
+        items.push({
+          id: 'synth-ll-quote',
+          timestamp: landlord.review_request_sent_at,
+          direction: 'outbound',
+          messageType: 'landlord_quote',
+          role: 'landlord',
+          label: 'Quote Sent to Landlord',
+          body: landlord.last_outbound_body || null,
+          isInteraction: true,
+          isFollowUp: false,
+          isEscalation: false,
+        })
+      }
+      if (landlord.replied_at) {
+        items.push({
+          id: 'synth-landlord-reply',
+          timestamp: landlord.replied_at,
+          direction: 'inbound',
+          messageType: 'landlord_reply',
+          role: 'landlord',
+          label: landlord.approval ? 'Landlord Approved' : landlord.approval === false ? 'Landlord Declined' : 'Landlord Replied',
+          isInteraction: false,
+          isFollowUp: false,
+          isEscalation: false,
+          badge: landlord.approval
+            ? { text: 'Approved', color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' }
+            : landlord.approval === false
+            ? { text: 'Declined', color: 'bg-red-500/10 text-red-700 dark:text-red-400' }
+            : { text: 'Replied', color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
+        })
+      }
+    }
+  }
+
+  // 3. Sort by timestamp
+  items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  return items
 }
 
 function formatBody(body: string): string {
@@ -86,26 +250,11 @@ interface TicketDispatchTabProps {
 }
 
 export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabProps) {
-  const [openContractors, setOpenContractors] = useState<number[]>([])
-  const [openManager, setOpenManager] = useState(false)
-  const [openLandlord, setOpenLandlord] = useState(false)
-  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const timeline = useMemo(() => buildTimeline(messages, outboundLog), [messages, outboundLog])
 
-  const contractors = messages ? getContractors(messages.contractors) : []
-  const managerRecipient = messages ? getRecipient(messages.manager) : null
-  const landlordRecipient = messages ? getRecipient(messages.landlord) : null
-  const hasManager = !!managerRecipient?.last_outbound_body || !!managerRecipient?.replied_at
-  const hasLandlord = !!landlordRecipient?.last_outbound_body || !!landlordRecipient?.replied_at
-  const hasDispatchCards = contractors.length > 0 || hasManager || hasLandlord
-
-  const toggleContractor = (index: number) => {
-    setOpenContractors(prev =>
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-    )
-  }
-
-  const toggleMessage = (id: string) => {
-    setExpandedMessages(prev => {
+  const toggle = (id: string) => {
+    setExpanded(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -113,366 +262,161 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
     })
   }
 
-  // Multi-contractor warning
-  const contactedCount = contractors.filter(c => c.sent_at || c.replied_at).length
-  const approvedCount = contractors.filter(c => c.manager_decision === 'approved').length
-  const quotedCount = contractors.filter(c => c.replied_at && c.quote_amount).length
-
-  const getReferencedContractorName = (): string | null => {
-    const approved = contractors.find(c => c.manager_decision === 'approved')
-    if (approved) return approved.name
-    const quoted = contractors.find(c => c.quote_amount)
-    if (quoted) return quoted.name
-    return null
+  if (timeline.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
+        <div className="text-center">
+          <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">No dispatch activity yet</p>
+        </div>
+      </div>
+    )
   }
 
-  const contractorRef = getReferencedContractorName()
-
   return (
-    <div className="space-y-6">
-      {/* ─── DISPATCH STATUS CARDS ─── */}
-      {hasDispatchCards && (
-        <div className="space-y-4">
-          {/* Multi-contractor warning banner */}
-          {contactedCount > 1 && approvedCount === 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-lg border">
-              <AlertTriangle className="h-4 w-4 text-foreground/70 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium">
-                  {contactedCount} contractors contacted
-                </p>
-                <p className="text-muted-foreground text-xs mt-0.5">
-                  {quotedCount > 0
-                    ? `${quotedCount} quote${quotedCount > 1 ? 's' : ''} received. Approve only one to proceed.`
-                    : 'Awaiting quotes. Only one can be approved.'}
-                </p>
+    <div>
+      {timeline.map((item, index) => {
+        const isLast = index === timeline.length - 1
+        const isOpen = expanded.has(item.id)
+        const RoleIcon = ROLE_ICONS[item.role] || MessageCircle
+        const roleColor = ROLE_COLORS[item.role] || 'text-muted-foreground'
+        const dotBg = ROLE_DOT_BG[item.role] || 'bg-muted'
+        const isInbound = item.direction === 'inbound'
+
+        return (
+          <div
+            key={item.id}
+            className={cn(
+              'flex gap-3',
+              (isInbound || item.isFollowUp) && 'ml-5',
+            )}
+          >
+            {/* Timeline dot + line */}
+            <div className="flex flex-col items-center">
+              <div className={cn(
+                'rounded-full flex items-center justify-center shrink-0',
+                item.isInteraction ? 'h-8 w-8' : 'h-7 w-7',
+                item.isEscalation ? 'bg-red-500/10' : dotBg,
+              )}>
+                {item.isEscalation ? (
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                ) : isInbound ? (
+                  <ArrowDownLeft className={cn('h-3.5 w-3.5', roleColor)} />
+                ) : item.isFollowUp ? (
+                  <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <RoleIcon className={cn(item.isInteraction ? 'h-4 w-4' : 'h-3.5 w-3.5', roleColor)} />
+                )}
               </div>
+              {!isLast && <div className="w-px flex-1 bg-border/50" />}
             </div>
-          )}
 
-          {/* Contractors */}
-          {contractors.length > 0 && (
-            <div>
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Contractors</p>
-              <div className="space-y-2">
-                {contractors.map((contractor, index) => {
-                  const status = getContractorStatus(contractor)
-                  const isOpen = openContractors.includes(index)
-
-                  return (
-                    <div key={contractor.id || index} className="border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleContractor(index)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Wrench className="h-4 w-4 text-muted-foreground" />
-                          <div className="text-left">
-                            <p className="text-sm font-medium">{contractor.name}</p>
-                            {contractor.category && (
-                              <p className="text-xs text-muted-foreground">{contractor.category}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1.5">
-                            {contractor.quote_notes && (
-                              <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground max-w-[120px] truncate" title={contractor.quote_notes}>
-                                {contractor.quote_notes}
-                              </span>
-                            )}
-                            <span className={`px-2 py-0.5 text-xs rounded-full ${
-                              status === 'approved' ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
-                              status === 'replied' ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
-                              status === 'sent' ? 'bg-yellow-500/10 dark:bg-yellow-400/15 text-yellow-700 dark:text-yellow-400' :
-                              'bg-gray-500/10 dark:bg-gray-400/15 text-gray-600 dark:text-gray-400'
-                            }`}>
-                              {status === 'approved' ? `Approved ${formatAmount(contractor.quote_amount) || ''}`.trim() :
-                               status === 'replied' ? `${formatAmount(contractor.quote_amount) || 'Quoted'}` :
-                               status === 'sent' ? 'Sent' : 'Pending'}
-                            </span>
-                          </div>
-                          {isOpen ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      </button>
-
-                      {isOpen && (
-                        <div className="px-3 pb-3 max-h-[320px] overflow-y-auto border-t bg-muted/30">
-                          <div className="pt-2">
-                            <ChatHistory
-                              messages={getContractorMessages([contractor])}
-                              allowHtmlForAssistant={true}
-                              compact={true}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Manager */}
-          {hasManager && (() => {
-            const approved = managerRecipient?.approval === true
-            const declined = managerRecipient?.approval === false
-            const hasReplied = !!managerRecipient?.replied_at
-
-            return (
-              <div>
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Manager</p>
+            {/* Content */}
+            <div className={cn('min-w-0 flex-1', !isLast ? 'pb-4' : 'pb-1')}>
+              {item.isInteraction ? (
+                /* ─── INTERACTION CARD (bold, bordered) ─── */
                 <div className="border rounded-lg overflow-hidden">
                   <button
-                    onClick={() => setOpenManager(!openManager)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                    onClick={() => item.body && toggle(item.id)}
+                    className="w-full text-left p-3 hover:bg-muted/30 transition-colors"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium">Manager</p>
-                        {contractorRef && (
-                          <p className="text-xs text-muted-foreground">Re: {contractorRef}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{item.label}</p>
+                        {item.sublabel && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{item.sublabel}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[11px] text-muted-foreground">
+                          {format(new Date(item.timestamp), 'dd MMM, HH:mm')}
+                        </span>
+                        {item.body && (
+                          isOpen
+                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        approved ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
-                        declined ? 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400' :
-                        hasReplied ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
-                        'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
-                      }`}>
-                        {approved ? `Approved${managerRecipient?.approval_amount ? ` ${managerRecipient.approval_amount}` : ''}` :
-                         declined ? 'Declined' :
-                         hasReplied ? 'Replied' : 'Pending'}
-                      </span>
-                      {openManager ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
                   </button>
-
-                  {openManager && (
-                    <div className="px-3 pb-3 max-h-[320px] overflow-y-auto border-t bg-muted/30">
-                      <div className="pt-2">
-                        <ChatHistory
-                          messages={getRecipientMessages(managerRecipient, 'Manager')}
-                          allowHtmlForAssistant={true}
-                          compact={true}
-                        />
-                      </div>
+                  {isOpen && item.body && (
+                    <div className="px-3 pb-3 border-t bg-muted/20">
+                      <p
+                        className="text-xs text-foreground/80 leading-relaxed pt-2"
+                        dangerouslySetInnerHTML={{ __html: formatBody(item.body) }}
+                      />
                     </div>
                   )}
                 </div>
-              </div>
-            )
-          })()}
 
-          {/* Landlord */}
-          {hasLandlord && (() => {
-            const approved = landlordRecipient?.approval === true
-            const declined = landlordRecipient?.approval === false
-            const hasReplied = !!landlordRecipient?.replied_at
-
-            return (
-              <div>
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Landlord</p>
-                <div className="border rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setOpenLandlord(!openLandlord)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium">Landlord</p>
-                        {contractorRef && (
-                          <p className="text-xs text-muted-foreground">Re: {contractorRef}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        approved ? 'bg-green-500/10 dark:bg-green-400/15 text-green-700 dark:text-green-400' :
-                        declined ? 'bg-red-500/10 dark:bg-red-400/15 text-red-700 dark:text-red-400' :
-                        hasReplied ? 'bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-400' :
-                        'bg-orange-500/10 dark:bg-orange-400/15 text-orange-700 dark:text-orange-400'
-                      }`}>
-                        {approved ? `Approved${landlordRecipient?.approval_amount ? ` ${landlordRecipient.approval_amount}` : ''}` :
-                         declined ? 'Declined' :
-                         hasReplied ? 'Replied' : 'Pending'}
-                      </span>
-                      {openLandlord ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              ) : isInbound ? (
+                /* ─── INBOUND REPLY ─── */
+                <div className="py-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                      <p className="text-sm font-medium">{item.label}</p>
+                      {item.badge && (
+                        <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium', item.badge.color)}>
+                          {item.badge.text}
+                        </span>
                       )}
                     </div>
-                  </button>
-
-                  {openLandlord && (
-                    <div className="px-3 pb-3 max-h-[320px] overflow-y-auto border-t bg-muted/30">
-                      <div className="pt-2">
-                        <ChatHistory
-                          messages={getRecipientMessages(landlordRecipient, 'Landlord')}
-                          allowHtmlForAssistant={true}
-                          compact={true}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-      )}
-
-      {/* ─── OUTBOUND MESSAGE LOG ─── */}
-      {outboundLog.length > 0 && (
-        <div>
-          {hasDispatchCards && (
-            <div className="border-t pt-4 mb-3">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Message Log</p>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-0">
-            {outboundLog.map((entry, index) => {
-              const typeConfig = MESSAGE_TYPES[entry.message_type]
-              const roleConfig = ROLE_CONFIG[entry.recipient_role] || ROLE_CONFIG.contractor
-              const RoleIcon = roleConfig.icon
-              const isOpen = expandedMessages.has(entry.id)
-              const isLast = index === outboundLog.length - 1
-              const isFollowUp = typeConfig?.isFollowUp
-              const isEscalation = typeConfig?.isEscalation
-              const phase = typeConfig?.phase || 'dispatch'
-              const phaseBadge = PHASE_BADGE[phase]
-
-              return (
-                <div
-                  key={entry.id}
-                  className={cn('flex gap-3', (isFollowUp || isEscalation) && 'ml-5')}
-                >
-                  {/* Timeline dot + line */}
-                  <div className="flex flex-col items-center">
-                    <div className={cn(
-                      'h-7 w-7 rounded-full flex items-center justify-center shrink-0',
-                      isEscalation
-                        ? 'bg-red-500/10 dark:bg-red-400/15'
-                        : roleConfig.dotBg
-                    )}>
-                      {isEscalation ? (
-                        <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                      ) : isFollowUp ? (
-                        <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-                      ) : (
-                        <RoleIcon className={cn('h-3.5 w-3.5', roleConfig.color)} />
-                      )}
-                    </div>
-                    {!isLast && <div className="w-px flex-1 bg-border/50" />}
+                    <span className="text-[11px] text-muted-foreground shrink-0">
+                      {format(new Date(item.timestamp), 'dd MMM, HH:mm')}
+                    </span>
                   </div>
+                  {item.sublabel && (
+                    <p className="text-xs text-muted-foreground mt-0.5 italic">&ldquo;{item.sublabel}&rdquo;</p>
+                  )}
+                </div>
 
-                  {/* Content */}
-                  <div className={cn('pb-3 min-w-0 flex-1', !isLast && 'pb-4')}>
-                    <button
-                      onClick={() => toggleMessage(entry.id)}
-                      className="w-full text-left group"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium">
-                              {typeConfig?.label || entry.message_type.replace(/_/g, ' ')}
-                            </p>
-                            {(isFollowUp || isEscalation) && (
-                              <span className={cn(
-                                'px-1.5 py-0.5 text-[10px] rounded-full font-medium',
-                                isEscalation
-                                  ? 'bg-red-500/10 text-red-700 dark:text-red-400'
-                                  : 'bg-muted text-muted-foreground'
-                              )}>
-                                {isEscalation ? 'escalation' : 'follow-up'}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className={cn(
-                              'px-1.5 py-0.5 text-[10px] rounded-full font-medium',
-                              roleConfig.dotBg, roleConfig.color
-                            )}>
-                              {roleConfig.label}
-                            </span>
-                            {phaseBadge && (
-                              <span className={cn(
-                                'px-1.5 py-0.5 text-[10px] rounded-full font-medium',
-                                phaseBadge.className
-                              )}>
-                                {phaseBadge.label}
-                              </span>
-                            )}
-                            <span className="text-[11px] text-muted-foreground/60">
-                              {format(new Date(entry.sent_at), 'dd MMM, HH:mm')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                          <span className={cn(
-                            'px-1.5 py-0.5 text-[10px] rounded-full',
-                            entry.status === 'delivered' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
-                            entry.status === 'sent' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' :
-                            entry.status === 'queued' ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
-                            entry.status === 'failed' ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
-                            'bg-muted text-muted-foreground'
-                          )}>
-                            {entry.status || 'sent'}
+              ) : (
+                /* ─── NOTIFICATION (light, expandable) ─── */
+                <div className="py-0.5">
+                  <button
+                    onClick={() => item.body && toggle(item.id)}
+                    className="w-full text-left group"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <p className="text-sm font-medium">{item.label}</p>
+                        {item.isEscalation && (
+                          <span className="px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-red-500/10 text-red-700 dark:text-red-400">
+                            escalation
                           </span>
-                          {entry.body && (
-                            isOpen
-                              ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                              : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          )}
-                        </div>
+                        )}
+                        {item.isFollowUp && (
+                          <span className="px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-muted text-muted-foreground">
+                            follow-up
+                          </span>
+                        )}
                       </div>
-                    </button>
-
-                    {/* Expanded body */}
-                    {isOpen && entry.body && (
-                      <div className="mt-2 rounded-lg bg-muted/30 border px-3 py-2.5">
-                        <p
-                          className="text-xs text-foreground/80 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: formatBody(entry.body) }}
-                        />
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[11px] text-muted-foreground">
+                          {format(new Date(item.timestamp), 'dd MMM, HH:mm')}
+                        </span>
+                        {item.body && (
+                          isOpen
+                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  </button>
+                  {isOpen && item.body && (
+                    <div className="mt-2 rounded-lg bg-muted/30 border px-3 py-2.5">
+                      <p
+                        className="text-xs text-foreground/80 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: formatBody(item.body) }}
+                      />
+                    </div>
+                  )}
                 </div>
-              )
-            })}
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!hasDispatchCards && outboundLog.length === 0 && (
-        <div className="flex items-center justify-center py-12 text-muted-foreground">
-          <div className="text-center">
-            <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">No dispatch activity yet</p>
-          </div>
-        </div>
-      )}
+        )
+      })}
     </div>
   )
 }
