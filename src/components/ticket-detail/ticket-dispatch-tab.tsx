@@ -17,6 +17,9 @@ const TYPE_LABELS: Record<string, string> = {
   contractor_job_reminder: 'Day-of Reminder',
   contractor_completion_reminder: 'Completion Reminder',
   pm_completion_overdue: 'Completion Overdue',
+  pm_job_completed: 'Job Completed — Manager Notified',
+  pm_job_not_completed: 'Job Not Completed — Manager Alerted',
+  ll_job_completed: 'Job Completed — Landlord Notified',
 }
 
 const CONTRACTOR_LOG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_contractors_left'])
@@ -24,6 +27,7 @@ const MANAGER_LOG_TYPES = new Set(['pm_quote'])
 const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved'])
 const BOOKING_LOG_TYPES = new Set(['tenant_job_booked', 'pm_job_booked', 'landlord_job_booked'])
 const FOLLOWUP_LOG_TYPES = new Set(['contractor_job_reminder', 'contractor_completion_reminder', 'pm_completion_overdue'])
+const COMPLETION_LOG_TYPES = new Set(['pm_job_completed', 'pm_job_not_completed', 'll_job_completed'])
 
 // ─── Types ───
 
@@ -71,6 +75,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
   const managerLogs = outboundLog.filter(e => MANAGER_LOG_TYPES.has(e.message_type))
   const landlordLogs = outboundLog.filter(e => LANDLORD_LOG_TYPES.has(e.message_type))
   const bookingLogs = outboundLog.filter(e => BOOKING_LOG_TYPES.has(e.message_type))
+  const completionLogs = outboundLog.filter(e => COMPLETION_LOG_TYPES.has(e.message_type))
   const followupLogs = outboundLog.filter(e => FOLLOWUP_LOG_TYPES.has(e.message_type))
 
   // ─── Contractors: one row per contractor, reminders nested ───
@@ -265,17 +270,23 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
     })
   }
 
-  // ─── Follow-up: day-of reminder is primary, completion entries nested ───
+  // ─── Follow-up: day-of reminder is primary, completion reminders/overdue nested ───
   const dayOfReminders = followupLogs.filter(e => e.message_type === 'contractor_job_reminder')
   const completionReminders = followupLogs.filter(e => e.message_type === 'contractor_completion_reminder')
   const completionOverdue = followupLogs.filter(e => e.message_type === 'pm_completion_overdue')
 
+  const FOLLOWUP_WARNING_TYPES = new Set(['pm_completion_overdue'])
+  const FOLLOWUP_SUB_LABELS: Record<string, string> = {
+    contractor_completion_reminder: 'Completion reminder to contractor',
+    pm_completion_overdue: 'Completion overdue — manager alerted',
+  }
+
+  const allFollowupSubs = [...completionReminders, ...completionOverdue]
+
   if (dayOfReminders.length > 0) {
-    // First day-of reminder is the primary row
     const primary = dayOfReminders[0]
     const subEntries: SubEntry[] = []
 
-    // Extra day-of reminders nested (edge case / bug)
     for (let i = 1; i < dayOfReminders.length; i++) {
       const r = dayOfReminders[i]
       subEntries.push({
@@ -284,18 +295,12 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       })
     }
 
-    // Completion reminders nested
-    for (const r of completionReminders) {
+    for (const r of allFollowupSubs) {
       subEntries.push({
-        id: r.id, label: 'Completion reminder to contractor', timestamp: r.sent_at, variant: 'reminder',
-        chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
-      })
-    }
-
-    // Completion overdue nested as warning
-    for (const r of completionOverdue) {
-      subEntries.push({
-        id: r.id, label: 'Completion overdue — manager alerted', timestamp: r.sent_at, variant: 'warning',
+        id: r.id,
+        label: FOLLOWUP_SUB_LABELS[r.message_type] || r.message_type,
+        timestamp: r.sent_at,
+        variant: FOLLOWUP_WARNING_TYPES.has(r.message_type) ? 'warning' : 'reminder',
         chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
       })
     }
@@ -313,17 +318,16 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       chatMessages: primary.body ? [{ role: 'assistant', text: primary.body, timestamp: primary.sent_at, allowHtml: true }] : [],
       subEntries,
     })
-  } else if (completionReminders.length > 0 || completionOverdue.length > 0) {
-    // No day-of reminder but completion entries exist — first completion is primary
-    const allCompletion = [...completionReminders, ...completionOverdue].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
-    const primary = allCompletion[0]
-    const isPrimaryOverdue = primary.message_type === 'pm_completion_overdue'
+  } else if (allFollowupSubs.length > 0) {
+    const sorted = [...allFollowupSubs].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
+    const primary = sorted[0]
+    const isPrimaryWarning = FOLLOWUP_WARNING_TYPES.has(primary.message_type)
 
-    const subEntries: SubEntry[] = allCompletion.slice(1).map(r => ({
+    const subEntries: SubEntry[] = sorted.slice(1).map(r => ({
       id: r.id,
-      label: r.message_type === 'pm_completion_overdue' ? 'Completion overdue — manager alerted' : 'Completion reminder to contractor',
+      label: FOLLOWUP_SUB_LABELS[r.message_type] || r.message_type,
       timestamp: r.sent_at,
-      variant: (r.message_type === 'pm_completion_overdue' ? 'warning' : 'reminder') as 'warning' | 'reminder',
+      variant: (FOLLOWUP_WARNING_TYPES.has(r.message_type) ? 'warning' : 'reminder') as 'warning' | 'reminder',
       chatMessages: r.body ? [{ role: 'assistant', text: r.body, timestamp: r.sent_at, allowHtml: true }] : [],
     }))
 
@@ -332,11 +336,28 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       phase: 'Follow-up',
       label: TYPE_LABELS[primary.message_type] || primary.message_type,
       sublabel: format(new Date(primary.sent_at), 'dd MMM, HH:mm'),
-      status: isPrimaryOverdue ? 'escalation' : 'sent',
+      status: isPrimaryWarning ? 'escalation' : 'sent',
       timestamp: primary.sent_at,
-      isEscalation: isPrimaryOverdue,
+      isEscalation: isPrimaryWarning,
       chatMessages: primary.body ? [{ role: 'assistant', text: primary.body, timestamp: primary.sent_at, allowHtml: true }] : [],
       subEntries,
+    })
+  }
+
+  // ─── Completion: each submission/notification is its own row, chronological ───
+  const sortedCompletionLogs = [...completionLogs].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
+  for (const entry of sortedCompletionLogs) {
+    const isWarning = entry.message_type === 'pm_job_not_completed'
+    entries.push({
+      id: entry.id,
+      phase: 'Completion',
+      label: TYPE_LABELS[entry.message_type] || entry.message_type,
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: isWarning ? 'escalation' : 'sent',
+      timestamp: entry.sent_at,
+      isEscalation: isWarning,
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
     })
   }
 
