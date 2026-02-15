@@ -373,7 +373,7 @@ export default function RulesPage() {
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Escalate to You</span>
               </div>
-              <div className="flex items-center h-10 px-3 rounded-md border bg-muted/30">
+              <div className="flex items-center h-9 px-3 rounded-md border bg-muted/30">
                 <span className="text-sm text-muted-foreground">
                   {parseInt(draft.completion_reminder_hours) * 2} hours (auto)
                 </span>
