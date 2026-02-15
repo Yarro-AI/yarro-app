@@ -304,7 +304,6 @@ export default function RulesPage() {
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Landlord Approval</h2>
           <div className="grid grid-cols-2 gap-4">
-            {/* Follow-up Reminder */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-muted-foreground" />
@@ -320,12 +319,8 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Remind landlord if no response after this time.
-              </p>
+              <p className="text-xs text-muted-foreground">Remind landlord if no response after this time.</p>
             </div>
-
-            {/* Escalation */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
@@ -344,9 +339,7 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Alert you if landlord still hasn&apos;t responded. Ticket marked &quot;Landlord No Response&quot;.
-              </p>
+              <p className="text-xs text-muted-foreground">Alert you if landlord hasn&apos;t responded.</p>
             </div>
           </div>
         </section>
@@ -355,7 +348,6 @@ export default function RulesPage() {
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Job Completion</h2>
           <div className="grid grid-cols-2 gap-4">
-            {/* Completion Reminder */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
@@ -374,12 +366,8 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Nudge contractor to submit outcome form after this time.
-              </p>
+              <p className="text-xs text-muted-foreground">Nudge contractor to submit after this time.</p>
             </div>
-
-            {/* Escalation (auto-calculated) */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
@@ -387,12 +375,10 @@ export default function RulesPage() {
               </div>
               <div className="flex items-center h-10 px-3 rounded-md border bg-muted/30">
                 <span className="text-sm text-muted-foreground">
-                  {parseInt(draft.completion_reminder_hours) * 2} hours
+                  {parseInt(draft.completion_reminder_hours) * 2} hours (auto)
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Auto-set to 2× the reminder. Alert you if contractor still hasn&apos;t submitted.
-              </p>
+              <p className="text-xs text-muted-foreground">2× the reminder if still no submission.</p>
             </div>
           </div>
         </section>
