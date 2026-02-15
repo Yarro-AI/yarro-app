@@ -555,8 +555,9 @@ export default function DashboardPage() {
                 const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-4 flex flex-col">
-                    <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-card rounded-xl border border-border p-4 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
                         {totalAction > 0 && (
@@ -567,7 +568,7 @@ export default function DashboardPage() {
                         <InteractiveHoverButton text="Create" className="w-24 text-xs h-7" />
                       </Link>
                     </div>
-                    <div className="space-y-1 flex-1">
+                    <div className="space-y-1">
                       {/* Primary actions */}
                       {[
                         { key: 'handoff' as const, label: 'Handoff Review', desc: 'AI needs your help', count: totalHandoffs, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
@@ -595,13 +596,15 @@ export default function DashboardPage() {
                         </Tooltip>
                       ))}
 
-                      {/* Separator */}
-                      <div className="flex items-center gap-2 py-1">
-                        <div className="flex-1 h-px bg-border" />
-                        <span className="text-[10px] font-medium text-foreground/50 uppercase tracking-wider">Needs Follow Up</span>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
+                    </div>
+                    </div>
 
+                    {/* Needs Follow Up Card */}
+                    <div className="bg-card rounded-xl border border-border p-4 flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-sm font-semibold text-card-foreground">Needs Follow Up</h3>
+                      </div>
+                      <div className="space-y-1">
                       {[
                         { key: 'noContractorsLeft' as const, label: 'No Contractors', desc: 'Re-dispatch or find new', count: noContractorsCount, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
                         { key: 'declined' as const, label: 'Landlord Declined', desc: 'Needs follow-up', count: declinedCount, icon: XCircle, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
@@ -629,6 +632,7 @@ export default function DashboardPage() {
                           <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
                         </Tooltip>
                       ))}
+                      </div>
                     </div>
                   </div>
                 )
