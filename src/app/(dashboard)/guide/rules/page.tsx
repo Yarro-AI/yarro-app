@@ -296,25 +296,31 @@ export default function RulesPage() {
                       </SelectContent>
                     </Select>
                     {draft.dispatch_mode === 'broadcast' && (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          Nudge all contractors who haven&apos;t responded after this time.
-                        </p>
-                        <div className="flex items-center h-9 px-3 rounded-md border bg-muted/30 mt-1">
-                          <span className="text-sm text-muted-foreground">
-                            Give up after: {parseInt(draft.contractor_reminder_minutes) * 2 >= 60
-                              ? `${parseInt(draft.contractor_reminder_minutes) * 2 / 60} hours`
-                              : `${parseInt(draft.contractor_reminder_minutes) * 2} min`
-                            } (auto)
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          2× the reminder — no response from anyone triggers escalation.
-                        </p>
-                      </>
+                      <p className="text-xs text-muted-foreground">
+                        Nudge all contractors who haven&apos;t responded after this time.
+                      </p>
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Escalate to You — broadcast auto-timeout */}
+            {draft.dispatch_mode === 'broadcast' && draft.contractor_reminder_enabled && (
+              <div className="col-start-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Escalate to You</span>
+                </div>
+                <div className="flex items-center h-9 px-3 rounded-md border bg-muted/30">
+                  <span className="text-sm text-muted-foreground">
+                    {parseInt(draft.contractor_reminder_minutes) * 2 >= 60
+                      ? `${parseInt(draft.contractor_reminder_minutes) * 2 / 60} hours`
+                      : `${parseInt(draft.contractor_reminder_minutes) * 2} min`
+                    } (auto)
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">2× the reminder if still no quotes received.</p>
               </div>
             )}
           </div>
