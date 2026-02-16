@@ -10,11 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
-  Clock,
   Users,
   Bell,
   SlidersHorizontal,
@@ -27,16 +25,8 @@ import { cn } from '@/lib/utils'
 
 // ─── Option constants ───
 
-const TIMEOUT_OPTIONS = [
+const CONTRACTOR_REMINDER_OPTIONS = [
   { value: '1', label: '1 min (testing)' },
-  { value: '120', label: '2 hours' },
-  { value: '240', label: '4 hours' },
-  { value: '360', label: '6 hours' },
-  { value: '720', label: '12 hours' },
-  { value: '1440', label: '24 hours' },
-]
-
-const ALL_REMINDER_OPTIONS = [
   { value: '30', label: '30 minutes' },
   { value: '60', label: '1 hour' },
   { value: '120', label: '2 hours' },
@@ -76,8 +66,6 @@ const ALL_LANDLORD_TIMEOUT_OPTIONS = [
 
 interface DraftSettings {
   dispatch_mode: 'sequential' | 'broadcast'
-  contractor_timeout_minutes: string
-  contractor_reminder_enabled: boolean
   contractor_reminder_minutes: string
   landlord_followup_hours: string
   landlord_timeout_hours: string
@@ -86,12 +74,16 @@ interface DraftSettings {
 
 const DEFAULTS: DraftSettings = {
   dispatch_mode: 'sequential',
-  contractor_timeout_minutes: '360',
-  contractor_reminder_enabled: false,
-  contractor_reminder_minutes: '120',
+  contractor_reminder_minutes: '360',
   landlord_followup_hours: '24',
   landlord_timeout_hours: '48',
   completion_reminder_hours: '6',
+}
+
+function formatAutoTimeout(reminderMinutes: number): string {
+  const timeout = reminderMinutes * 2
+  if (timeout >= 60) return `${timeout / 60} hours`
+  return `${timeout} min`
 }
 
 export default function RulesPage() {
@@ -105,9 +97,7 @@ export default function RulesPage() {
     if (!propertyManager) return
     const fromPM: DraftSettings = {
       dispatch_mode: (propertyManager.dispatch_mode as 'sequential' | 'broadcast') || 'sequential',
-      contractor_timeout_minutes: (propertyManager.contractor_timeout_minutes || 360).toString(),
-      contractor_reminder_enabled: !!propertyManager.contractor_reminder_minutes,
-      contractor_reminder_minutes: (propertyManager.contractor_reminder_minutes || 120).toString(),
+      contractor_reminder_minutes: (propertyManager.contractor_reminder_minutes || 360).toString(),
       landlord_followup_hours: (propertyManager.landlord_followup_hours || 24).toString(),
       landlord_timeout_hours: (propertyManager.landlord_timeout_hours || 48).toString(),
       completion_reminder_hours: (propertyManager.completion_reminder_hours || 6).toString(),
@@ -118,13 +108,6 @@ export default function RulesPage() {
 
   const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
 
-  const availableReminderOptions = useMemo(() => {
-    const maxReminder = parseInt(draft.contractor_timeout_minutes) / 2
-    return ALL_REMINDER_OPTIONS.filter(o => parseInt(o.value) <= maxReminder)
-  }, [draft.contractor_timeout_minutes])
-
-  const canEnableReminder = availableReminderOptions.length > 0
-
   const availableLandlordTimeoutOptions = useMemo(() => {
     const minTimeout = parseInt(draft.landlord_followup_hours)
     return ALL_LANDLORD_TIMEOUT_OPTIONS.filter(o => parseInt(o.value) > minTimeout)
@@ -133,29 +116,6 @@ export default function RulesPage() {
   const updateDraft = useCallback((partial: Partial<DraftSettings>) => {
     setDraft(prev => ({ ...prev, ...partial }))
   }, [])
-
-  const handleTimeoutChange = (value: string) => {
-    const newMax = parseInt(value) / 2
-    const updates: Partial<DraftSettings> = { contractor_timeout_minutes: value }
-    if (draft.contractor_reminder_enabled && parseInt(draft.contractor_reminder_minutes) > newMax) {
-      const valid = ALL_REMINDER_OPTIONS.filter(o => parseInt(o.value) <= newMax)
-      if (valid.length > 0) {
-        updates.contractor_reminder_minutes = valid[valid.length - 1].value
-      } else {
-        updates.contractor_reminder_enabled = false
-      }
-    }
-    updateDraft(updates)
-  }
-
-  const handleReminderToggle = (checked: boolean) => {
-    if (checked) {
-      const mid = Math.floor(availableReminderOptions.length / 2)
-      updateDraft({ contractor_reminder_enabled: true, contractor_reminder_minutes: availableReminderOptions[mid]?.value || '120' })
-    } else {
-      updateDraft({ contractor_reminder_enabled: false })
-    }
-  }
 
   const handleLandlordFollowupChange = (value: string) => {
     const updates: Partial<DraftSettings> = { landlord_followup_hours: value }
@@ -170,11 +130,9 @@ export default function RulesPage() {
     if (!propertyManager) return
     setSaving(true)
 
-    // Broadcast mode: timeout = 2× reminder (auto-calculated)
-    const reminderMinutes = draft.contractor_reminder_enabled ? parseInt(draft.contractor_reminder_minutes) : null
-    const timeoutMinutes = draft.dispatch_mode === 'broadcast' && reminderMinutes
-      ? reminderMinutes * 2
-      : parseInt(draft.contractor_timeout_minutes)
+    // Timeout always = 2× reminder (auto-calculated for both modes)
+    const reminderMinutes = parseInt(draft.contractor_reminder_minutes)
+    const timeoutMinutes = reminderMinutes * 2
 
     const { error } = await supabase
       .from('c1_property_managers')
@@ -213,8 +171,8 @@ export default function RulesPage() {
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Contractor Dispatch</h2>
           <div className="grid grid-cols-2 gap-4">
-            {/* Dispatch Mode */}
-            <div className="space-y-2">
+            {/* Dispatch Mode — full width */}
+            <div className="col-span-2 space-y-2">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Dispatch Mode</span>
@@ -242,87 +200,49 @@ export default function RulesPage() {
               </div>
             </div>
 
-            {/* Response Timeout — only for sequential */}
-            {draft.dispatch_mode === 'sequential' && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Response Timeout</span>
-                </div>
-                <Select value={draft.contractor_timeout_minutes} onValueChange={handleTimeoutChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMEOUT_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Auto-advance to next contractor after this period.
-                </p>
+            {/* Follow-up Reminder */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Follow-up Reminder</span>
               </div>
-            )}
+              <Select
+                value={draft.contractor_reminder_minutes}
+                onValueChange={(v) => updateDraft({ contractor_reminder_minutes: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTRACTOR_REMINDER_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {draft.dispatch_mode === 'broadcast'
+                  ? 'Nudge all contractors who haven\'t responded after this time.'
+                  : 'Nudge the current contractor if no response.'}
+              </p>
+            </div>
 
-            {/* Reminder — available in both modes */}
-            {(draft.dispatch_mode === 'broadcast' || canEnableReminder) && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {draft.dispatch_mode === 'sequential' ? 'Reminder Before Timeout' : 'Follow-up Reminder'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Switch checked={draft.contractor_reminder_enabled} onCheckedChange={handleReminderToggle} />
-                  <span className="text-sm text-muted-foreground">
-                    {draft.contractor_reminder_enabled ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
-                {draft.contractor_reminder_enabled && (
-                  <>
-                    <Select
-                      value={draft.contractor_reminder_minutes}
-                      onValueChange={(v) => updateDraft({ contractor_reminder_minutes: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(draft.dispatch_mode === 'broadcast' ? ALL_REMINDER_OPTIONS : availableReminderOptions).map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {draft.dispatch_mode === 'broadcast' && (
-                      <p className="text-xs text-muted-foreground">
-                        Nudge all contractors who haven&apos;t responded after this time.
-                      </p>
-                    )}
-                  </>
-                )}
+            {/* Escalate to You — auto 2× */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Escalate to You</span>
               </div>
-            )}
-
-            {/* Escalate to You — broadcast auto-timeout */}
-            {draft.dispatch_mode === 'broadcast' && draft.contractor_reminder_enabled && (
-              <div className="col-start-2 space-y-2">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Escalate to You</span>
-                </div>
-                <div className="flex items-center h-9 px-3 rounded-md border bg-muted/30">
-                  <span className="text-sm text-muted-foreground">
-                    {parseInt(draft.contractor_reminder_minutes) * 2 >= 60
-                      ? `${parseInt(draft.contractor_reminder_minutes) * 2 / 60} hours`
-                      : `${parseInt(draft.contractor_reminder_minutes) * 2} min`
-                    } (auto)
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">2× the reminder if still no quotes received.</p>
+              <div className="flex items-center h-9 px-3 rounded-md border bg-muted/30">
+                <span className="text-sm text-muted-foreground">
+                  {formatAutoTimeout(parseInt(draft.contractor_reminder_minutes))} (auto)
+                </span>
               </div>
-            )}
+              <p className="text-xs text-muted-foreground">
+                {draft.dispatch_mode === 'broadcast'
+                  ? '2× the reminder if still no quotes received.'
+                  : '2× the reminder — advance to next contractor.'}
+              </p>
+            </div>
           </div>
         </section>
 
