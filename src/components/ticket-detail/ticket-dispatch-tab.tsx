@@ -11,6 +11,9 @@ import { cn } from '@/lib/utils'
 // ─── Config ───
 
 const TYPE_LABELS: Record<string, string> = {
+  pm_ticket_created: 'Manager Notified',
+  ll_ticket_created: 'Landlord Notified',
+  pm_handoff: 'Handoff — Manager Alerted',
   tenant_job_booked: 'Tenant Notified',
   pm_job_booked: 'Manager Notified',
   landlord_job_booked: 'Landlord Notified',
@@ -22,6 +25,8 @@ const TYPE_LABELS: Record<string, string> = {
   ll_job_completed: 'Job Completed — Landlord Notified',
 }
 
+const TICKET_CREATED_LOG_TYPES = new Set(['pm_ticket_created', 'll_ticket_created'])
+const HANDOFF_LOG_TYPES = new Set(['pm_handoff'])
 const CONTRACTOR_LOG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_contractors_left'])
 const MANAGER_LOG_TYPES = new Set(['pm_quote'])
 const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved'])
@@ -73,12 +78,45 @@ const STATUS_STYLES: Record<string, string> = {
 function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[]): PurposeEntry[] {
   const entries: PurposeEntry[] = []
 
+  const ticketCreatedLogs = outboundLog.filter(e => TICKET_CREATED_LOG_TYPES.has(e.message_type))
+  const handoffLogs = outboundLog.filter(e => HANDOFF_LOG_TYPES.has(e.message_type))
   const contractorLogs = outboundLog.filter(e => CONTRACTOR_LOG_TYPES.has(e.message_type))
   const managerLogs = outboundLog.filter(e => MANAGER_LOG_TYPES.has(e.message_type))
   const landlordLogs = outboundLog.filter(e => LANDLORD_LOG_TYPES.has(e.message_type))
   const bookingLogs = outboundLog.filter(e => BOOKING_LOG_TYPES.has(e.message_type))
   const completionLogs = outboundLog.filter(e => COMPLETION_LOG_TYPES.has(e.message_type))
   const followupLogs = outboundLog.filter(e => FOLLOWUP_LOG_TYPES.has(e.message_type))
+
+  // ─── Ticket Created: PM + LL initial notifications (auto + manual + reviewed) ───
+  const sortedCreatedLogs = [...ticketCreatedLogs].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
+  for (const entry of sortedCreatedLogs) {
+    entries.push({
+      id: entry.id,
+      phase: 'Ticket Created',
+      label: TYPE_LABELS[entry.message_type] || entry.message_type,
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: 'sent',
+      timestamp: entry.sent_at,
+      isEscalation: false,
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
+    })
+  }
+
+  // ─── Handoff: PM alerted for handoff tickets ───
+  for (const entry of handoffLogs) {
+    entries.push({
+      id: entry.id,
+      phase: 'Handoff',
+      label: TYPE_LABELS[entry.message_type] || entry.message_type,
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: 'escalation',
+      timestamp: entry.sent_at,
+      isEscalation: true,
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
+    })
+  }
 
   // ─── Contractors: one row per contractor, reminders nested ───
   if (messages) {
