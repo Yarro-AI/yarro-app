@@ -195,7 +195,7 @@ export default function RulesPage() {
         <h1 className="text-xl font-semibold">Rules & Preferences</h1>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto pb-20">
+      <div className="flex-1 space-y-3 overflow-y-auto pb-4">
 
         {/* ─── CONTRACTOR DISPATCH ─── */}
         <section className="border rounded-lg p-4">
@@ -391,13 +391,16 @@ export default function RulesPage() {
       </div>
 
       {/* Save bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur px-6 py-3 flex items-center gap-3 z-10">
+      <div className="flex-shrink-0 border-t pt-3 flex items-center justify-end gap-3">
+        {isDirty && (
+          <span className="text-xs text-muted-foreground">Unsaved changes</span>
+        )}
         <Button
           onClick={handleSave}
           disabled={!isDirty || saving}
           size="sm"
           className={cn(
-            'min-w-[120px]',
+            'min-w-[100px]',
             isDirty ? '' : 'bg-muted text-muted-foreground'
           )}
         >
@@ -418,9 +421,6 @@ export default function RulesPage() {
             </span>
           )}
         </Button>
-        {isDirty && (
-          <span className="text-xs text-muted-foreground">You have unsaved changes</span>
-        )}
       </div>
     </div>
   )
