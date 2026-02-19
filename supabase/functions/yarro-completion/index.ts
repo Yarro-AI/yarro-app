@@ -383,6 +383,22 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createSupabaseClient();
 
+    // Dedup: skip if we already processed this exact Fillout submission
+    if (parsed.fillout_submission_id) {
+      const { data: existing } = await supabase
+        .from("c1_job_completions")
+        .select("fillout_submission_id")
+        .eq("fillout_submission_id", parsed.fillout_submission_id)
+        .maybeSingle();
+      if (existing) {
+        console.log(`[${FN}] Duplicate Fillout submission ${parsed.fillout_submission_id}, skipping`);
+        return new Response(
+          JSON.stringify({ ok: true, duplicate: true, submission_id: parsed.fillout_submission_id }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Handle media uploads (Fillout S3 → Supabase Storage) — parallel
     let finalMediaUrls = parsed.media_urls;
     if (parsed.media_urls.length > 0) {

@@ -492,6 +492,25 @@ async function handleFilloutScheduling(
   const formattedWindow = formatSchedulingWindow(startIso, endIso || startIso);
   const scheduledIso = new Date(startIso).toISOString();
 
+  // Dedup: skip if ticket already scheduled for this exact date (Fillout retry)
+  const { data: currentTicket } = await supabase
+    .from("c1_tickets")
+    .select("status, scheduled_date")
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  if (
+    currentTicket?.status === "Job Scheduled" &&
+    currentTicket?.scheduled_date &&
+    new Date(currentTicket.scheduled_date).toISOString() === scheduledIso
+  ) {
+    console.log(`[${FN}] Duplicate scheduling for ticket ${ticketId} (same date ${scheduledIso}), skipping`);
+    return new Response(
+      JSON.stringify({ ok: true, duplicate: true, ticket_id: ticketId }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   // Get full ticket context via RPC
   const { data: ctx, error: rpcError } = await supabase.rpc(
     "c1_job_reminder_payload",
