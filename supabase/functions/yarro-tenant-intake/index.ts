@@ -266,7 +266,7 @@ function buildConversationMessages(
   for (const entry of recent) {
     if (entry.direction === "inbound") {
       messages.push({ role: "user", content: entry.message || "" });
-    } else if (entry.direction === "outbound") {
+    } else if (entry.direction === "out" || entry.direction === "outbound") {
       messages.push({ role: "assistant", content: entry.message || "" });
     }
   }
