@@ -260,10 +260,8 @@ export default function TicketsPage() {
       }
 
       try {
-        await fetch('https://yarro.app.n8n.cloud/webhook/manual-ll-ticket', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticket_id: handoffTicketId }),
+        await supabase.functions.invoke('yarro-ticket-notify', {
+          body: { ticket_id: handoffTicketId, source: 'manual-ll' },
         })
       } catch (webhookErr) {
         console.error('Landlord notification webhook failed:', webhookErr)
@@ -290,10 +288,8 @@ export default function TicketsPage() {
       }
 
       try {
-        await fetch('https://yarro.app.n8n.cloud/webhook/manual-ll-ticket', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticket_id: ticketId }),
+        await supabase.functions.invoke('yarro-ticket-notify', {
+          body: { ticket_id: ticketId, source: 'manual-ll' },
         })
       } catch (webhookErr) {
         console.error('Landlord notification webhook failed:', webhookErr)
