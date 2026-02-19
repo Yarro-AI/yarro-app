@@ -24,4 +24,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.yarro-ticket-notify]
-verify_jwt = true
+verify_jwt = false
