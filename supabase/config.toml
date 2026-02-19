@@ -1,0 +1,24 @@
+[project]
+id = "qedsceehrrvohsjmbodc"
+
+# Edge Function settings
+# verify_jwt = false for functions called by SQL (net.http_post)
+# verify_jwt = true for functions called by the app (supabase.functions.invoke)
+
+[functions.yarro-dispatcher]
+verify_jwt = false
+
+[functions.yarro-followups]
+verify_jwt = false
+
+[functions.yarro-job-reminder]
+verify_jwt = false
+
+[functions.yarro-scheduling]
+verify_jwt = false
+
+[functions.yarro-completion]
+verify_jwt = false
+
+[functions.yarro-ticket-notify]
+verify_jwt = true

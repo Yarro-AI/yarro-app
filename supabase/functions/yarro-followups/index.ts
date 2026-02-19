@@ -24,6 +24,7 @@ interface TwilioResult {
   to?: string;
   direction?: string;
   error?: string;
+  httpStatus?: number;
 }
 
 async function sendWhatsApp(
@@ -77,7 +78,7 @@ async function sendWhatsApp(
           await new Promise((r) => setTimeout(r, 2000));
           continue;
         }
-        return { ok: false, error: data.message || JSON.stringify(data) };
+        return { ok: false, error: data.message || JSON.stringify(data), httpStatus: resp.status };
       }
 
       return {
@@ -239,6 +240,8 @@ async function sendAndLog(
       Recipient: `${params.recipientPhone} (${params.recipientRole})`,
       Template: params.templateSid,
       "Message Type": params.messageType,
+      "HTTP Status": result.httpStatus ? String(result.httpStatus) : "N/A",
+      Variables: JSON.stringify(params.variables),
     });
   }
 
