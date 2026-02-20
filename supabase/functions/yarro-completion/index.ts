@@ -21,11 +21,29 @@ interface ParsedCompletion {
   completion_text: string | null;
 }
 
-function parseFillout(body: Record<string, any>): ParsedCompletion | null {
-  const ticket_id = body?.urlParameters?.ticket_id?.value ?? null;
+/** Extract a URL parameter from Fillout's array format: [{name, value}, ...] */
+function getUrlParam(urlParams: any, name: string): string | null {
+  if (Array.isArray(urlParams)) {
+    const param = urlParams.find((p: any) => p.name === name || p.id === name);
+    return param?.value ?? null;
+  }
+  // Fallback: object format
+  if (urlParams && typeof urlParams === "object") {
+    return urlParams[name]?.value ?? urlParams[name] ?? null;
+  }
+  return null;
+}
+
+function parseFillout(rawBody: Record<string, any>): ParsedCompletion | null {
+  // Fillout Workflows wrap data under body.submission — unwrap if present
+  const body = rawBody.submission ?? rawBody;
+
+  const ticket_id = getUrlParam(body?.urlParameters, "ticket_id") || body?.ticket_id || null;
   if (!ticket_id) return null;
 
-  const questions = body?.questions ? Object.values(body.questions) as any[] : [];
+  const questions = Array.isArray(body?.questions)
+    ? body.questions
+    : body?.questions ? Object.values(body.questions) as any[] : [];
 
   const statusQ = questions.find((q: any) => q.name?.toLowerCase().includes("status"));
   const statusVal = Array.isArray(statusQ?.value) ? statusQ.value[0] : statusQ?.value;
@@ -47,7 +65,7 @@ function parseFillout(body: Record<string, any>): ParsedCompletion | null {
     reason: reasonQ?.value || null,
     media_urls,
     source: "fillout",
-    fillout_submission_id: body?.submissionId || null,
+    fillout_submission_id: body?.submissionId || rawBody?.submissionId || null,
     inbound_sid: null,
     completion_text: null,
   };
@@ -115,10 +133,32 @@ async function uploadMedia(
 
 // ─── Main Handler ────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+      },
+    });
+  }
+
   try {
     const url = new URL(req.url);
     const source = url.searchParams.get("source") || "fillout";
-    const body = await req.json();
+
+    let body: Record<string, any>;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Invalid or empty JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    console.log(`[${FN}] source=${source}, body keys: ${Object.keys(body).join(",")}`);
 
     const parsed = source === "webhook" ? parseWebhook(body) : parseFillout(body);
 

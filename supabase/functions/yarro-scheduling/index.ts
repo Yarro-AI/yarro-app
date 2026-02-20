@@ -454,17 +454,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[${FN}] source=${source}, method=${req.method}, body keys: ${Object.keys(body).join(",")}`);
-
-    // DEBUG: Trace fillout webhooks via Telegram so we can see what arrives
-    if (source === "fillout") {
-      const bodyPreview = JSON.stringify(body).slice(0, 800);
-      await alertTelegram(FN, "🔍 Fillout webhook received", bodyPreview, {
-        "URL Params": JSON.stringify(body.urlParameters)?.slice(0, 300) || "none",
-        "Scheduling": JSON.stringify(body.scheduling)?.slice(0, 300) || "none",
-        "Top-level keys": Object.keys(body).join(", "),
-      });
-    }
+    console.log(`[${FN}] source=${source}, body keys: ${Object.keys(body).join(",")}`);
 
     const supabase = createSupabaseClient();
 
