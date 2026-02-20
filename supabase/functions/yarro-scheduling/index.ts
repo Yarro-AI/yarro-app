@@ -204,27 +204,62 @@ async function handleFinalizeJob(
 
 // ─── Path B: Fillout Scheduling Form ─────────────────────────────────────
 
-/** Extract a URL parameter from Fillout's array format: [{name, value}, ...] */
-function getUrlParam(urlParams: any, name: string): string | null {
+/** Extract a URL parameter from multiple possible Fillout payload formats */
+function getUrlParam(body: any, name: string): string | null {
+  // Format 1: Standard Fillout array [{id, name, value}, ...]
+  const urlParams = body?.urlParameters;
   if (Array.isArray(urlParams)) {
     const param = urlParams.find((p: any) => p.name === name || p.id === name);
-    return param?.value ?? null;
+    if (param?.value) return param.value;
   }
-  // Fallback: object format (in case Fillout ever changes)
-  return urlParams?.[name]?.value ?? urlParams?.[name] ?? null;
+  // Format 2: Object format {name: {value}} or {name: value}
+  if (urlParams && typeof urlParams === "object" && !Array.isArray(urlParams)) {
+    if (urlParams[name]?.value) return urlParams[name].value;
+    if (typeof urlParams[name] === "string") return urlParams[name];
+  }
+  // Format 3: Direct top-level field (Workflow custom mapping)
+  if (body?.[name] && typeof body[name] === "string") return body[name];
+  // Format 4: Nested under data (some webhook wrappers)
+  if (body?.data?.[name] && typeof body.data[name] === "string") return body.data[name];
+  return null;
+}
+
+/** Extract scheduling dates from multiple possible Fillout payload formats */
+function extractSchedulingDates(body: any): { startIso: string | null; endIso: string | null } {
+  // Format 1: Standard array [{id, name, value: {eventStartTime, eventEndTime}}, ...]
+  const sched = body?.scheduling;
+  if (Array.isArray(sched) && sched.length > 0) {
+    const val = sched[0]?.value || {};
+    if (val.eventStartTime) return { startIso: val.eventStartTime, endIso: val.eventEndTime || null };
+  }
+  // Format 2: Flat object {eventStartTime, eventEndTime}
+  if (sched && typeof sched === "object" && !Array.isArray(sched)) {
+    if (sched.eventStartTime) return { startIso: sched.eventStartTime, endIso: sched.eventEndTime || null };
+  }
+  // Format 3: Top-level fields
+  if (body?.eventStartTime) return { startIso: body.eventStartTime, endIso: body.eventEndTime || null };
+  // Format 4: Nested under data
+  if (body?.data?.eventStartTime) return { startIso: body.data.eventStartTime, endIso: body.data.eventEndTime || null };
+  // Format 5: Within questions array (Fillout puts all answers there)
+  if (Array.isArray(body?.questions)) {
+    for (const q of body.questions) {
+      if (q.value?.eventStartTime) return { startIso: q.value.eventStartTime, endIso: q.value.eventEndTime || null };
+    }
+  }
+  return { startIso: null, endIso: null };
 }
 
 async function handleFilloutScheduling(
   supabase: SupabaseClient,
   body: Record<string, any>,
 ): Promise<Response> {
-  // Parse Fillout webhook — urlParameters is an ARRAY of {id, name, value}
-  const ticketId = getUrlParam(body?.urlParameters, "ticket_id");
-  const contractorId = getUrlParam(body?.urlParameters, "contractor_id");
-  const submissionId = body?.submissionId ?? null;
+  // Parse ticket_id from multiple possible locations
+  const ticketId = getUrlParam(body, "ticket_id");
+  const contractorId = getUrlParam(body, "contractor_id");
+  const submissionId = body?.submissionId ?? body?.submission_id ?? null;
 
   if (!ticketId) {
-    console.error(`[${FN}] No ticket_id found. urlParameters:`, JSON.stringify(body?.urlParameters)?.slice(0, 500));
+    console.error(`[${FN}] No ticket_id found. Body keys: ${Object.keys(body).join(",")}, urlParameters:`, JSON.stringify(body?.urlParameters)?.slice(0, 500));
     return new Response(
       JSON.stringify({ ok: false, error: "No ticket_id in Fillout URL parameters" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
@@ -233,11 +268,8 @@ async function handleFilloutScheduling(
 
   console.log(`[${FN}] fillout scheduling for ticket ${ticketId}, submission ${submissionId}`);
 
-  // Parse scheduling dates — scheduling is an ARRAY of {id, name, value: {eventStartTime, eventEndTime}}
-  const schedulingArr = Array.isArray(body?.scheduling) ? body.scheduling : [];
-  const schedulingValue = schedulingArr[0]?.value || {};
-  const startIso = schedulingValue.eventStartTime || null;
-  const endIso = schedulingValue.eventEndTime || null;
+  // Parse scheduling dates from multiple possible formats
+  const { startIso, endIso } = extractSchedulingDates(body);
 
   if (!startIso) {
     await alertTelegram(FN, "fillout → no eventStartTime", `ticket ${ticketId}`, {
