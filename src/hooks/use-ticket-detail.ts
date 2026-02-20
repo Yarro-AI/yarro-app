@@ -238,8 +238,8 @@ export function getLogEntries(log: Json): { role: string; text: string; timestam
       })
       .map(entry => {
         let role = entry.role || 'system'
-        if (entry.direction === 'in') role = 'tenant'
-        if (entry.direction === 'out') role = 'assistant'
+        if (entry.direction === 'in' || entry.direction === 'inbound') role = 'tenant'
+        if (entry.direction === 'out' || entry.direction === 'outbound') role = 'assistant'
         return {
           role,
           text: entry.text || entry.content || entry.message || '',
