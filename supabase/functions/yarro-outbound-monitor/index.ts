@@ -45,22 +45,26 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2. Log to c1_outbound_log for audit trail
-    await supabase.from("c1_outbound_log").insert({
+    const logEntry: Record<string, any> = {
       message_type: "outbound_reply",
       recipient_phone: phone,
-      recipient_role: "unknown",
+      recipient_role: replyResult?.actor || "unknown",
       body: displayBody + (numMedia > 0 ? ` [+${numMedia} media]` : ""),
       twilio_sid: messageSid,
       status: "received",
       sent_at: new Date().toISOString(),
-    });
+    };
+    if (replyResult?.ticket_id) logEntry.ticket_id = replyResult.ticket_id;
+    await supabase.from("c1_outbound_log").insert(logEntry);
 
     // 3. Telegram alert for visibility
     const replyStatus = replyError
       ? `Error: ${replyError.message}`
-      : replyResult?.matched
-        ? `Matched ticket ${replyResult.ticket_id || "?"}`
-        : "No ticket match";
+      : replyResult?.ticket_id
+        ? `${replyResult.actor || "unknown"} → ticket ${replyResult.ticket_id}${replyResult.path ? ` (${replyResult.path})` : ""}`
+        : replyResult?.path === "ignored-noise"
+          ? "Ignored (no actionable content)"
+          : "No ticket match";
 
     const text = [
       "\ud83d\udce9 <b>Outbound Number Reply</b>",
