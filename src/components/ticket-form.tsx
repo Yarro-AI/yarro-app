@@ -44,7 +44,7 @@ interface Tenant {
 }
 
 interface ConversationMessage {
-  direction: 'in' | 'out'
+  direction: 'in' | 'out' | 'inbound' | 'outbound'
   message: string
   timestamp: string
   label?: string
