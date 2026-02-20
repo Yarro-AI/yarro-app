@@ -907,7 +907,7 @@ export default function DashboardPage() {
                             return (log as Array<{ direction?: string; text?: string; content?: string; message?: string; timestamp?: string; label?: string }>)
                               .filter(entry => !entry.label && (entry.text || entry.content || entry.message))
                               .map(entry => ({
-                                role: entry.direction === 'in' ? 'tenant' : entry.direction === 'out' ? 'assistant' : 'system',
+                                role: (entry.direction === 'in' || entry.direction === 'inbound') ? 'tenant' : (entry.direction === 'out' || entry.direction === 'outbound') ? 'assistant' : 'system',
                                 text: entry.text || entry.content || entry.message || '',
                                 timestamp: entry.timestamp,
                               }))
@@ -941,7 +941,7 @@ export default function DashboardPage() {
                           const log = selectedHandoff.log
                           if (!log || !Array.isArray(log)) return ''
                           const tenantMessages = (log as Array<{ direction?: string; text?: string; content?: string; message?: string }>)
-                            .filter(entry => entry.direction === 'in')
+                            .filter(entry => entry.direction === 'in' || entry.direction === 'inbound')
                             .map(entry => entry.text || entry.content || entry.message || '')
                             .filter(Boolean)
                           // Return last substantial tenant message as issue description

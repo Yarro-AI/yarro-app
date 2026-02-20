@@ -630,7 +630,7 @@ export function TicketForm({
               {conversationLog.map((msg, i) => (
                 <div
                   key={i}
-                  className={`flex ${msg.direction === 'in' ? 'justify-start' : 'justify-end'}`}
+                  className={`flex ${(msg.direction === 'in' || msg.direction === 'inbound') ? 'justify-start' : 'justify-end'}`}
                 >
                   {msg.label === 'HANDOFF' ? (
                     <div className="text-xs text-amber-600 font-medium py-1 w-full text-center">
@@ -639,7 +639,7 @@ export function TicketForm({
                   ) : (
                     <div
                       className={`max-w-[80%] rounded-lg px-3 py-1.5 text-xs ${
-                        msg.direction === 'in'
+                        (msg.direction === 'in' || msg.direction === 'inbound')
                           ? 'bg-white dark:bg-zinc-800 border text-gray-900 dark:text-gray-100'
                           : 'bg-primary/10 text-foreground'
                       }`}
