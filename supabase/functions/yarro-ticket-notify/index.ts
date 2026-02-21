@@ -82,10 +82,7 @@ async function handleIntake(
       // No PM phone — property not matched. Send urgent Telegram alert.
       const isEmergency = (ctx.label || "").toUpperCase().includes("EMERGENCY")
         || (ctx.priority || "").toLowerCase() === "emergency";
-      const alertFn = isEmergency ? alertTelegram : alertInfo;
-      await alertFn(FN, isEmergency
-        ? "EMERGENCY handoff — no property manager found"
-        : "Handoff ticket — no property manager found", {
+      const extras = {
         Ticket: ticketId,
         Label: ctx.label || "N/A",
         Priority: ctx.priority || "N/A",
@@ -93,7 +90,13 @@ async function handleIntake(
         "Caller Name": ctx.caller_name || ctx.tenant_name || "Unknown",
         Issue: (ctx.issue_description || "").slice(0, 200),
         "Property Address": ctx.property_address || "NOT MATCHED",
-      });
+      };
+      if (isEmergency) {
+        await alertTelegram(FN, "EMERGENCY handoff — no property manager found",
+          "No PM phone — property not matched. Ticket created, needs manual review.", extras);
+      } else {
+        await alertInfo(FN, "Handoff ticket — no property manager found", extras);
+      }
       results.push({ type: "telegram_fallback", sent: true });
     }
   } else {

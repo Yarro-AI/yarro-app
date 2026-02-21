@@ -25,6 +25,8 @@ import {
   Send,
   CircleX,
   MessageSquare,
+  Phone,
+  User,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -893,15 +895,29 @@ export default function DashboardPage() {
                 <div className={`flex-1 overflow-hidden grid gap-4 ${showHandoffConvo ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   {/* Left: Conversation Context (collapsible) */}
                   {showHandoffConvo && (
-                    <div className="flex flex-col min-h-0 border rounded-lg">
-                      <div className="px-4 py-3 border-b bg-muted/30 flex-shrink-0">
-                        <h4 className="font-medium text-sm">Conversation History</h4>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {selectedHandoff.caller_name || 'Unknown'} • {selectedHandoff.phone}
-                        </p>
+                    <div className="flex flex-col min-h-0 border rounded-lg p-3">
+                      {/* Caller info bar — matches ticket-conversation-tab design */}
+                      <div className="flex items-center gap-4 pb-2 mb-2 border-b flex-shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-mono text-xs">{selectedHandoff.phone || 'Unknown'}</span>
+                        </div>
+                        {selectedHandoff.caller_name && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs">
+                              {selectedHandoff.caller_name}
+                              {selectedHandoff.caller_role && (
+                                <span className="text-muted-foreground text-[10px] ml-1">({selectedHandoff.caller_role})</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1 overflow-y-auto p-3">
+                      {/* Chat bubbles */}
+                      <div className="flex-1 min-h-0 overflow-y-auto bg-muted/30 rounded-xl p-3">
                         <ChatHistory
+                          compact
                           messages={(() => {
                             const log = selectedHandoff.log
                             if (!log || !Array.isArray(log)) return []
@@ -916,9 +932,9 @@ export default function DashboardPage() {
                         />
                       </div>
                       {/* Handoff reason hint */}
-                      <div className="px-4 py-2 border-t bg-amber-50 dark:bg-amber-950/20 flex-shrink-0">
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          <strong>Handoff reason:</strong> {selectedHandoff.stage === 'handoff' ? 'AI determined this needs human review' : `Stage: ${selectedHandoff.stage || 'unknown'}`}
+                      <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 flex-shrink-0">
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                          <strong>Handoff:</strong> {selectedHandoff.stage === 'handoff' ? 'AI determined this needs human review' : `Stage: ${selectedHandoff.stage || 'unknown'}`}
                         </p>
                       </div>
                     </div>
