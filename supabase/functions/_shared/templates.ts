@@ -36,3 +36,9 @@ export const TEMPLATES = {
 } as const;
 
 export type TemplateName = keyof typeof TEMPLATES;
+
+/** Short ticket ref for WhatsApp messages — first UUID segment only.
+ *  Avoids WhatsApp auto-linking digit sequences as phone numbers. */
+export function shortRef(ticketId: string): string {
+  return `T-${ticketId.split("-")[0]}`;
+}

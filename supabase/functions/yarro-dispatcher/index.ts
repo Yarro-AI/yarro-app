@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 
 // ─── Function: yarro-dispatcher ──────────────────────────────────────────
 
@@ -234,7 +234,7 @@ async function handleNoMoreContractors(
     messageType: "no_more_contractors",
     templateSid: TEMPLATES.no_more_contractors,
     variables: {
-      "1": String(ticket.id || ""),
+      "1": shortRef(String(ticket.id || "")),
       "2": ticket.issue_description || "",
       "3": property.address || "",
     },

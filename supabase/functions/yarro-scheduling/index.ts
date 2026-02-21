@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 
 // ─── Function: yarro-scheduling ──────────────────────────────────────────
 
@@ -173,7 +173,7 @@ async function handleFinalizeJob(
         messageType: "landlord_declined",
         templateSid: TEMPLATES.landlord_declined,
         variables: {
-          "1": ticketId,
+          "1": shortRef(ticketId),
           "2": property.address || "",
           "3": ticket.issue_description || "",
           "4": contractor.total || "",
@@ -357,7 +357,7 @@ async function handleFilloutScheduling(
         variables: {
           "1": formattedWindow,
           "2": addr,
-          "3": ticketId,
+          "3": shortRef(ticketId),
           "4": contrName,
           "5": issueTitle,
         },
@@ -379,7 +379,7 @@ async function handleFilloutScheduling(
           "1": formattedWindow,
           "2": addr,
           "3": contrName,
-          "4": ticketId,
+          "4": shortRef(ticketId),
           "5": issueTitle,
         },
       });
@@ -400,7 +400,7 @@ async function handleFilloutScheduling(
           "1": formattedWindow,
           "2": addr,
           "3": contrName,
-          "4": ticketId,
+          "4": shortRef(ticketId),
           "5": issueTitle,
         },
       });

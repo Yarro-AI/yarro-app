@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 
 const FN = "yarro-ticket-notify";
 
@@ -68,7 +68,7 @@ async function handleIntake(
         messageType: "pm_handoff",
         templateSid: TEMPLATES.handoff,
         variables: {
-          "1": ticketId,
+          "1": shortRef(ticketId),
           "2": ctx.label || "Handoff",
           "3": ctx.property_address || "",
           "4": formatCallerInfoHandoff(ctx),
@@ -108,7 +108,7 @@ async function handleIntake(
           messageType: "pm_ticket_created",
           templateSid: TEMPLATES.ticket_created,
           variables: {
-            "1": ticketId,
+            "1": shortRef(ticketId),
             "2": ctx.property_address || "",
             "3": formatCallerInfo(ctx),
             "4": formatTenantInfo(ctx),
@@ -129,7 +129,7 @@ async function handleIntake(
           messageType: "ll_ticket_created",
           templateSid: TEMPLATES.ticket_created,
           variables: {
-            "1": ticketId,
+            "1": shortRef(ticketId),
             "2": ctx.property_address || "",
             "3": formatCallerInfo(ctx),
             "4": formatTenantInfo(ctx),
@@ -216,7 +216,7 @@ async function handleManualLandlord(
     messageType: "ll_ticket_created",
     templateSid: TEMPLATES.ticket_created,
     variables: {
-      "1": ticketId,
+      "1": shortRef(ticketId),
       "2": ctx.property_address || "",
       "3": ctx.business_name || "",
       "4": ctx.tenant_name || "N/A",

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 
 // ─── Function: yarro-completion ──────────────────────────────────────────
 
@@ -264,7 +264,7 @@ Deno.serve(async (req: Request) => {
               messageType: "pm_job_completed",
               templateSid: TEMPLATES.pm_job_completed,
               variables: {
-                "1": ticketId,
+                "1": shortRef(ticketId),
                 "2": addr,
                 "3": `${contrName} / ${contrPhone}`,
                 "4": issue,
@@ -283,7 +283,7 @@ Deno.serve(async (req: Request) => {
               messageType: "ll_job_completed",
               templateSid: TEMPLATES.ll_job_completed,
               variables: {
-                "1": ticketId,
+                "1": shortRef(ticketId),
                 "2": addr,
                 "3": `${contrName} / ${contrPhone}`,
                 "4": issue,
@@ -304,7 +304,7 @@ Deno.serve(async (req: Request) => {
             messageType: "pm_job_not_completed",
             templateSid: TEMPLATES.pm_job_not_completed,
             variables: {
-              "1": ticketId,
+              "1": shortRef(ticketId),
               "2": addr,
               "3": contrName,
               "4": reason,

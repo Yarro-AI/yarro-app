@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 
 const FN = "yarro-job-reminder";
 
@@ -31,8 +31,8 @@ async function sendReminder(
       "1": reminder.formatted_window || "",
       "2": reminder.property_address || "",
       "3": reminder.access_text || "",
-      "4": String(reminder.ticket_id),
-      "5": String(reminder.ticket_id),
+      "4": shortRef(reminder.ticket_id),
+      "5": shortRef(reminder.ticket_id),
     },
   });
 
