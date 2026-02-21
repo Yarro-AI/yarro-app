@@ -18,7 +18,7 @@ export function HandoffAlertBanner({ tickets, onReview }: HandoffAlertBannerProp
   if (tickets.length === 0) return null
 
   return (
-    <div className="mb-6 rounded-xl border p-4">
+    <div className="mb-6 rounded-xl border border-red-300 dark:border-red-800 p-4">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-foreground/70" />
         <p className="text-sm font-medium">
