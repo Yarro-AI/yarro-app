@@ -346,7 +346,7 @@ export default function TicketsPage() {
 
     const { error: ticketError } = await supabase
       .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
+      .update({ archived: true, archived_at: archivedAt })
       .eq('id', handoffTicketId)
 
     if (ticketError) {
@@ -505,7 +505,7 @@ export default function TicketsPage() {
 
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
-        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open')}
+        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open' && !t.archived)}
         onReview={(ticketId) => {
           const ticket = tickets.find(t => t.id === ticketId)
           if (ticket) {
