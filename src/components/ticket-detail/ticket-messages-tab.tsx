@@ -26,20 +26,29 @@ interface MessageTypeConfig {
 }
 
 const MESSAGE_TYPES: Record<string, MessageTypeConfig> = {
+  pm_ticket_created: { label: 'Manager Notified', phase: 'dispatch' },
+  ll_ticket_created: { label: 'Landlord Notified', phase: 'dispatch' },
+  pm_handoff: { label: 'Handoff — Manager Alerted', phase: 'dispatch', isEscalation: true },
   contractor_dispatch: { label: 'Contractor Dispatched', phase: 'dispatch' },
   contractor_reminder: { label: 'Contractor Reminder', phase: 'dispatch', isFollowUp: true },
-  no_contractors_left: { label: 'No Contractors Available', phase: 'dispatch' },
+  no_more_contractors: { label: 'No Contractors Available', phase: 'dispatch', isEscalation: true },
   pm_quote: { label: 'Quote Sent to Manager', phase: 'approval' },
   landlord_quote: { label: 'Quote Sent to Landlord', phase: 'approval' },
   landlord_followup: { label: 'Landlord Follow-up', phase: 'approval', isFollowUp: true },
   pm_landlord_timeout: { label: 'Landlord Timeout Alert', phase: 'approval', isEscalation: true },
   pm_landlord_approved: { label: 'Landlord Approved', phase: 'approval' },
+  landlord_declined: { label: 'Landlord Declined', phase: 'approval', isEscalation: true },
+  contractor_job_schedule: { label: 'Contractor Booking Sent', phase: 'booking' },
+  contractor_job_confirmed: { label: 'Contractor Confirmed Slot', phase: 'booking' },
   tenant_job_booked: { label: 'Job Booked — Tenant', phase: 'booking' },
   pm_job_booked: { label: 'Job Booked — Manager', phase: 'booking' },
   landlord_job_booked: { label: 'Job Booked — Landlord', phase: 'booking' },
   contractor_job_reminder: { label: 'Outcome Form Reminder', phase: 'completion' },
   contractor_completion_reminder: { label: 'Completion Reminder', phase: 'completion', isFollowUp: true },
   pm_completion_overdue: { label: 'Completion Overdue', phase: 'completion', isEscalation: true },
+  pm_job_completed: { label: 'Job Completed — Manager', phase: 'completion' },
+  pm_job_not_completed: { label: 'Job Not Completed — Manager', phase: 'completion', isEscalation: true },
+  ll_job_completed: { label: 'Job Completed — Landlord', phase: 'completion' },
 }
 
 // ─── Role config ───

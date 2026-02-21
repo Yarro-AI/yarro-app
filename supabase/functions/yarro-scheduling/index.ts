@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
-import { sendAndLog } from "../_shared/twilio.ts";
+import { sendAndLog, logOutbound } from "../_shared/twilio.ts";
 import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 
 // ─── Function: yarro-scheduling ──────────────────────────────────────────
@@ -332,6 +332,20 @@ async function handleFilloutScheduling(
   if (patchError) {
     await alertTelegram(FN, "fillout → ticket PATCH", patchError.message, { Ticket: ticketId });
   }
+
+  // Log cosmetic entry: contractor confirmed slot via Fillout form
+  const contrPhone = ctx.contractor?.contractor_phone || "";
+  await logOutbound(supabase, {
+    ticketId,
+    messageType: "contractor_job_confirmed",
+    recipientPhone: contrPhone,
+    recipientRole: "contractor",
+    twilioSid: null,
+    templateSid: "",
+    contentVariables: {},
+    twilioBody: `Contractor confirmed slot: ${formattedWindow}`,
+    status: "cosmetic",
+  });
 
   // Extract context for SMS
   const addr = ctx.property?.address || "";

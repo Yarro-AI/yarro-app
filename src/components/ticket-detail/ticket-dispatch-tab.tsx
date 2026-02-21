@@ -14,6 +14,9 @@ const TYPE_LABELS: Record<string, string> = {
   pm_ticket_created: 'Manager Notified',
   ll_ticket_created: 'Landlord Notified',
   pm_handoff: 'Handoff — Manager Alerted',
+  contractor_job_schedule: 'Contractor Booking Sent',
+  contractor_job_confirmed: 'Contractor Confirmed Slot',
+  landlord_declined: 'Landlord Declined',
   tenant_job_booked: 'Tenant Notified',
   pm_job_booked: 'Manager Notified',
   landlord_job_booked: 'Landlord Notified',
@@ -27,10 +30,10 @@ const TYPE_LABELS: Record<string, string> = {
 
 const TICKET_CREATED_LOG_TYPES = new Set(['pm_ticket_created', 'll_ticket_created'])
 const HANDOFF_LOG_TYPES = new Set(['pm_handoff'])
-const CONTRACTOR_LOG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_contractors_left'])
+const CONTRACTOR_LOG_TYPES = new Set(['contractor_dispatch', 'contractor_reminder', 'no_more_contractors'])
 const MANAGER_LOG_TYPES = new Set(['pm_quote'])
-const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved'])
-const BOOKING_LOG_TYPES = new Set(['tenant_job_booked', 'pm_job_booked', 'landlord_job_booked'])
+const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_landlord_timeout', 'pm_landlord_approved', 'landlord_declined'])
+const BOOKING_LOG_TYPES = new Set(['contractor_job_schedule', 'contractor_job_confirmed', 'tenant_job_booked', 'pm_job_booked', 'landlord_job_booked'])
 const FOLLOWUP_LOG_TYPES = new Set(['contractor_job_reminder', 'contractor_completion_reminder', 'pm_completion_overdue'])
 const COMPLETION_LOG_TYPES = new Set(['pm_job_completed', 'pm_job_not_completed', 'll_job_completed'])
 
@@ -170,7 +173,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
   }
 
   // No contractors available
-  for (const entry of contractorLogs.filter(e => e.message_type === 'no_contractors_left')) {
+  for (const entry of contractorLogs.filter(e => e.message_type === 'no_more_contractors')) {
     entries.push({
       id: entry.id,
       phase: 'Contractor Quotes',
@@ -271,6 +274,16 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
           timestamp: a.sent_at,
           variant: 'reminder',
           chatMessages: a.body ? [{ role: 'assistant', text: a.body, timestamp: a.sent_at, allowHtml: true }] : [],
+        })
+      }
+
+      for (const d of landlordLogs.filter(e => e.message_type === 'landlord_declined')) {
+        subEntries.push({
+          id: d.id,
+          label: 'Landlord declined — manager alerted',
+          timestamp: d.sent_at,
+          variant: 'warning',
+          chatMessages: d.body ? [{ role: 'assistant', text: d.body, timestamp: d.sent_at, allowHtml: true }] : [],
         })
       }
 
