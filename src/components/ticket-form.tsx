@@ -582,11 +582,11 @@ export function TicketForm({
         </div>
       )}
       {isHandoff && formData.priority !== 'Emergency' && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+        <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-amber-800 dark:text-amber-300">Manual Review Required</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+            <p className="font-medium text-red-800 dark:text-red-300">Manual Review Required</p>
+            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
               This conversation was handed off because it couldn&apos;t be fully automated.
               Please verify tenant details, review the issue description, and check any photos before dispatching.
             </p>
