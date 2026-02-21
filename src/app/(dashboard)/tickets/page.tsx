@@ -234,7 +234,6 @@ export default function TicketsPage() {
     property_id: string
     tenant_id: string
     issue_description: string
-    issue_title: string
     category: string
     priority: string
     contractor_ids: string[]
@@ -274,7 +273,7 @@ export default function TicketsPage() {
         p_property_id: data.property_id,
         p_tenant_id: data.tenant_id,
         p_issue_description: data.issue_description,
-        p_issue_title: data.issue_title || null,
+        p_issue_title: null,
         p_category: data.category,
         p_priority: data.priority,
         p_contractor_ids: data.contractor_ids,
