@@ -18,9 +18,9 @@ export function HandoffAlertBanner({ tickets, onReview }: HandoffAlertBannerProp
   if (tickets.length === 0) return null
 
   return (
-    <div className="mb-6 rounded-xl border border-red-300 dark:border-red-800 p-4">
+    <div className="mb-6 rounded-xl border p-4">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="h-4 w-4 text-foreground/70" />
+        <AlertTriangle className="h-5 w-5 text-red-500" />
         <p className="text-sm font-medium">
           {tickets.length} ticket{tickets.length > 1 ? 's' : ''} need{tickets.length === 1 ? 's' : ''} your review
         </p>
