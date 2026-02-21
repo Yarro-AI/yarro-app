@@ -180,7 +180,8 @@ export default function TicketsPage() {
         return msgs.stage || null
       }
 
-      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
+      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; archived: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
+        if (t.archived && t.handoff) return 'Dismissed'
         const isClosed = t.status?.toLowerCase() === 'closed'
         if (isClosed) return 'Completed'
         if (t.handoff) return 'handoff'
@@ -345,7 +346,7 @@ export default function TicketsPage() {
 
     const { error: ticketError } = await supabase
       .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt })
+      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
       .eq('id', handoffTicketId)
 
     if (ticketError) {
