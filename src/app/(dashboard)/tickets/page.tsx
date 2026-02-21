@@ -454,7 +454,7 @@ export default function TicketsPage() {
   ]
 
   // Open handoffs only show in the banner, not in the table
-  const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open'
+  const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && !t.archived
 
   const toggleStageFilter = (stage: string) => {
     setStageFilter(prev => {
