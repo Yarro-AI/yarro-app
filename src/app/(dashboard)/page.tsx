@@ -269,7 +269,7 @@ export default function DashboardPage() {
         issue_description: t.issue_description,
         status: t.status,
         job_stage: t.job_stage,
-        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || 'Created',
+        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created',
         message_stage: null,
         category: t.category,
         priority: t.priority,

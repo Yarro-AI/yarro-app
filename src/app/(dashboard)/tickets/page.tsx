@@ -192,7 +192,7 @@ export default function TicketsPage() {
         tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
         contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
         message_stage: null,
-        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || 'Created',
+        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created',
       }))
       setTickets(mapped)
     }

@@ -533,7 +533,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       dismissed: 'Dismissed',
       new: 'Created',
     }
-    return reasonMap[basic.next_action_reason || ''] || 'Created'
+    return reasonMap[basic.next_action_reason || ''] || reasonMap[basic.next_action || ''] || 'Created'
   })()
 
   return {
