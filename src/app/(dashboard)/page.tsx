@@ -16,6 +16,8 @@ import {
   MessageSquare,
   Phone,
   User,
+  Search,
+  Plus,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -127,6 +129,8 @@ export default function DashboardPage() {
   const [notCompletedIds, setNotCompletedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [scheduledFilter, setScheduledFilter] = useState<ScheduledFilter>('week')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [simpleCreateOpen, setSimpleCreateOpen] = useState(false)
   const supabase = createClient()
 
   // Persist view mode
@@ -488,17 +492,34 @@ export default function DashboardPage() {
 
         <div className="relative p-4 h-full flex flex-col gap-6">
           {/* Header */}
-          <div className="flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <h1 className="text-4xl font-bold text-foreground tracking-tight leading-none">To-do</h1>
-              {totalAction > 0 && (
-                <span className="text-sm font-bold text-white bg-red-500 rounded-full h-6 min-w-[24px] flex items-center justify-center px-2">
-                  {totalAction}
-                </span>
-              )}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Left: Search + Create CTA */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+                <input
+                  type="text"
+                  placeholder="Search tickets, landlords, tenants..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      router.push(`/tickets?search=${encodeURIComponent(searchQuery.trim())}`)
+                    }
+                  }}
+                  className="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 placeholder:text-muted-foreground/40"
+                />
+              </div>
+              <Button
+                onClick={() => setSimpleCreateOpen(true)}
+                className="gap-1.5 flex-shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                Create ticket
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              {/* View Toggle */}
+            {/* Right: View toggle + date filter */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
                 <button
                   onClick={() => handleViewChange('stats')}
@@ -551,7 +572,15 @@ export default function DashboardPage() {
                 ]
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col justify-center">
+                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
+                    <div className="flex items-center gap-3 mb-6">
+                      <h2 className="text-2xl font-bold text-card-foreground tracking-tight">To-do</h2>
+                      {totalAction > 0 && (
+                        <span className="text-sm font-bold text-white bg-red-500 rounded-full h-6 min-w-[24px] flex items-center justify-center px-2">
+                          {totalAction}
+                        </span>
+                      )}
+                    </div>
                     <div className="space-y-1">
                       {todoItems.map((item) => (
                         <button
@@ -624,8 +653,8 @@ export default function DashboardPage() {
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <h3 className="text-sm font-medium text-muted-foreground">Scheduled jobs</h3>
+                    <div className="flex items-start justify-between gap-2 mb-4">
+                      <h3 className="text-sm font-semibold text-card-foreground">Scheduled jobs</h3>
                       <div className="flex items-center gap-1 flex-wrap justify-end">
                         {filterOptions.map((opt) => (
                           <button
@@ -672,7 +701,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom: Recent tickets — fixed height, secondary context */}
-            <div className="h-[300px] flex-shrink-0 bg-card/60 rounded-xl border border-border/50 flex flex-col">
+            <div className="flex-shrink-0 bg-card/60 rounded-xl border border-border/50 flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 flex-shrink-0">
                 <h3 className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">Recent tickets</h3>
                 <Link href="/tickets">
@@ -682,7 +711,7 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/30 flex-1 overflow-y-auto">
+              <div className="divide-y divide-border/30">
                 {recentTickets.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground/50">
                     No tickets found for this period
@@ -765,6 +794,26 @@ export default function DashboardPage() {
             </div>
           </SheetContent>
         </Sheet>
+
+        {/* Simple Create Ticket Dialog */}
+        <Dialog open={simpleCreateOpen} onOpenChange={setSimpleCreateOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle>Create Ticket</DialogTitle>
+              <DialogDescription>Log a new maintenance ticket</DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto pt-2">
+              <TicketForm
+                onSuccess={() => {
+                  setSimpleCreateOpen(false)
+                  toast.success('Ticket created')
+                  fetchData()
+                }}
+                onCancel={() => setSimpleCreateOpen(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Create Ticket from Handoff Dialog */}
         <Dialog open={createTicketOpen} onOpenChange={(open) => {
