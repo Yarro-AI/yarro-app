@@ -7,6 +7,8 @@ interface SlaBadgeProps {
   slaDueAt: string | null
   resolvedAt?: string | null
   priority?: string | null
+  dateLogged?: string | null
+  archived?: boolean | null
   className?: string
 }
 
@@ -33,16 +35,16 @@ function formatDuration(totalMinutes: number): string {
 
 type SlaStatus = 'green' | 'amber' | 'red' | 'breached' | 'resolved'
 
-function getSlaStatus(slaDueAt: string, resolvedAt?: string | null, priority?: string | null): { status: SlaStatus; label: string } {
-  // If resolved, show resolution time relative to SLA
+function getSlaStatus(slaDueAt: string, resolvedAt?: string | null, priority?: string | null, dateLogged?: string | null): { status: SlaStatus; label: string } {
+  // If resolved, show actual resolution time
   if (resolvedAt) {
-    const due = new Date(slaDueAt).getTime()
-    const resolved = new Date(resolvedAt).getTime()
-    const diff = Math.round((due - resolved) / 60000)
-    if (diff >= 0) {
-      return { status: 'resolved', label: `Resolved (${formatDuration(diff)} early)` }
+    if (dateLogged) {
+      const logged = new Date(dateLogged).getTime()
+      const resolved = new Date(resolvedAt).getTime()
+      const resolutionMinutes = Math.round((resolved - logged) / 60000)
+      return { status: 'resolved', label: `Resolved in ${formatDuration(resolutionMinutes)}` }
     }
-    return { status: 'resolved', label: `Resolved (${formatDuration(diff)} late)` }
+    return { status: 'resolved', label: 'Resolved' }
   }
 
   const minutesRemaining = getMinutesRemaining(slaDueAt)
@@ -71,10 +73,13 @@ const statusStyles: Record<SlaStatus, string> = {
   resolved: 'bg-muted text-muted-foreground',
 }
 
-export function SlaBadge({ slaDueAt, resolvedAt, priority, className }: SlaBadgeProps) {
+export function SlaBadge({ slaDueAt, resolvedAt, priority, dateLogged, archived, className }: SlaBadgeProps) {
   if (!slaDueAt) return null
 
-  const { status, label } = getSlaStatus(slaDueAt, resolvedAt, priority)
+  // Archived tickets without resolution — don't show ongoing countdown
+  if (archived && !resolvedAt) return null
+
+  const { status, label } = getSlaStatus(slaDueAt, resolvedAt, priority, dateLogged)
 
   return (
     <span className={cn(

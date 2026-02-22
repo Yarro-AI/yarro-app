@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
@@ -95,6 +96,7 @@ interface TicketRow {
   next_action_reason: string | null
   date_logged: string
   scheduled_date: string | null
+  archived: boolean | null
 }
 
 // --- Helpers ---
@@ -188,7 +190,7 @@ export default function PropertyDetailPage() {
         .eq('active', true),
       supabase
         .from('c1_tickets')
-        .select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, scheduled_date')
+        .select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, scheduled_date, archived')
         .eq('property_id', propertyId)
         .order('date_logged', { ascending: false })
         .limit(50),
@@ -321,8 +323,8 @@ export default function PropertyDetailPage() {
 
   // --- Ticket counts ---
 
-  const openTickets = tickets.filter((t) => t.status !== 'closed')
-  const closedTickets = tickets.filter((t) => t.status === 'closed')
+  const openTickets = tickets.filter((t) => t.status !== 'closed' && !t.archived)
+  const completedTickets = tickets.filter((t) => t.status === 'closed' || t.next_action_reason === 'completed')
 
   // --- Loading / Not found ---
 
@@ -406,8 +408,9 @@ export default function PropertyDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-8 py-6 space-y-6">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="overflow-y-auto flex-shrink-0 max-h-[50%]">
+          <div className="max-w-4xl mx-auto px-8 py-6 space-y-6">
 
           {/* Details Card */}
           <Card>
@@ -632,20 +635,24 @@ export default function PropertyDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Tickets Card */}
-          <Card>
-            <CardHeader>
+          </div>
+        </div>
+
+        {/* Tickets Card — fills remaining screen */}
+        <div className="flex-1 min-h-0 flex flex-col px-8 pb-6">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardHeader className="flex-shrink-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <Ticket className="h-4 w-4" /> Tickets
                 {openTickets.length > 0 && (
                   <Badge className="bg-primary text-xs ml-1">{openTickets.length} open</Badge>
                 )}
-                {closedTickets.length > 0 && (
-                  <Badge variant="outline" className="text-xs ml-1">{closedTickets.length} closed</Badge>
+                {completedTickets.length > 0 && (
+                  <Badge variant="outline" className="text-xs ml-1">{completedTickets.length} completed</Badge>
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 min-h-0 overflow-y-auto">
               {tickets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No tickets for this property</p>
               ) : (
@@ -654,7 +661,10 @@ export default function PropertyDetailPage() {
                     <button
                       key={t.id}
                       onClick={() => setSelectedTicketId(t.id)}
-                      className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                      className={cn(
+                        "w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left",
+                        t.archived && "opacity-50"
+                      )}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -677,7 +687,6 @@ export default function PropertyDetailPage() {
               )}
             </CardContent>
           </Card>
-
         </div>
       </div>
 

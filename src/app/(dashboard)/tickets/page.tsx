@@ -127,6 +127,7 @@ export default function TicketsPage() {
   }, [selectedId, tickets, action])
 
   const fetchTickets = async () => {
+    setLoading(true)
     let query = supabase
       .from('c1_tickets')
       .select(`
@@ -434,6 +435,8 @@ export default function TicketsPage() {
           slaDueAt={ticket.sla_due_at ?? null}
           resolvedAt={ticket.resolved_at}
           priority={ticket.priority}
+          dateLogged={ticket.date_logged}
+          archived={ticket.archived}
         />
       ),
       getValue: (ticket) => ticket.sla_due_at ? new Date(ticket.sla_due_at).getTime() : 0,
