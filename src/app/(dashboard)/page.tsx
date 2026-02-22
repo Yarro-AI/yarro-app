@@ -9,21 +9,11 @@ import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
 import { KanbanBoard } from '@/components/kanban-board'
 import {
-  Clock,
-  UserCheck,
   ArrowRight,
-  Hourglass,
-  CalendarClock,
   AlertTriangle,
-  XCircle,
-  BarChart3,
-  Plus,
-  CheckCircle2,
   LayoutDashboard,
   LayoutGrid,
   Columns3,
-  Send,
-  CircleX,
   MessageSquare,
   Phone,
   User,
@@ -47,12 +37,7 @@ import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 interface DashboardStats {
   totalTickets: number
@@ -119,6 +104,7 @@ const ACTION_DESCRIPTIONS = {
 }
 
 type ViewMode = 'stats' | 'board'
+type ScheduledFilter = 'today' | 'week' | 'month' | 'year'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -141,6 +127,7 @@ export default function DashboardPage() {
   const [showHandoffConvo, setShowHandoffConvo] = useState(false)
   const [notCompletedIds, setNotCompletedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [scheduledFilter, setScheduledFilter] = useState<ScheduledFilter>('week')
   const supabase = createClient()
 
   // Persist view mode
@@ -489,7 +476,7 @@ export default function DashboardPage() {
       <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
         <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:hidden" />
 
-        <div className="relative p-4 h-full flex flex-col gap-3">
+        <div className="relative p-4 h-full flex flex-col gap-5">
           {/* Header */}
           <div className="flex items-center justify-between flex-shrink-0">
             <div>
@@ -497,13 +484,13 @@ export default function DashboardPage() {
                 <LayoutDashboard className="h-7 w-7" />
                 Dashboard
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground/60 mt-0.5">
                 Manage and monitor all property maintenance activity
               </p>
             </div>
             <div className="flex items-center gap-2">
               {/* View Toggle */}
-              <div className="flex items-center bg-muted rounded-lg p-0.5">
+              <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
                 <button
                   onClick={() => handleViewChange('stats')}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
@@ -541,11 +528,12 @@ export default function DashboardPage() {
               />
             </div>
           ) : (
-          /* Dashboard — Top cards + full-width recent tickets */
-          <div className="flex-1 min-h-0 flex flex-col gap-3">
-            {/* Top section: two columns */}
-            <div className="grid grid-cols-2 grid-rows-[auto_1fr] gap-3">
-              {/* LEFT: Your To-Do */}
+          /* Dashboard — Stats view */
+          <div className="flex-1 min-h-0 flex flex-col gap-4">
+            {/* Top row: 2 cards side by side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 min-h-0">
+
+              {/* LEFT: To-do */}
               {(() => {
                 const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
                 const totalHandoffs = handoffTicketsList.length + handoffConversations.length
@@ -554,214 +542,148 @@ export default function DashboardPage() {
                 const managerCount = stats?.awaitingManager || 0
                 const noContractorsCount = stats?.noContractorsLeft || 0
                 const notCompletedCount = stats?.jobNotCompleted || 0
-
+                const followUpCount = declinedCount + landlordNoResponseCount + notCompletedCount
                 const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
 
+                const todoItems = [
+                  { key: 'handoff' as const, label: 'Needs review', count: totalHandoffs, color: 'bg-red-500' },
+                  { key: 'manager' as const, label: 'Manager approval', count: managerCount, color: 'bg-blue-500' },
+                  { key: 'noContractorsLeft' as const, label: 'No contractors', count: noContractorsCount, color: 'bg-orange-500' },
+                ]
+
                 return (
-                  <>
-                    <div className="bg-card rounded-xl border border-border p-4 row-start-1 col-start-1">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
-                        {totalAction > 0 && (
-                          <span className="text-xs font-bold text-white bg-red-500 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalAction}</span>
-                        )}
-                      </div>
-                      <Link href="/tickets?create=true">
-                        <InteractiveHoverButton text="Create" className="w-24 text-xs h-7" />
-                      </Link>
-                    </div>
-                    <div className="space-y-1">
-                      {/* Primary actions */}
-                      {[
-                        { key: 'handoff' as const, label: 'Handoff Review', desc: 'AI needs your help', count: totalHandoffs, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
-                        { key: 'manager' as const, label: 'Manager Approval', desc: 'Check WhatsApp & approve', count: managerCount, icon: UserCheck, iconBg: 'bg-blue-500/15', iconColor: 'text-blue-500', countColor: 'text-blue-500' },
-                      ].map((item) => (
-                        <Tooltip key={item.key}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
-                            >
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
-                                <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                                <p className="text-xs text-muted-foreground">{item.desc}</p>
-                              </div>
-                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>
-                                {item.count}
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
-
-                    </div>
-                    </div>
-
-                    {/* Needs Follow Up Card */}
-                    <div className="bg-card rounded-xl border border-border p-4 row-start-2 col-start-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-sm font-semibold text-card-foreground">Needs Follow Up</h3>
-                      </div>
-                      <div className="space-y-1">
-                      {[
-                        { key: 'noContractorsLeft' as const, label: 'No Contractors', desc: 'Re-dispatch or find new', count: noContractorsCount, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
-                        { key: 'declined' as const, label: 'Landlord Declined', desc: 'Needs follow-up', count: declinedCount, icon: XCircle, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
-                        { key: 'landlordNoResponse' as const, label: 'Landlord No Response', desc: 'Contact directly', count: landlordNoResponseCount, icon: Clock, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
-                        { key: 'notCompleted' as const, label: 'Job Not Completed', desc: 'Needs follow-up', count: notCompletedCount, icon: CircleX, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
-                      ].map((item) => (
-                        <Tooltip key={item.key}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
-                            >
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
-                                <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                                <p className="text-xs text-muted-foreground">{item.desc}</p>
-                              </div>
-                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>
-                                {item.count}
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
-                      </div>
-                    </div>
-                  </>
-                )
-              })()}
-
-              {/* RIGHT: Overview + In Progress (stacked, same height as left) */}
-              {/* Ticket Overview */}
-              <div className="bg-card rounded-xl border border-border p-4 row-start-1 col-start-2">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                      <h3 className="text-sm font-semibold text-card-foreground">Ticket Overview</h3>
-                      <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
-                    </div>
-                    <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
-                      View all →
-                    </Link>
-                  </div>
-
-                  {/* Status bar */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
-                      {stats && stats.totalTickets > 0 && (
-                        <span className="text-[11px] text-muted-foreground">
-                          {getPercentage(stats.closedTickets, stats.totalTickets)}% complete
+                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-base font-semibold text-card-foreground">To-do</h3>
+                      {totalAction > 0 && (
+                        <span className="text-base font-bold text-white bg-red-500 rounded-full h-7 min-w-[28px] flex items-center justify-center px-2.5">
+                          {totalAction}
                         </span>
                       )}
                     </div>
-                    <div className="h-2.5 rounded-full overflow-hidden flex bg-muted">
-                      {stats && stats.totalTickets > 0 ? (
-                        <>
-                          <div className="h-full bg-blue-500 transition-all duration-500 ease-out" style={{ flex: stats.openTickets }} />
-                          <div className="h-full bg-emerald-500 transition-all duration-500 ease-out" style={{ flex: stats.closedTickets }} />
-                        </>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-4 mt-1">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        <span className="text-xs text-muted-foreground">Open</span>
-                        <span className="text-xs font-semibold text-card-foreground">{stats?.openTickets || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="text-xs text-muted-foreground">Closed</span>
-                        <span className="text-xs font-semibold text-card-foreground">{stats?.closedTickets || 0}</span>
-                      </div>
+                    <div className="space-y-1">
+                      {todoItems.map((item) => (
+                        <button
+                          key={item.key}
+                          onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
+                          className="w-full flex items-center gap-3 px-2.5 py-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className={`h-3.5 w-3.5 rounded-sm flex-shrink-0 ${item.count > 0 ? item.color : 'bg-muted-foreground/15'}`} />
+                          <span className={`flex-1 text-sm ${item.count > 0 ? 'text-card-foreground font-medium' : 'text-muted-foreground/50'}`}>
+                            {item.label}
+                          </span>
+                          <span className={`text-xl font-bold tabular-nums ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>
+                            {item.count}
+                          </span>
+                        </button>
+                      ))}
+                      {/* Follow-up combined row: declined + no response + not completed */}
+                      <button
+                        onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
+                        className="w-full flex items-center gap-3 px-2.5 py-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                      >
+                        <div className={`h-3.5 w-3.5 rounded-sm flex-shrink-0 ${followUpCount > 0 ? 'bg-amber-500' : 'bg-muted-foreground/15'}`} />
+                        <span className={`flex-1 text-sm ${followUpCount > 0 ? 'text-card-foreground font-medium' : 'text-muted-foreground/50'}`}>
+                          Follow-up needed
+                        </span>
+                        <span className={`text-xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>
+                          {followUpCount}
+                        </span>
+                      </button>
                     </div>
                   </div>
+                )
+              })()}
 
-                  {/* Category bar */}
-                  <div className="border-t border-border pt-3">
-                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Category</span>
-                    <div className="h-2.5 rounded-full overflow-hidden flex bg-muted mt-1">
-                      {categoryChartData.map((item) => (
-                        <Tooltip key={item.fullName}>
-                          <TooltipTrigger asChild>
-                            <div className="h-full transition-all duration-500 ease-out" style={{ flex: item.value, backgroundColor: item.color }} />
-                          </TooltipTrigger>
-                          <TooltipContent><p className="text-xs font-medium">{item.fullName}: {item.value}</p></TooltipContent>
-                        </Tooltip>
-                      ))}
+              {/* RIGHT: Scheduled jobs */}
+              {(() => {
+                const msPerDay = 86_400_000
+                const now = new Date()
+                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+                const scheduledAll = allTickets.filter((t) => {
+                  if (t.status?.toLowerCase() === 'closed') return false
+                  if (notCompletedIds.has(t.id)) return false
+                  const stage = (t.job_stage || '').toLowerCase()
+                  return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
+                })
+
+                const scheduledFiltered = scheduledAll
+                  .filter((t) => {
+                    if (!t.scheduled_date) return scheduledFilter === 'year'
+                    const d = new Date(t.scheduled_date)
+                    if (scheduledFilter === 'today') return d >= startOfDay && d < new Date(startOfDay.getTime() + msPerDay)
+                    if (scheduledFilter === 'week') return d >= startOfDay && d < new Date(startOfDay.getTime() + 7 * msPerDay)
+                    if (scheduledFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+                    return d.getFullYear() === now.getFullYear()
+                  })
+                  .sort((a, b) => {
+                    if (!a.scheduled_date) return 1
+                    if (!b.scheduled_date) return -1
+                    return new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
+                  })
+                  .slice(0, 6)
+
+                const filterOptions: { key: ScheduledFilter; label: string }[] = [
+                  { key: 'today', label: 'Today' },
+                  { key: 'week', label: 'Week' },
+                  { key: 'month', label: 'Month' },
+                  { key: 'year', label: 'Year' },
+                ]
+
+                return (
+                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
+                    <div className="flex items-start justify-between gap-2 mb-4">
+                      <h3 className="text-base font-semibold text-card-foreground">Scheduled jobs</h3>
+                      <div className="flex items-center gap-1 flex-wrap justify-end">
+                        {filterOptions.map((opt) => (
+                          <button
+                            key={opt.key}
+                            onClick={() => setScheduledFilter(opt.key)}
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                              scheduledFilter === opt.key
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground/60 hover:text-muted-foreground'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                      {categoryChartData.length > 0 ? (
-                        categoryChartData.map((item) => (
-                          <div key={item.fullName} className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                            <span className="text-[11px] text-muted-foreground">{item.fullName}</span>
-                            <span className="text-[11px] font-semibold text-card-foreground">{item.value}</span>
-                          </div>
-                        ))
+                    <div className="space-y-1 flex-1 overflow-y-auto min-h-0">
+                      {scheduledFiltered.length === 0 ? (
+                        <p className="text-sm text-muted-foreground/60 pt-3 pb-2">No scheduled jobs for this period</p>
                       ) : (
-                        <span className="text-xs text-muted-foreground">No categories yet</span>
+                        scheduledFiltered.map((ticket) => (
+                          <Link
+                            key={ticket.id}
+                            href={`/tickets?id=${ticket.id}`}
+                            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <span className="flex-shrink-0 text-xs font-medium text-muted-foreground w-10">
+                              {ticket.scheduled_date ? formatDate(ticket.scheduled_date) : '—'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-card-foreground truncate">
+                                {ticket.issue_description || 'No description'}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+                            </div>
+                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          </Link>
+                        ))
                       )}
                     </div>
                   </div>
-                </div>
-
-              {/* In Progress */}
-              <div className="bg-card rounded-xl border border-border p-4 row-start-2 col-start-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-sm font-semibold text-card-foreground">In Progress</h3>
-                    {(() => {
-                      const totalProgress = (stats?.awaitingContractor || 0) + (stats?.awaitingBooking || 0) + (stats?.scheduledJobs || 0) + (stats?.awaitingLandlord || 0)
-                      return totalProgress > 0 ? (
-                        <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalProgress}</span>
-                      ) : null
-                    })()}
-                  </div>
-                  <div className="space-y-1">
-                    {[
-                      { key: 'contractor' as const, label: 'Awaiting Contractor', count: stats?.awaitingContractor || 0, icon: Clock, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
-                      { key: 'booking' as const, label: 'Awaiting Booking', count: stats?.awaitingBooking || 0, icon: Send, iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500' },
-                      { key: 'scheduled' as const, label: 'Scheduled Jobs', count: stats?.scheduledJobs || 0, icon: CalendarClock, iconBg: 'bg-cyan-500/10', iconColor: 'text-cyan-500' },
-                      { key: 'landlord' as const, label: 'Awaiting Landlord', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconBg: 'bg-violet-500/10', iconColor: 'text-violet-500' },
-                    ].map((item) => (
-                      <Tooltip key={item.key}>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
-                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
-                          >
-                            <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconBg}`}>
-                              <item.icon className={`h-3.5 w-3.5 ${item.iconColor}`} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                            </div>
-                            <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground/40'}`}>
-                              {item.count}
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </div>
+                )
+              })()}
             </div>
 
-            {/* Bottom: Recent Tickets — full width */}
-            <div className="flex-1 min-h-0 bg-card rounded-xl border border-border flex flex-col">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
-                <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
+            {/* Bottom: Recent tickets — fixed height, secondary context */}
+            <div className="h-[260px] flex-shrink-0 bg-card rounded-xl border border-border flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 flex-shrink-0">
+                <h3 className="text-xs font-medium text-muted-foreground">Recent tickets</h3>
                 <Link href="/tickets">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
@@ -769,7 +691,7 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border flex-1 overflow-y-auto">
+              <div className="divide-y divide-border/40 flex-1 overflow-y-auto">
                 {recentTickets.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     No tickets found for this period
@@ -779,23 +701,20 @@ export default function DashboardPage() {
                     <Link
                       key={ticket.id}
                       href={`/tickets?id=${ticket.id}`}
-                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-all duration-200"
+                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-card-foreground truncate">
                           {ticket.issue_description || 'No description'}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {ticket.address}
-                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
                       </div>
-                      <div className="flex items-center gap-2 ml-3">
-                        {ticket.display_stage && (
-                          <StatusBadge status={ticket.display_stage} />
-                        )}
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                        {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
+                        <span className="text-xs text-muted-foreground/60 whitespace-nowrap">
                           {formatDate(ticket.date_logged)}
                         </span>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground/40" />
                       </div>
                     </Link>
                   ))
