@@ -51,7 +51,7 @@ export function TicketDetailModal({
     displayStage,
   } = useTicketDetail(open ? ticketId : null)
 
-  const isHandoff = context?.handoff && basic?.status === 'open'
+  const isHandoff = context?.handoff && basic?.status === 'open' && !basic?.archived
   // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
   const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
 

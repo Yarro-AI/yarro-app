@@ -248,7 +248,7 @@ export default function TicketsPage() {
       const { error } = await supabase.rpc('c1_complete_handoff_ticket', {
         p_ticket_id: handoffTicketId,
         p_property_id: data.property_id,
-        p_tenant_id: data.tenant_id,
+        p_tenant_id: data.tenant_id || null,
         p_issue_description: data.issue_description,
         p_category: data.category,
         p_priority: data.priority,
@@ -274,7 +274,7 @@ export default function TicketsPage() {
       const { data: ticketId, error } = await supabase.rpc('c1_create_manual_ticket', {
         p_property_manager_id: propertyManager!.id,
         p_property_id: data.property_id,
-        p_tenant_id: data.tenant_id,
+        p_tenant_id: data.tenant_id || null,
         p_issue_description: data.issue_description,
         p_issue_title: null,
         p_category: data.category,

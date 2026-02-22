@@ -54,6 +54,7 @@ interface Contractor {
   id: string
   contractor_name: string
   category: string
+  categories: string[] | null
   property_ids: string[] | null
 }
 
@@ -171,7 +172,7 @@ export function TicketForm({
           .order('full_name'),
         supabase
           .from('c1_contractors')
-          .select('id, contractor_name, category, property_ids')
+          .select('id, contractor_name, category, categories, property_ids')
           .eq('property_manager_id', propertyManager.id)
           .eq('active', true)
           .order('category')
@@ -212,7 +213,7 @@ export function TicketForm({
     const isPropertyAssigned = (c: Contractor) =>
       c.property_ids === null || (formData.property_id && c.property_ids?.includes(formData.property_id))
     const isCategoryMatch = (c: Contractor) =>
-      formData.category && c.category === formData.category
+      formData.category && (c.categories?.includes(formData.category) || c.category === formData.category)
 
     // Sort: property-assigned first, then category matches, then alphabetically
     const sorted = [...contractors].sort((a, b) => {
@@ -411,6 +412,7 @@ export function TicketForm({
         .insert({
           ...normalized,
           category: newContractor.category,
+          categories: [newContractor.category],
           active: true,
           property_ids: formData.property_id ? [formData.property_id] : null,
           property_manager_id: propertyManager!.id,
@@ -425,6 +427,7 @@ export function TicketForm({
         id: data.id,
         contractor_name: newContractor.contractor_name,
         category: newContractor.category,
+        categories: [newContractor.category],
         property_ids: formData.property_id ? [formData.property_id] : null,
       }
       setContractors((prev) => [...prev, newC])
@@ -443,10 +446,6 @@ export function TicketForm({
     // Validate required fields
     if (!formData.property_id) {
       setError('Please select a property')
-      return
-    }
-    if (!formData.tenant_id) {
-      setError('Please select a tenant')
       return
     }
     if (!formData.issue_description.trim()) {
@@ -482,7 +481,7 @@ export function TicketForm({
         .from('c1_tickets')
         .insert({
           property_id: formatted.property_id,
-          tenant_id: formatted.tenant_id,
+          tenant_id: formatted.tenant_id || null,
           issue_description: formatted.issue_description,
           category: formatted.category,
           priority: formatted.priority,
@@ -525,7 +524,7 @@ export function TicketForm({
 
       // Trigger dispatcher webhook to send SMS to contractor
       const property = properties.find(p => p.id === formatted.property_id)
-      const tenant = tenants.find(t => t.id === formatted.tenant_id)
+      const tenant = formatted.tenant_id ? tenants.find(t => t.id === formatted.tenant_id) : null
 
       try {
         await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/yarro-dispatcher`, {
@@ -540,7 +539,7 @@ export function TicketForm({
             category: formatted.category,
             priority: formatted.priority,
             address: property?.address,
-            tenant_name: tenant?.full_name,
+            tenant_name: tenant?.full_name || null,
             availability: formatted.availability,
             access: formatted.access,
           }),
@@ -692,9 +691,7 @@ export function TicketForm({
 
         {/* Row 2 left: Tenant */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">
-            Tenant <span className="text-destructive">*</span>
-          </label>
+          <label className="text-sm font-medium">Tenant</label>
           <Combobox
             options={filteredTenants.map((t) => ({ value: t.id, label: t.full_name }))}
             value={formData.tenant_id}
@@ -793,12 +790,13 @@ export function TicketForm({
           </label>
           <MultiCombobox
             options={filteredContractors.map((c) => {
-              const isCategoryMatch = formData.category && c.category === formData.category
+              const isCategoryMatch = formData.category && (c.categories?.includes(formData.category) || c.category === formData.category)
               const isPropertyAssigned = isAssignedToProperty(c)
+              const displayCats = c.categories?.length ? c.categories.join(', ') : c.category
               return {
                 value: c.id,
                 label: c.contractor_name,
-                description: c.category,
+                description: displayCats,
                 badge: isCategoryMatch ? 'Match' : (!isPropertyAssigned && formData.property_id ? 'Not assigned' : undefined),
                 badgeVariant: isCategoryMatch ? 'success' as const : (!isPropertyAssigned && formData.property_id ? 'warning' as const : 'default' as const),
               }
@@ -816,13 +814,13 @@ export function TicketForm({
           </p>
         </div>
 
-        {/* Row 4 right: Access Instructions */}
+        {/* Row 4 right: Access Details */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Access Instructions</label>
+          <label className="text-sm font-medium">Access Details</label>
           <Input
             value={formData.access}
             onChange={(e) => updateField('access', e.target.value)}
-            placeholder="e.g., Key under mat"
+            placeholder="e.g., Gate code 1234, key under mat"
           />
         </div>
 
@@ -830,7 +828,7 @@ export function TicketForm({
         {formData.category && formData.contractor_ids.length > 0 && (() => {
           const mismatchedContractors = formData.contractor_ids
             .map(id => contractors.find(c => c.id === id))
-            .filter(c => c && c.category !== formData.category) as Contractor[]
+            .filter(c => c && !(c.categories?.includes(formData.category) || c.category === formData.category)) as Contractor[]
           if (mismatchedContractors.length === 0) return null
           return (
             <div className="col-span-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
@@ -843,14 +841,14 @@ export function TicketForm({
                     {mismatchedContractors.length === 1 ? (
                       <>
                         <span className="font-medium">{mismatchedContractors[0].contractor_name}</span> specialises in{' '}
-                        <span className="font-medium">&quot;{mismatchedContractors[0].category}&quot;</span>
+                        <span className="font-medium">&quot;{(mismatchedContractors[0].categories || [mismatchedContractors[0].category]).join(', ')}&quot;</span>
                       </>
                     ) : (
                       <>
                         {mismatchedContractors.map((c, i) => (
                           <span key={c.id}>
                             {i > 0 && (i === mismatchedContractors.length - 1 ? ' and ' : ', ')}
-                            <span className="font-medium">{c.contractor_name}</span> ({c.category})
+                            <span className="font-medium">{c.contractor_name}</span> ({(c.categories || [c.category]).join(', ')})
                           </span>
                         ))}
                         {' '}don&apos;t match

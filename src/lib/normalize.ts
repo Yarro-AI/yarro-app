@@ -207,6 +207,7 @@ export function validateContractor(record: {
   contractor_phone?: string | null
   contractor_email?: string | null
   category?: string | null
+  categories?: string[] | null
 }): ValidationErrors {
   const errors: ValidationErrors = {}
 
@@ -220,8 +221,11 @@ export function validateContractor(record: {
     errors.contractor_phone = 'Enter a valid UK phone number'
   }
 
-  if (!record.category || record.category.trim() === '') {
-    errors.category = 'Category is required'
+  // Accept either categories array or single category
+  const hasCategories = record.categories && record.categories.length > 0
+  const hasCategory = record.category && record.category.trim() !== ''
+  if (!hasCategories && !hasCategory) {
+    errors.category = 'At least one category is required'
   }
 
   // Email validation (if provided)

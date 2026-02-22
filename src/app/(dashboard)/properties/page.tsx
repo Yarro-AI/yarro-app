@@ -481,11 +481,11 @@ export default function PropertiesPage() {
       </DetailSection>
 
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">Access Instructions</label>
+        <label className="text-xs text-muted-foreground">Access Details</label>
         <Textarea
           value={data.access_instructions || ''}
           onChange={(e) => update('access_instructions', e.target.value || null)}
-          placeholder="Key safe code, gate access, etc."
+          placeholder="Gate code, key safe number, entry instructions, etc."
           rows={3}
           className="text-sm"
         />

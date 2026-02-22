@@ -54,7 +54,7 @@ export function OnboardingWizard() {
     landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
     properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '', city: '' }],
     tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
-    contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', service_areas: [] }],
+    contractors: [{ contractor_name: '', categories: [], contractor_phone: '', contractor_email: '', service_areas: [] }],
     batchId: crypto.randomUUID(),
     insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
     existingProperties: [],
@@ -479,12 +479,12 @@ export function OnboardingWizard() {
       } else if (state.step === 'contractors') {
         if (!propertyManager) return
 
-        // Check for contractors with name but missing category
+        // Check for contractors with name but missing categories
         const contractorsWithoutCategory = state.contractors.filter(
-          (c) => c.contractor_name.trim() && !c.category
+          (c) => c.contractor_name.trim() && c.categories.length === 0
         )
         if (contractorsWithoutCategory.length > 0) {
-          setError(`${contractorsWithoutCategory.length} ${contractorsWithoutCategory.length === 1 ? 'contractor needs' : 'contractors need'} a category selected (highlighted in amber)`)
+          setError(`${contractorsWithoutCategory.length} ${contractorsWithoutCategory.length === 1 ? 'contractor needs' : 'contractors need'} at least one category selected (highlighted in amber)`)
           setSaving(false)
           return
         }
@@ -501,7 +501,7 @@ export function OnboardingWizard() {
 
         // Insert contractors
         const validContractors = state.contractors.filter(
-          (c) => c.contractor_name.trim() && c.category && c.contractor_phone.trim()
+          (c) => c.contractor_name.trim() && c.categories.length > 0 && c.contractor_phone.trim()
         )
 
         // Validate before inserting
@@ -567,7 +567,8 @@ export function OnboardingWizard() {
 
           const record: Record<string, unknown> = {
             contractor_name: contractor.contractor_name,
-            category: contractor.category,
+            category: contractor.categories[0], // Primary category (backward compat for Edge Functions)
+            categories: contractor.categories,
             contractor_phone: contractor.contractor_phone,
             contractor_email: contractor.contractor_email || null,
             service_areas: contractor.service_areas.length > 0 ? contractor.service_areas : null,
@@ -621,7 +622,7 @@ export function OnboardingWizard() {
       landlords: [{ tempId: crypto.randomUUID(), name: '', email: '', phone: '' }],
       properties: [{ tempId: crypto.randomUUID(), address: '', landlordTempId: '', access_instructions: '', emergency_access_contact: '', auto_approve_limit: '', city: '' }],
       tenants: [{ full_name: '', phone: '', email: '', role_tag: 'tenant', propertyId: '' }],
-      contractors: [{ contractor_name: '', category: '', contractor_phone: '', contractor_email: '', service_areas: [] }],
+      contractors: [{ contractor_name: '', categories: [], contractor_phone: '', contractor_email: '', service_areas: [] }],
       batchId: crypto.randomUUID(),
       insertedCounts: { properties: 0, tenants: 0, contractors: 0 },
       existingProperties: state.existingProperties,
