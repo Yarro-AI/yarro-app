@@ -113,7 +113,7 @@ export function hasValidUKPostcode(address: string | null | undefined): boolean 
  * Pass the entity type and raw record, get back normalized version.
  */
 export function normalizeRecord(
-  entityType: 'properties' | 'tenants' | 'contractors',
+  entityType: 'properties' | 'tenants' | 'contractors' | 'landlords',
   record: Record<string, unknown>
 ): Record<string, unknown> {
   const normalized = { ...record }
@@ -165,8 +165,6 @@ export interface ValidationErrors {
  */
 export function validateProperty(record: {
   address?: string | null
-  landlord_phone?: string | null
-  landlord_email?: string | null
   auto_approve_limit?: number | null
 }): ValidationErrors {
   const errors: ValidationErrors = {}
@@ -178,21 +176,9 @@ export function validateProperty(record: {
     errors.address = 'Address must end with a valid UK postcode'
   }
 
-  // Landlord phone required + valid UK
-  if (!record.landlord_phone || record.landlord_phone.trim() === '') {
-    errors.landlord_phone = 'Landlord phone is required'
-  } else if (!isValidUKPhone(record.landlord_phone)) {
-    errors.landlord_phone = 'Enter a valid UK phone number'
-  }
-
   // Auto-approve limit required
   if (record.auto_approve_limit === null || record.auto_approve_limit === undefined) {
     errors.auto_approve_limit = 'Auto-approve limit is required'
-  }
-
-  // Email validation (if provided)
-  if (record.landlord_email && !isValidEmail(record.landlord_email)) {
-    errors.landlord_email = 'Enter a valid email address'
   }
 
   return errors
@@ -264,6 +250,34 @@ export function validateTenant(record: {
   }
 
   // Email validation (if provided)
+  if (record.email && !isValidEmail(record.email)) {
+    errors.email = 'Enter a valid email address'
+  }
+
+  return errors
+}
+
+/**
+ * Validate a landlord record
+ * Required: full_name, phone
+ */
+export function validateLandlord(record: {
+  full_name?: string | null
+  phone?: string | null
+  email?: string | null
+}): ValidationErrors {
+  const errors: ValidationErrors = {}
+
+  if (!record.full_name || record.full_name.trim() === '') {
+    errors.full_name = 'Landlord name is required'
+  }
+
+  if (!record.phone || record.phone.trim() === '') {
+    errors.phone = 'Phone number is required'
+  } else if (!isValidUKPhone(record.phone)) {
+    errors.phone = 'Enter a valid UK phone number'
+  }
+
   if (record.email && !isValidEmail(record.email)) {
     errors.email = 'Enter a valid email address'
   }

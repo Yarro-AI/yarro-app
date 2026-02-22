@@ -277,6 +277,37 @@ export function OnboardingWizard() {
           (existingProps || []).map((p) => p.address.toLowerCase().trim())
         )
 
+        // Insert landlords into c1_landlords first and build tempId → realId map
+        const landlordIdMap = new Map<string, string>()
+        const landlordsWithData = state.landlords.filter((l) => l.name.trim())
+
+        for (const ll of landlordsWithData) {
+          const normalized = normalizeRecord('landlords', {
+            full_name: ll.name,
+            phone: ll.phone,
+            email: ll.email,
+          })
+
+          const { data: llData, error: llError } = await supabase
+            .from('c1_landlords')
+            .insert({
+              ...normalized,
+              property_manager_id: propertyManager.id,
+              _import_batch_id: state.batchId,
+              _imported_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single()
+
+          if (llError) {
+            setError(`Failed to insert landlord "${ll.name}": ${llError.message}`)
+            setSaving(false)
+            return
+          }
+
+          landlordIdMap.set(ll.tempId, llData.id)
+        }
+
         let insertedCount = 0
         let skippedCount = 0
 
@@ -300,10 +331,12 @@ export function OnboardingWizard() {
 
           // Find landlord info
           const landlord = state.landlords.find((l) => l.tempId === prop.landlordTempId)
+          const landlordId = prop.landlordTempId ? landlordIdMap.get(prop.landlordTempId) : null
 
           const record: Record<string, unknown> = {
             address: prop.address,
             property_manager_id: propertyManager.id,
+            landlord_id: landlordId || null,
             auto_approve_limit: prop.auto_approve_limit ? parseFloat(prop.auto_approve_limit) : null,
             access_instructions: prop.access_instructions || null,
             emergency_access_contact: prop.emergency_access_contact || null,
@@ -312,6 +345,7 @@ export function OnboardingWizard() {
             _imported_at: new Date().toISOString(),
           }
 
+          // Also set denormalized fields for backward compat
           if (landlord) {
             record.landlord_name = landlord.name || null
             record.landlord_email = landlord.email || null
