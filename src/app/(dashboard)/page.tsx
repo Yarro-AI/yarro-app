@@ -11,7 +11,6 @@ import { KanbanBoard } from '@/components/kanban-board'
 import {
   ArrowRight,
   AlertTriangle,
-  LayoutDashboard,
   LayoutGrid,
   Columns3,
   MessageSquare,
@@ -455,6 +454,17 @@ export default function DashboardPage() {
     }
   }
 
+  // Computed action counts — hoisted so the page heading can use them
+  const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
+  const totalHandoffs = handoffTicketsList.length + handoffConversations.length
+  const declinedCount = stats?.landlordDeclined || 0
+  const landlordNoResponseCount = stats?.landlordNoResponse || 0
+  const managerCount = stats?.awaitingManager || 0
+  const noContractorsCount = stats?.noContractorsLeft || 0
+  const notCompletedCount = stats?.jobNotCompleted || 0
+  const followUpCount = declinedCount + landlordNoResponseCount + notCompletedCount
+  const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
+
   if (loading && !stats) {
     return (
       <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
@@ -476,17 +486,16 @@ export default function DashboardPage() {
       <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
         <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:hidden" />
 
-        <div className="relative p-4 h-full flex flex-col gap-5">
+        <div className="relative p-4 h-full flex flex-col gap-6">
           {/* Header */}
           <div className="flex items-center justify-between flex-shrink-0">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-2.5">
-                <LayoutDashboard className="h-7 w-7" />
-                Dashboard
-              </h1>
-              <p className="text-xs text-muted-foreground/60 mt-0.5">
-                Manage and monitor all property maintenance activity
-              </p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-4xl font-bold text-foreground tracking-tight leading-none">To-do</h1>
+              {totalAction > 0 && (
+                <span className="text-sm font-bold text-white bg-red-500 rounded-full h-6 min-w-[24px] flex items-center justify-center px-2">
+                  {totalAction}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {/* View Toggle */}
@@ -531,20 +540,10 @@ export default function DashboardPage() {
           /* Dashboard — Stats view */
           <div className="flex-1 min-h-0 flex flex-col gap-4">
             {/* Top row: 2 cards side by side */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 sm:grid-cols-[70%_30%] gap-4 flex-1 min-h-0">
 
               {/* LEFT: To-do */}
               {(() => {
-                const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
-                const totalHandoffs = handoffTicketsList.length + handoffConversations.length
-                const declinedCount = stats?.landlordDeclined || 0
-                const landlordNoResponseCount = stats?.landlordNoResponse || 0
-                const managerCount = stats?.awaitingManager || 0
-                const noContractorsCount = stats?.noContractorsLeft || 0
-                const notCompletedCount = stats?.jobNotCompleted || 0
-                const followUpCount = declinedCount + landlordNoResponseCount + notCompletedCount
-                const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
-
                 const todoItems = [
                   { key: 'handoff' as const, label: 'Needs review', count: totalHandoffs, color: 'bg-red-500' },
                   { key: 'manager' as const, label: 'Manager approval', count: managerCount, color: 'bg-blue-500' },
@@ -552,15 +551,7 @@ export default function DashboardPage() {
                 ]
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-base font-semibold text-card-foreground">To-do</h3>
-                      {totalAction > 0 && (
-                        <span className="text-base font-bold text-white bg-red-500 rounded-full h-7 min-w-[28px] flex items-center justify-center px-2.5">
-                          {totalAction}
-                        </span>
-                      )}
-                    </div>
+                  <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col justify-center">
                     <div className="space-y-1">
                       {todoItems.map((item) => (
                         <button
@@ -633,8 +624,8 @@ export default function DashboardPage() {
 
                 return (
                   <div className="bg-card rounded-xl border border-border p-5 h-full flex flex-col">
-                    <div className="flex items-start justify-between gap-2 mb-4">
-                      <h3 className="text-base font-semibold text-card-foreground">Scheduled jobs</h3>
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <h3 className="text-sm font-medium text-muted-foreground">Scheduled jobs</h3>
                       <div className="flex items-center gap-1 flex-wrap justify-end">
                         {filterOptions.map((opt) => (
                           <button
@@ -681,9 +672,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom: Recent tickets — fixed height, secondary context */}
-            <div className="h-[260px] flex-shrink-0 bg-card rounded-xl border border-border flex flex-col">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 flex-shrink-0">
-                <h3 className="text-xs font-medium text-muted-foreground">Recent tickets</h3>
+            <div className="h-[300px] flex-shrink-0 bg-card/60 rounded-xl border border-border/50 flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 flex-shrink-0">
+                <h3 className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">Recent tickets</h3>
                 <Link href="/tickets">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
@@ -691,9 +682,9 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/40 flex-1 overflow-y-auto">
+              <div className="divide-y divide-border/30 flex-1 overflow-y-auto">
                 {recentTickets.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
+                  <div className="p-4 text-center text-sm text-muted-foreground/50">
                     No tickets found for this period
                   </div>
                 ) : (
@@ -701,20 +692,20 @@ export default function DashboardPage() {
                     <Link
                       key={ticket.id}
                       href={`/tickets?id=${ticket.id}`}
-                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/30 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-card-foreground truncate">
+                        <p className="text-sm text-card-foreground/80 truncate">
                           {ticket.issue_description || 'No description'}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+                        <p className="text-xs text-muted-foreground/50 truncate">{ticket.address}</p>
                       </div>
-                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                      <div className="flex items-center gap-2 ml-3 flex-shrink-0 opacity-70">
                         {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
-                        <span className="text-xs text-muted-foreground/60 whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground/50 whitespace-nowrap">
                           {formatDate(ticket.date_logged)}
                         </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground/40" />
+                        <ArrowRight className="h-3 w-3 text-muted-foreground/30" />
                       </div>
                     </Link>
                   ))
