@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
@@ -252,7 +253,7 @@ export default function TenantsPage() {
   }
 
   const handleRowClick = (tenant: Tenant) => {
-    router.push(`/tenants?id=${tenant.id}`)
+    router.push(`/tenants/${tenant.id}`)
   }
 
   const handleCloseDrawer = () => {
@@ -465,7 +466,12 @@ export default function TenantsPage() {
             Manage tenant contacts across your properties
           </p>
         </div>
-        <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} className="w-32 text-sm h-10" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchTenants()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+          <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} className="w-32 text-sm h-10" />
+        </div>
       </div>
 
       {/* Data Table */}
@@ -566,7 +572,7 @@ export default function TenantsPage() {
                 <>
                   <DetailSection title="Property">
                     <Link
-                      href={`/properties?id=${selectedTenant.property_id}`}
+                      href={`/properties/${selectedTenant.property_id}`}
                       className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                       onClick={handleCloseDrawer}
                     >

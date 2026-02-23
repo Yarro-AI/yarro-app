@@ -25,7 +25,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -35,6 +41,7 @@ interface Contractor {
   id: string
   contractor_name: string
   category: string
+  categories: string[] | null
   contractor_phone: string | null
   contractor_email: string | null
   active: boolean
@@ -45,7 +52,7 @@ interface Contractor {
 interface ContractorEditable {
   id: string
   contractor_name: string
-  category: string
+  categories: string[]
   contractor_phone: string
   contractor_email: string | null
   active: boolean
@@ -65,7 +72,7 @@ const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
 const defaultContractorData: ContractorEditable = {
   id: '',
   contractor_name: '',
-  category: '',
+  categories: [],
   contractor_phone: '',
   contractor_email: null,
   active: true,
@@ -94,7 +101,7 @@ export default function ContractorsPage() {
     return {
       id: c.id,
       contractor_name: c.contractor_name,
-      category: c.category,
+      categories: c.categories || (c.category ? [c.category] : []),
       contractor_phone: c.contractor_phone || '',
       contractor_email: c.contractor_email,
       active: c.active,
@@ -131,7 +138,8 @@ export default function ContractorsPage() {
       .from('c1_contractors')
       .update({
         ...normalized,
-        category: data.category,
+        category: data.categories[0] || '', // Primary category (backward compat)
+        categories: data.categories,
         active: data.active,
         property_ids: data.property_ids,
         _audit_log: newLog,
@@ -179,7 +187,8 @@ export default function ContractorsPage() {
       .from('c1_contractors')
       .insert({
         ...normalized,
-        category: data.category,
+        category: data.categories[0] || '', // Primary category (backward compat)
+        categories: data.categories,
         active: data.active,
         property_ids: data.property_ids,
         property_manager_id: propertyManager!.id,
@@ -273,7 +282,7 @@ export default function ContractorsPage() {
   }
 
   const handleRowClick = (contractor: Contractor) => {
-    router.push(`/contractors?id=${contractor.id}`)
+    router.push(`/contractors/${contractor.id}`)
   }
 
   const handleCloseDrawer = () => {
@@ -338,14 +347,21 @@ export default function ContractorsPage() {
     },
     {
       key: 'category',
-      header: 'Category',
+      header: 'Categories',
       sortable: true,
-      render: (c) => (
-        <Badge variant="outline">
-          <Wrench className="h-3 w-3 mr-1" />
-          {c.category}
-        </Badge>
-      ),
+      render: (c) => {
+        const cats = c.categories?.length ? c.categories : (c.category ? [c.category] : [])
+        return (
+          <div className="flex flex-wrap gap-1">
+            {cats.map((cat) => (
+              <Badge key={cat} variant="outline" className="text-xs">
+                <Wrench className="h-3 w-3 mr-1" />
+                {cat}
+              </Badge>
+            ))}
+          </div>
+        )
+      },
     },
     {
       key: 'contractor_phone',
@@ -411,23 +427,64 @@ export default function ContractorsPage() {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">
-              Category <span className="text-destructive">*</span>
+              Categories <span className="text-destructive">*</span>
             </label>
-            <Select
-              value={data.category}
-              onValueChange={(v) => update('category', v)}
-            >
-              <SelectTrigger className={`h-9 ${validationErrors.category ? 'border-destructive' : ''}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
+            {data.categories.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-1.5">
+                {data.categories.map((cat) => (
+                  <Badge key={cat} variant="secondary" className="gap-1 pr-1 text-xs">
+                    {cat}
+                    <button
+                      type="button"
+                      onClick={() => update('categories', data.categories.filter((c) => c !== cat))}
+                      className="hover:bg-muted rounded p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={`flex items-center justify-between w-full h-9 px-3 text-sm rounded-md border bg-background hover:bg-accent/50 transition-colors text-left ${
+                    validationErrors.category ? 'border-destructive' : 'border-input'
+                  }`}
+                >
+                  <span className="text-muted-foreground">
+                    {data.categories.length === 0 ? 'Select categories...' : 'Add more...'}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-1.5 max-h-64 overflow-y-auto" align="start">
+                {CATEGORY_OPTIONS.map((opt) => {
+                  const isSelected = data.categories.includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        const newCats = isSelected
+                          ? data.categories.filter((c) => c !== opt.value)
+                          : [...data.categories, opt.value]
+                        update('categories', newCats)
+                      }}
+                      className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left"
+                    >
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                        isSelected ? 'bg-primary border-primary' : 'border-input'
+                      }`}>
+                        {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                      </div>
+                      <span>{opt.label}</span>
+                    </button>
+                  )
+                })}
+              </PopoverContent>
+            </Popover>
             {validationErrors.category && (
               <p className="text-xs text-destructive">{validationErrors.category}</p>
             )}
@@ -552,7 +609,12 @@ export default function ContractorsPage() {
             Manage your contractor network
           </p>
         </div>
-        <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+          <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
+        </div>
       </div>
 
       {/* Data Table */}
@@ -609,10 +671,12 @@ export default function ContractorsPage() {
             <div className="space-y-4">
               {/* Status badges - compact */}
               <div className="flex gap-2 flex-wrap">
-                <Badge variant="outline">
-                  <Wrench className="h-3 w-3 mr-1" />
-                  {selectedContractor.category}
-                </Badge>
+                {(selectedContractor.categories?.length ? selectedContractor.categories : [selectedContractor.category]).map((cat) => (
+                  <Badge key={cat} variant="outline">
+                    <Wrench className="h-3 w-3 mr-1" />
+                    {cat}
+                  </Badge>
+                ))}
                 <Badge variant={selectedContractor.active ? 'default' : 'secondary'}>
                   {selectedContractor.active ? 'Active' : 'Inactive'}
                 </Badge>
@@ -663,7 +727,7 @@ export default function ContractorsPage() {
                     {propertyAddresses.map((property) => (
                       <Link
                         key={property.id}
-                        href={`/properties?id=${property.id}`}
+                        href={`/properties/${property.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                         onClick={handleCloseDrawer}
                       >
@@ -679,7 +743,7 @@ export default function ContractorsPage() {
                     {propertyAddresses.map((property) => (
                       <Link
                         key={property.id}
-                        href={`/properties?id=${property.id}`}
+                        href={`/properties/${property.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                         onClick={handleCloseDrawer}
                       >

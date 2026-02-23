@@ -16,7 +16,7 @@ import {
 
 export interface ContractorEntry {
   contractor_name: string
-  category: string
+  categories: string[]
   contractor_phone: string
   contractor_email: string
   service_areas: string[] // Cities they serve (empty = no auto-assignment)
@@ -28,7 +28,7 @@ interface StepContractorsProps {
   onChange: (contractors: ContractorEntry[]) => void
 }
 
-const CSV_COLUMNS = ['contractor_name', 'category', 'contractor_phone', 'contractor_email', 'service_areas']
+const CSV_COLUMNS = ['contractor_name', 'categories', 'contractor_phone', 'contractor_email', 'service_areas']
 
 const CATEGORY_OPTIONS = CONTRACTOR_CATEGORIES.map((c) => ({
   value: c,
@@ -41,14 +41,14 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
 
   const columns: ColumnDef[] = [
     { key: 'contractor_name', label: 'Name', required: true, placeholder: 'QuickFix Plumbing Ltd', width: '25%' },
-    { key: 'category', label: 'Category', required: true, type: 'select', options: CATEGORY_OPTIONS, width: '20%' },
+    { key: 'categories', label: 'Categories', required: true, type: 'multiselect', options: CATEGORY_OPTIONS, placeholder: 'Select categories...', width: '22%' },
     { key: 'contractor_phone', label: 'Phone', required: true, placeholder: '07700 900500', width: '18%' },
     { key: 'contractor_email', label: 'Email', placeholder: 'info@quickfix-demo.co.uk', width: '22%' },
   ]
 
   const rows = contractors.map((c) => ({
     contractor_name: c.contractor_name,
-    category: c.category,
+    categories: c.categories.join(','),
     contractor_phone: c.contractor_phone,
     contractor_email: c.contractor_email,
   }))
@@ -56,7 +56,7 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
   const handleRowsChange = (newRows: Record<string, string>[]) => {
     const updated: ContractorEntry[] = newRows.map((row, i) => ({
       contractor_name: row.contractor_name || '',
-      category: row.category || '',
+      categories: row.categories ? row.categories.split(',').filter(Boolean) : [],
       contractor_phone: row.contractor_phone || '',
       contractor_email: row.contractor_email || '',
       service_areas: contractors[i]?.service_areas || [], // Preserve existing
@@ -66,13 +66,15 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
 
   const handleCsvParsed = (csvRows: Record<string, string>[]) => {
     const newContractors: ContractorEntry[] = csvRows.map((row) => {
-      // Match category against known list (case-insensitive)
-      let category = ''
-      if (row.category) {
-        const match = CATEGORY_OPTIONS.find(
-          (c) => c.value.toLowerCase() === row.category.toLowerCase().trim()
-        )
-        if (match) category = match.value
+      // Match categories against known list (case-insensitive, supports comma-separated)
+      let categories: string[] = []
+      const rawCats = row.category || row.categories || ''
+      if (rawCats) {
+        const parsed = rawCats.split(',').map((c) => c.trim()).filter(Boolean)
+        for (const c of parsed) {
+          const match = CATEGORY_OPTIONS.find((opt) => opt.value.toLowerCase() === c.toLowerCase())
+          if (match) categories.push(match.value)
+        }
       }
 
       // Parse service_areas from CSV (comma-separated)
@@ -87,7 +89,7 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
 
       return {
         contractor_name: row.contractor_name || '',
-        category,
+        categories,
         contractor_phone: row.contractor_phone || '',
         contractor_email: row.contractor_email || '',
         service_areas,
@@ -182,29 +184,122 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="contractors_template.csv"
+        exampleRows={[
+          {
+            contractor_name: 'QuickFix Plumbing Ltd',
+            categories: 'Plumber, General / Handyman',
+            contractor_phone: '07700 900100',
+            contractor_email: 'info@quickfix-demo.co.uk',
+            service_areas: 'Manchester, Salford',
+          },
+          {
+            contractor_name: 'Spark Electrical',
+            categories: 'Electrician',
+            contractor_phone: '07700 900200',
+            contractor_email: 'jobs@spark-demo.co.uk',
+            service_areas: 'Manchester',
+          },
+          {
+            contractor_name: 'SafeGas Services',
+            categories: 'Gas, Boiler Engineer',
+            contractor_phone: '07700 900300',
+            contractor_email: 'hello@safegas-demo.co.uk',
+            service_areas: 'Bolton',
+          },
+          {
+            contractor_name: 'AllTrades Maintenance',
+            categories: 'Joiner, Locksmith',
+            contractor_phone: '07700 900400',
+            contractor_email: 'team@alltrades-demo.co.uk',
+            service_areas: 'Bury',
+          },
+          {
+            contractor_name: 'CleanPest Solutions',
+            categories: 'Pest Control, Cleaning',
+            contractor_phone: '07700 900500',
+            contractor_email: 'info@cleanpest-demo.co.uk',
+            service_areas: 'Stockport',
+          },
+          {
+            contractor_name: 'TopCoat Decorators',
+            categories: 'Decorator',
+            contractor_phone: '07700 900600',
+            contractor_email: 'quote@topcoat-demo.co.uk',
+            service_areas: 'Manchester, Salford',
+          },
+          {
+            contractor_name: 'RoofRight Ltd',
+            categories: 'Roofing / Guttering, Window Specialist',
+            contractor_phone: '07700 900700',
+            contractor_email: 'jobs@roofright-demo.co.uk',
+            service_areas: 'Manchester',
+          },
+          {
+            contractor_name: 'DrainPro Services',
+            categories: 'Drainage',
+            contractor_phone: '07700 900800',
+            contractor_email: 'info@drainpro-demo.co.uk',
+            service_areas: 'Salford, Bolton',
+          },
+          {
+            contractor_name: 'GreenThumb Gardens',
+            categories: 'Gardener',
+            contractor_phone: '07700 900900',
+            contractor_email: 'hello@greenthumb-demo.co.uk',
+            service_areas: 'Bury, Stockport',
+          },
+          {
+            contractor_name: 'FixIt Appliances',
+            categories: 'Appliance Engineer',
+            contractor_phone: '07700 901000',
+            contractor_email: 'repair@fixit-demo.co.uk',
+            service_areas: 'Manchester',
+          },
+        ]}
       />
 
+      {/* CSV Categories Tip */}
+      <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
+        <Pencil className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-foreground">
+            Categories in CSV
+          </p>
+          <p className="text-muted-foreground mt-1">
+            Use comma-separated values for multiple categories, e.g. <code className="text-xs bg-muted px-1 py-0.5 rounded">Plumber, General / Handyman</code>.
+            Categories must match exactly (case-insensitive):
+          </p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {CONTRACTOR_CATEGORIES.map((cat) => (
+              <span key={cat} className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-foreground text-xs">
+                {cat}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Service Area Assignment Explanation */}
-      <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+      <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
+        <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
         <div className="text-sm space-y-2">
-          <p className="font-medium text-blue-900 dark:text-blue-100">
+          <p className="font-medium text-foreground">
             Service Area Assignment
           </p>
-          <p className="text-blue-700 dark:text-blue-300">
+          <p className="text-muted-foreground">
             We&apos;ve extracted cities from your property postcodes. Assign each contractor to the cities they serve.
           </p>
-          <ul className="text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+          <ul className="text-muted-foreground space-y-1 list-disc list-inside">
             <li><strong>CSV:</strong> Include &quot;service_areas&quot; column (comma-separated: &quot;Manchester, Salford&quot;)</li>
             <li><strong>UI:</strong> Click Service Areas column to select cities</li>
             <li>Contractors are auto-assigned to <strong>all properties</strong> in their selected cities</li>
             <li><strong>No selection = no automatic assignment</strong> (you can assign manually later)</li>
           </ul>
           {availableCities.length > 0 && (
-            <p className="text-blue-700 dark:text-blue-300 pt-1">
+            <p className="text-muted-foreground pt-1">
               <strong>Cities from your properties:</strong>{' '}
               {availableCities.map((city, i) => (
-                <span key={city} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs mr-1.5 mb-1">
+                <span key={city} className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-foreground text-xs mr-1.5 mb-1">
                   {city}
                 </span>
               ))}

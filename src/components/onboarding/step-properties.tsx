@@ -37,7 +37,7 @@ export function StepProperties({ properties, landlords, onChange, onLookupCity }
       ? [{ key: 'landlordTempId', label: 'Landlord', type: 'combobox' as const, options: landlordOptions, placeholder: 'Search landlord...' }]
       : []),
     { key: 'auto_approve_limit', label: 'Auto-Approve (£)', required: true, type: 'number' as const, placeholder: '0' },
-    { key: 'access_instructions', label: 'Access', placeholder: 'Key safe by front door, code 1234' },
+    { key: 'access_instructions', label: 'Access Details', placeholder: 'Gate code, key safe number, entry instructions' },
     { key: 'emergency_access_contact', label: 'Emergency Contact', placeholder: '07700 900300' },
   ]
 
@@ -153,24 +153,33 @@ export function StepProperties({ properties, landlords, onChange, onLookupCity }
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="properties_template.csv"
+        exampleRows={[{
+          address: '14 Meadow Lane, Manchester, M14 5RL',
+          landlord_name: 'David Williams',
+          landlord_email: 'david.williams@example.com',
+          landlord_phone: '07700 900200',
+          access_instructions: 'Key safe code 4521',
+          emergency_access_contact: '07700 900300',
+          auto_approve_limit: '250',
+        }]}
       />
 
       {/* Unified info box */}
-      <div className="flex gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+      <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
+        <Lightbulb className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
         <div className="text-sm space-y-3">
           <div>
-            <p className="font-medium text-blue-900 dark:text-blue-100">
+            <p className="font-medium text-foreground">
               How property import works
             </p>
-            <ul className="text-blue-700 dark:text-blue-300 mt-1.5 space-y-1 list-disc list-inside">
+            <ul className="text-muted-foreground mt-1.5 space-y-1 list-disc list-inside">
               <li>Addresses must end with a valid UK postcode (e.g., &quot;M14 5RL&quot;)</li>
               <li>Use exact landlord names from Step 1 in your CSV &quot;landlord_name&quot; column — non-matches highlight amber</li>
               <li>Cities are auto-extracted from postcodes for contractor service area matching</li>
             </ul>
           </div>
           {uniqueCities.length > 0 && (
-            <p className="text-blue-700 dark:text-blue-300 pt-1 border-t border-blue-200 dark:border-blue-700">
+            <p className="text-muted-foreground pt-1 border-t border-border">
               <strong>Cities found:</strong> {uniqueCities.join(', ')}
             </p>
           )}

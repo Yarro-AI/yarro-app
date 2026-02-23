@@ -38,7 +38,7 @@ export const TEMPLATES = {
 export type TemplateName = keyof typeof TEMPLATES;
 
 /** Short ticket ref for WhatsApp messages — first UUID segment only.
- *  Avoids WhatsApp auto-linking digit sequences as phone numbers. */
+ *  The T- prefix lives in the Twilio template text, NOT in this variable. */
 export function shortRef(ticketId: string): string {
-  return `T-${ticketId.split("-")[0]}`;
+  return ticketId.split("-")[0];
 }

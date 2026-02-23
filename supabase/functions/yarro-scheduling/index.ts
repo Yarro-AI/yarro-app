@@ -144,9 +144,9 @@ async function handleFinalizeJob(
           "2": ticket.issue_description || "",
           "3": landlord.name || "",
           "4": contractor.name || "",
-          "5": contractor.total || "",
-          "6": contractor.quote || "",
-          "7": contractor.markup || "",
+          "5": contractor.total || "£0",
+          "6": contractor.quote || "£0",
+          "7": contractor.markup || "£0",
         },
       });
     }

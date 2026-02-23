@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
@@ -27,6 +28,8 @@ import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import { SlaBadge } from '@/components/sla-badge'
+import { RefreshCw } from 'lucide-react'
 
 interface TicketRow {
   id: string
@@ -50,6 +53,8 @@ interface TicketRow {
   contractor_id: string | null
   conversation_id: string | null
   archived: boolean | null
+  sla_due_at?: string | null
+  resolved_at?: string | null
   message_stage?: string | null
   display_stage?: string | null
   address?: string
@@ -122,6 +127,7 @@ export default function TicketsPage() {
   }, [selectedId, tickets, action])
 
   const fetchTickets = async () => {
+    setLoading(true)
     let query = supabase
       .from('c1_tickets')
       .select(`
@@ -147,10 +153,13 @@ export default function TicketsPage() {
         conversation_id,
         archived,
         images,
+        next_action,
+        next_action_reason,
+        sla_due_at,
+        resolved_at,
         c1_properties(address),
         c1_tenants(full_name),
-        c1_contractors(contractor_name),
-        c1_messages(stage)
+        c1_contractors(contractor_name)
       `)
       .eq('property_manager_id', propertyManager!.id)
       .gte('date_logged', dateRange.from.toISOString())
@@ -165,50 +174,34 @@ export default function TicketsPage() {
       query = query.not('status', 'ilike', 'closed')
     }
 
-    // Also fetch not-completed job IDs for display stage
-    const [{ data }, { data: notCompletedData }] = await Promise.all([
-      query,
-      supabase.from('c1_job_completions').select('id').eq('completed', false),
-    ])
-    const notCompletedIds = new Set((notCompletedData || []).map(r => r.id))
+    const { data } = await query
 
     if (data) {
-      type MsgData = { stage: string } | { stage: string }[] | null
-      const getMsgStage = (msgs: MsgData): string | null => {
-        if (!msgs) return null
-        if (Array.isArray(msgs)) return msgs[0]?.stage || null
-        return msgs.stage || null
+      // Map next_action_reason → display label
+      const reasonToDisplayStage: Record<string, string> = {
+        handoff_review: 'Handoff',
+        manager_approval: 'Awaiting Manager',
+        no_contractors: 'No Contractors',
+        landlord_declined: 'Landlord Declined',
+        landlord_no_response: 'Landlord No Response',
+        job_not_completed: 'Not Completed',
+        awaiting_contractor: 'Awaiting Contractor',
+        awaiting_landlord: 'Awaiting Landlord',
+        awaiting_booking: 'Awaiting Booking',
+        scheduled: 'Scheduled',
+        completed: 'Completed',
+        dismissed: 'Dismissed',
+        new: 'Created',
       }
 
-      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; archived: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
-        if (t.archived && t.handoff) return 'Dismissed'
-        const isClosed = t.status?.toLowerCase() === 'closed'
-        if (isClosed) return 'Completed'
-        if (t.handoff) return 'handoff'
-        // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
-        if (notCompletedIds.has(t.id)) return 'Not Completed'
-        const js = (t.job_stage || '').toLowerCase()
-        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
-        if (js === 'sent') return 'Awaiting Booking'
-        // Message stage (only when job hasn't progressed past this point)
-        const ms = (msgStage || '').toLowerCase()
-        if (ms === 'awaiting_manager') return 'Awaiting Manager'
-        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
-        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
-        return 'Created'
-      }
-
-      const mapped = data.map((t) => {
-        const msgStage = getMsgStage(t.c1_messages as MsgData)
-        return {
-          ...t,
-          address: (t.c1_properties as unknown as { address: string } | null)?.address,
-          tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
-          contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
-          message_stage: msgStage,
-          display_stage: deriveDisplayStage(t, msgStage),
-        }
-      })
+      const mapped = data.map((t) => ({
+        ...t,
+        address: (t.c1_properties as unknown as { address: string } | null)?.address,
+        tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
+        contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
+        message_stage: null,
+        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created',
+      }))
       setTickets(mapped)
     }
     setLoading(false)
@@ -248,7 +241,7 @@ export default function TicketsPage() {
       const { error } = await supabase.rpc('c1_complete_handoff_ticket', {
         p_ticket_id: handoffTicketId,
         p_property_id: data.property_id,
-        p_tenant_id: data.tenant_id,
+        p_tenant_id: data.tenant_id || null,
         p_issue_description: data.issue_description,
         p_category: data.category,
         p_priority: data.priority,
@@ -274,7 +267,7 @@ export default function TicketsPage() {
       const { data: ticketId, error } = await supabase.rpc('c1_create_manual_ticket', {
         p_property_manager_id: propertyManager!.id,
         p_property_id: data.property_id,
-        p_tenant_id: data.tenant_id,
+        p_tenant_id: data.tenant_id || null,
         p_issue_description: data.issue_description,
         p_issue_title: null,
         p_category: data.category,
@@ -433,6 +426,23 @@ export default function TicketsPage() {
       render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} /> : '-',
     },
     {
+      key: 'sla',
+      header: 'SLA',
+      width: '110px',
+      sortable: true,
+      render: (ticket) => (
+        <SlaBadge
+          slaDueAt={ticket.sla_due_at ?? null}
+          resolvedAt={ticket.resolved_at}
+          priority={ticket.priority}
+          dateLogged={ticket.date_logged}
+          archived={ticket.archived}
+          ticketStatus={ticket.status}
+        />
+      ),
+      getValue: (ticket) => ticket.sla_due_at ? new Date(ticket.sla_due_at).getTime() : 0,
+    },
+    {
       key: 'actions',
       header: '',
       width: '110px',
@@ -494,6 +504,15 @@ export default function TicketsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => fetchTickets()}
+            disabled={loading}
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
           <DateFilter value={dateRange} onChange={setDateRange} />
           <InteractiveHoverButton
             text="Create"

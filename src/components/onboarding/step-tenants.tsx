@@ -98,14 +98,21 @@ export function StepTenants({ tenants, properties, onChange }: StepTenantsProps)
         expectedColumns={CSV_COLUMNS}
         onParsed={handleCsvParsed}
         templateFilename="tenants_template.csv"
+        exampleRows={[{
+          full_name: 'Emma Thompson',
+          phone: '07700 900400',
+          email: 'emma.t@example.com',
+          role_tag: 'tenant',
+          property_address: '14 Meadow Lane, Manchester, M14 5RL',
+        }]}
       />
-      <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+      <div className="flex gap-3 p-4 bg-muted/30 border border-border rounded-lg">
+        <Lightbulb className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
         <div className="text-sm">
-          <p className="font-medium text-amber-900 dark:text-amber-100">
+          <p className="font-medium text-foreground">
             Property matching &amp; duplicate handling
           </p>
-          <p className="text-amber-700 dark:text-amber-300 mt-1">
+          <p className="text-muted-foreground mt-1">
             Use property addresses from the previous step in your CSV &quot;property_address&quot; column. Partial matches work (e.g., &quot;14 Meadow&quot; matches &quot;14 Meadow Lane, Manchester, M14 5RL&quot;). Tenants with the same phone number at the same property are treated as duplicates.
           </p>
         </div>

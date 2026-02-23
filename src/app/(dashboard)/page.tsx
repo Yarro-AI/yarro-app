@@ -9,18 +9,25 @@ import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
 import { KanbanBoard } from '@/components/kanban-board'
 import {
+  Clock,
+  UserCheck,
   ArrowRight,
+  Hourglass,
+  CalendarClock,
   AlertTriangle,
+  XCircle,
+  BarChart3,
+  Plus,
+  CheckCircle2,
+  LayoutDashboard,
   LayoutGrid,
   Columns3,
+  Send,
+  CircleX,
   MessageSquare,
   Phone,
   User,
-  Search,
-  Plus,
-  Eye,
-  UserX,
-  Clock,
+  RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -38,10 +45,16 @@ import {
 } from '@/components/ui/dialog'
 import { TicketForm } from '@/components/ticket-form'
 import { ChatHistory } from '@/components/chat-message'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface DashboardStats {
   totalTickets: number
@@ -88,6 +101,8 @@ interface TicketSummary {
   address?: string
   handoff?: boolean
   landlord_declined?: boolean
+  next_action?: string | null
+  next_action_reason?: string | null
 }
 
 // Chart colors
@@ -108,7 +123,6 @@ const ACTION_DESCRIPTIONS = {
 }
 
 type ViewMode = 'stats' | 'board'
-type ScheduledFilter = 'today' | 'week' | 'month' | 'year'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -129,12 +143,7 @@ export default function DashboardPage() {
   const [selectedHandoff, setSelectedHandoff] = useState<HandoffConversation | null>(null)
   const [createTicketOpen, setCreateTicketOpen] = useState(false)
   const [showHandoffConvo, setShowHandoffConvo] = useState(false)
-  const [notCompletedIds, setNotCompletedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [scheduledFilter, setScheduledFilter] = useState<ScheduledFilter>('week')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
-  const [simpleCreateOpen, setSimpleCreateOpen] = useState(false)
   const supabase = createClient()
 
   // Persist view mode
@@ -147,8 +156,8 @@ export default function DashboardPage() {
     if (!propertyManager) return
     setLoading(true)
 
-    // Fetch tickets with message stage (source of truth for workflow state)
-    const [ticketsRes, convosRes, notCompletedRes] = await Promise.all([
+    // Fetch tickets — next_action/next_action_reason is the single source of truth for state
+    const [ticketsRes, convosRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -163,8 +172,9 @@ export default function DashboardPage() {
           final_amount,
           handoff,
           conversation_id,
-          c1_properties(address),
-          c1_messages(stage, landlord)
+          next_action,
+          next_action_reason,
+          c1_properties(address)
         `)
         .eq('property_manager_id', propertyManager.id)
         .gte('date_logged', dateRange.from.toISOString())
@@ -190,17 +200,10 @@ export default function DashboardPage() {
         .eq('handoff', true)
         .eq('status', 'open')
         .order('last_updated', { ascending: false }),
-      // Fetch not-completed job IDs
-      supabase
-        .from('c1_job_completions')
-        .select('id')
-        .eq('completed', false),
     ])
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
-    const ncIds = new Set((notCompletedRes.data || []).map(r => r.id))
-    setNotCompletedIds(ncIds)
 
     // Filter conversations that don't have tickets yet
     const ticketConvoIds = new Set(tickets?.map(t => t.conversation_id).filter(Boolean) || [])
@@ -217,74 +220,17 @@ export default function DashboardPage() {
       const closed = tickets.filter((t) => t.status?.toLowerCase() === 'closed').length
       const open = total - closed
 
-      type MessageData = { stage: string; landlord?: { approval?: boolean | null } | null }
-      const getMessageData = (t: { c1_messages: MessageData | MessageData[] | null }): MessageData | null => {
-        const messages = t.c1_messages
-        if (!messages) return null
-        if (Array.isArray(messages)) {
-          return messages[0] || null
-        }
-        return messages
-      }
-      const getMessageStage = (t: { c1_messages: MessageData | MessageData[] | null }) => {
-        const data = getMessageData(t)
-        return (data?.stage || '').toLowerCase()
-      }
-      const isOpen = (t: { status: string }) => t.status?.toLowerCase() !== 'closed'
-      const isScheduled = (t: { job_stage: string | null; scheduled_date: string | null }) => {
-        const stage = (t.job_stage || '').toLowerCase()
-        return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
-      }
-
-      const handoffTickets = tickets.filter((t) => isOpen(t) && t.handoff === true).length
-
-      const awaitingContractor = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'waiting_contractor' || msgStage === 'contractor_notified'
-      }).length
-
-      const awaitingManager = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'awaiting_manager'
-      }).length
-
-      const awaitingLandlord = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'awaiting_landlord'
-      }).length
-
-      const landlordDeclined = tickets.filter((t) => {
-        const data = getMessageData(t)
-        return data?.landlord?.approval === false
-      }).length
-
-      const landlordNoResponse = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const js = (t.job_stage || '').toLowerCase()
-        return js === 'landlord no response'
-      }).length
-
-      const noContractorsLeft = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = getMessageStage(t)
-        return msgStage === 'no_contractors_left'
-      }).length
-
-      const scheduledJobs = tickets.filter((t) => isOpen(t) && isScheduled(t) && !ncIds.has(t.id)).length
-
-      const awaitingBooking = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const stage = (t.job_stage || '').toLowerCase()
-        return stage === 'sent'
-      }).length
-
-      const jobNotCompleted = tickets.filter((t) => {
-        if (!isOpen(t)) return false
-        return ncIds.has(t.id)
-      }).length
+      // All counts derived from next_action / next_action_reason (DB trigger computed)
+      const handoffTickets = tickets.filter((t) => t.next_action_reason === 'handoff_review').length
+      const awaitingManager = tickets.filter((t) => t.next_action_reason === 'manager_approval').length
+      const noContractorsLeft = tickets.filter((t) => t.next_action_reason === 'no_contractors').length
+      const landlordDeclined = tickets.filter((t) => t.next_action_reason === 'landlord_declined').length
+      const landlordNoResponse = tickets.filter((t) => t.next_action_reason === 'landlord_no_response').length
+      const jobNotCompleted = tickets.filter((t) => t.next_action_reason === 'job_not_completed').length
+      const awaitingContractor = tickets.filter((t) => t.next_action_reason === 'awaiting_contractor').length
+      const awaitingLandlord = tickets.filter((t) => t.next_action_reason === 'awaiting_landlord').length
+      const scheduledJobs = tickets.filter((t) => t.next_action_reason === 'scheduled').length
+      const awaitingBooking = tickets.filter((t) => t.next_action_reason === 'awaiting_booking').length
 
       setStats({
         totalTickets: total,
@@ -303,52 +249,41 @@ export default function DashboardPage() {
         jobNotCompleted,
       })
 
-      const deriveDisplayStage = (t: { id: string; status: string; handoff: boolean | null; job_stage: string | null; scheduled_date: string | null }, msgStage: string | null): string | null => {
-        const isClosed = t.status?.toLowerCase() === 'closed'
-        if (isClosed) return 'Completed'
-        if (t.handoff) return 'Handoff'
-        const js = (t.job_stage || '').toLowerCase()
-        if (js === 'landlord no response') return 'Landlord No Response'
-        // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
-        if (ncIds.has(t.id)) return 'Not Completed'
-        if (js === 'booked' || js === 'scheduled' || t.scheduled_date) return 'Scheduled'
-        if (js === 'sent') return 'Awaiting Booking'
-        // Message stage (only relevant when job hasn't progressed past this point)
-        const ms = (msgStage || '').toLowerCase()
-        if (ms === 'no_contractors_left') return 'No Contractors'
-        if (ms === 'awaiting_manager') return 'Awaiting Manager'
-        if (ms === 'awaiting_landlord') return 'Awaiting Landlord'
-        if (ms === 'waiting_contractor' || ms === 'contractor_notified') return 'Awaiting Contractor'
-        return 'Created'
+      // Map next_action_reason → display label
+      const reasonToDisplayStage: Record<string, string> = {
+        handoff_review: 'Handoff',
+        manager_approval: 'Awaiting Manager',
+        no_contractors: 'No Contractors',
+        landlord_declined: 'Landlord Declined',
+        landlord_no_response: 'Landlord No Response',
+        job_not_completed: 'Not Completed',
+        awaiting_contractor: 'Awaiting Contractor',
+        awaiting_landlord: 'Awaiting Landlord',
+        awaiting_booking: 'Awaiting Booking',
+        scheduled: 'Scheduled',
+        completed: 'Completed',
+        dismissed: 'Dismissed',
+        new: 'Created',
       }
 
-      const mappedTickets = tickets.map((t) => {
-        const messages = t.c1_messages as MessageData | MessageData[] | null
-        const messageStage = messages
-          ? Array.isArray(messages) ? messages[0]?.stage : messages.stage
-          : null
-        return {
-          id: t.id,
-          issue_description: t.issue_description,
-          status: t.status,
-          job_stage: t.job_stage,
-          display_stage: deriveDisplayStage(t, messageStage),
-          message_stage: messageStage || null,
-          category: t.category,
-          priority: t.priority,
-          date_logged: t.date_logged,
-          scheduled_date: t.scheduled_date,
-          final_amount: t.final_amount,
-          address: (t.c1_properties as unknown as { address: string } | null)?.address,
-          handoff: t.handoff,
-          landlord_declined: (() => {
-            const data = messages
-              ? Array.isArray(messages) ? messages[0] : messages
-              : null
-            return data?.landlord?.approval === false
-          })(),
-        }
-      })
+      const mappedTickets = tickets.map((t) => ({
+        id: t.id,
+        issue_description: t.issue_description,
+        status: t.status,
+        job_stage: t.job_stage,
+        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created',
+        message_stage: null,
+        category: t.category,
+        priority: t.priority,
+        date_logged: t.date_logged,
+        scheduled_date: t.scheduled_date,
+        final_amount: t.final_amount,
+        address: (t.c1_properties as unknown as { address: string } | null)?.address,
+        handoff: t.handoff,
+        landlord_declined: t.next_action_reason === 'landlord_declined',
+        next_action: t.next_action || null,
+        next_action_reason: t.next_action_reason || null,
+      }))
       setAllTickets(mappedTickets)
       setRecentTickets(mappedTickets.slice(0, 5))
     }
@@ -361,56 +296,24 @@ export default function DashboardPage() {
   }, [fetchData])
 
   const showAwaitingTickets = (type: string) => {
-    const isOpen = (t: TicketSummary) => t.status?.toLowerCase() !== 'closed'
-
-    let filtered: TicketSummary[] = []
-
-    if (type === 'contractor') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'waiting_contractor' || msgStage === 'contractor_notified'
-      })
-    } else if (type === 'manager') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'awaiting_manager'
-      })
-    } else if (type === 'landlord') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'awaiting_landlord'
-      })
-    } else if (type === 'booking') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const jobStage = (t.job_stage || '').toLowerCase()
-        return jobStage === 'sent'
-      })
-    } else if (type === 'scheduled') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        if (notCompletedIds.has(t.id)) return false
-        const jobStage = (t.job_stage || '').toLowerCase()
-        return jobStage === 'booked' || jobStage === 'scheduled' || t.scheduled_date !== null
-      })
-    } else if (type === 'handoff') {
-      filtered = allTickets.filter((t) => isOpen(t) && t.handoff === true)
-    } else if (type === 'declined') {
-      filtered = allTickets.filter((t) => t.landlord_declined === true)
-    } else if (type === 'landlordNoResponse') {
-      filtered = allTickets.filter((t) => t.display_stage === 'Landlord No Response')
-    } else if (type === 'noContractorsLeft') {
-      filtered = allTickets.filter((t) => {
-        if (!isOpen(t)) return false
-        const msgStage = (t.message_stage || '').toLowerCase()
-        return msgStage === 'no_contractors_left'
-      })
-    } else if (type === 'notCompleted') {
-      filtered = allTickets.filter((t) => isOpen(t) && notCompletedIds.has(t.id))
+    // All filtering uses next_action_reason from DB
+    const reasonMap: Record<string, string> = {
+      handoff: 'handoff_review',
+      manager: 'manager_approval',
+      noContractorsLeft: 'no_contractors',
+      declined: 'landlord_declined',
+      landlordNoResponse: 'landlord_no_response',
+      notCompleted: 'job_not_completed',
+      contractor: 'awaiting_contractor',
+      landlord: 'awaiting_landlord',
+      booking: 'awaiting_booking',
+      scheduled: 'scheduled',
     }
+
+    const reason = reasonMap[type]
+    const filtered = reason
+      ? allTickets.filter((t) => t.next_action_reason === reason)
+      : []
 
     setAwaitingTickets(filtered)
     setAwaitingType(type)
@@ -462,29 +365,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Computed action counts — hoisted so the page heading can use them
-  const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
-  const totalHandoffs = handoffTicketsList.length + handoffConversations.length
-  const declinedCount = stats?.landlordDeclined || 0
-  const landlordNoResponseCount = stats?.landlordNoResponse || 0
-  const managerCount = stats?.awaitingManager || 0
-  const noContractorsCount = stats?.noContractorsLeft || 0
-  const notCompletedCount = stats?.jobNotCompleted || 0
-  const followUpCount = declinedCount + landlordNoResponseCount + notCompletedCount
-  const totalAction = totalHandoffs + noContractorsCount + followUpCount
-
-  const searchSuggestions = searchQuery.trim().length > 1
-    ? allTickets
-        .filter((t) => {
-          const q = searchQuery.toLowerCase()
-          return (
-            t.issue_description?.toLowerCase().includes(q) ||
-            t.address?.toLowerCase().includes(q)
-          )
-        })
-        .slice(0, 6)
-    : []
-
   if (loading && !stats) {
     return (
       <div className="p-4 h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
@@ -506,71 +386,30 @@ export default function DashboardPage() {
       <div className="h-full bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background overflow-hidden">
         <div className="fixed inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none dark:hidden" />
 
-        <div className="relative p-4 h-full flex flex-col gap-6">
+        <div className="relative p-4 h-full flex flex-col gap-3">
           {/* Header */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {/* Left: Search + Create CTA */}
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 z-10" />
-                <input
-                  type="text"
-                  placeholder="Search tickets..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setShowSearchDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowSearchDropdown(false), 150)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      router.push(`/tickets?search=${encodeURIComponent(searchQuery.trim())}`)
-                      setShowSearchDropdown(false)
-                    }
-                  }}
-                  className="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 placeholder:text-muted-foreground/40"
-                />
-                {showSearchDropdown && searchSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-                    {searchSuggestions.map((ticket) => (
-                      <button
-                        key={ticket.id}
-                        onMouseDown={() => {
-                          router.push(`/tickets?id=${ticket.id}`)
-                          setSearchQuery('')
-                          setShowSearchDropdown(false)
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                          {ticket.address && <p className="text-xs text-muted-foreground/60 truncate">{ticket.address}</p>}
-                        </div>
-                        {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
-                      </button>
-                    ))}
-                    <button
-                      onMouseDown={() => {
-                        router.push(`/tickets?search=${encodeURIComponent(searchQuery.trim())}`)
-                        setShowSearchDropdown(false)
-                      }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 border-t border-border/50 hover:bg-muted/50 transition-colors text-sm text-primary"
-                    >
-                      <Search className="h-3.5 w-3.5" />
-                      See all results for &quot;{searchQuery}&quot;
-                    </button>
-                  </div>
-                )}
-              </div>
-              <Button
-                onClick={() => setSimpleCreateOpen(true)}
-                className="gap-1.5 flex-shrink-0"
-              >
-                <Plus className="h-4 w-4" />
-                Create ticket
-              </Button>
+          <div className="flex items-center justify-between flex-shrink-0">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground flex items-center gap-2.5">
+                <LayoutDashboard className="h-7 w-7" />
+                Dashboard
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Manage and monitor all property maintenance activity
+              </p>
             </div>
-            {/* Right: View toggle + date filter */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => fetchData()}
+                disabled={loading}
+              >
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              </Button>
+              {/* View Toggle */}
+              <div className="flex items-center bg-muted rounded-lg p-0.5">
                 <button
                   onClick={() => handleViewChange('stats')}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
@@ -608,247 +447,227 @@ export default function DashboardPage() {
               />
             </div>
           ) : (
-          /* Dashboard — Stats view */
-          <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-y-auto">
-            {/* Top row: 2 cards side by side */}
-            <div className="grid grid-cols-1 sm:grid-cols-[7fr_3fr] gap-4">
-
-              {/* LEFT: To-do */}
+          /* Dashboard — Top cards + full-width recent tickets */
+          <div className="flex-1 min-h-0 flex flex-col gap-3">
+            {/* Top section: two columns */}
+            <div className="grid grid-cols-2 grid-rows-[auto_1fr] gap-3">
+              {/* LEFT: Your To-Do */}
               {(() => {
-                // Sort oldest first — urgency leads (oldest = most overdue)
-                const byAge = (a: TicketSummary, b: TicketSummary) =>
-                  new Date(a.date_logged).getTime() - new Date(b.date_logged).getTime()
+                const handoffTicketsList = allTickets.filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
+                const totalHandoffs = handoffTicketsList.length + handoffConversations.length
+                const declinedCount = stats?.landlordDeclined || 0
+                const landlordNoResponseCount = stats?.landlordNoResponse || 0
+                const managerCount = stats?.awaitingManager || 0
+                const noContractorsCount = stats?.noContractorsLeft || 0
+                const notCompletedCount = stats?.jobNotCompleted || 0
 
-                const handoffPreview = allTickets
-                  .filter((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true)
-                  .sort(byAge).slice(0, 3)
-
-                const noContractorsPreview = allTickets
-                  .filter((t) => t.status?.toLowerCase() !== 'closed' && (t.message_stage || '').toLowerCase() === 'no_contractors_left')
-                  .sort(byAge).slice(0, 3)
-
-                const followUpPreview = allTickets
-                  .filter((t) => {
-                    if (t.status?.toLowerCase() === 'closed') return false
-                    return t.landlord_declined === true || t.display_stage === 'Landlord No Response' || notCompletedIds.has(t.id)
-                  })
-                  .sort(byAge).slice(0, 3)
-
-                const hasEmergency = allTickets.some((t) => t.status?.toLowerCase() !== 'closed' && t.handoff === true && t.priority?.toLowerCase() === 'emergency')
-
-                // Compact preview tiles — 3-column grid, accent bar on left, chevron on hover only
-                const renderPreviewRow = (
-                  tickets: TicketSummary[],
-                  emptyText: string,
-                  accentColor: string,
-                ) => (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 min-h-[56px]">
-                    {tickets.length === 0 ? (
-                      <p className="sm:col-span-3 text-xs text-muted-foreground/40 flex items-center">{emptyText}</p>
-                    ) : (
-                      tickets.map((ticket) => (
-                        <Link
-                          key={ticket.id}
-                          href={`/tickets?id=${ticket.id}`}
-                          className={`flex items-center gap-2 px-3 py-3 rounded-lg bg-muted/25 hover:bg-muted/50 border-l-2 ${accentColor} transition-colors group`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-card-foreground/80 group-hover:text-card-foreground truncate leading-snug">
-                              {ticket.issue_description?.substring(0, 55) || 'No description'}
-                            </p>
-                            {ticket.address && (
-                              <p className="text-[10px] text-muted-foreground/45 truncate mt-0.5">{ticket.address}</p>
-                            )}
-                          </div>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground/40 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                )
+                const totalAction = totalHandoffs + declinedCount + landlordNoResponseCount + noContractorsCount + managerCount + notCompletedCount
 
                 return (
-                  <div className="bg-card rounded-xl border border-border p-5 flex flex-col">
-                    <div className="flex items-center gap-3 mb-5">
-                      <h2 className="text-2xl font-bold text-card-foreground tracking-tight">To-do</h2>
-                      {totalAction > 0 && (
-                        <span className="text-sm font-bold text-white bg-red-500 rounded-full h-6 min-w-[24px] flex items-center justify-center px-2">
-                          {totalAction}
+                  <>
+                    <div className="bg-card rounded-xl border border-border p-4 row-start-1 col-start-1">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-card-foreground">Your To-Do</h3>
+                        {totalAction > 0 && (
+                          <span className="text-xs font-bold text-white bg-red-500 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalAction}</span>
+                        )}
+                      </div>
+                      <Link href="/tickets?create=true">
+                        <InteractiveHoverButton text="Create" className="w-24 text-xs h-7" />
+                      </Link>
+                    </div>
+                    <div className="space-y-1">
+                      {/* Primary actions */}
+                      {[
+                        { key: 'handoff' as const, label: 'Handoff Review', desc: 'AI needs your help', count: totalHandoffs, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
+                        { key: 'manager' as const, label: 'Manager Approval', desc: 'Check WhatsApp & approve', count: managerCount, icon: UserCheck, iconBg: 'bg-blue-500/15', iconColor: 'text-blue-500', countColor: 'text-blue-500' },
+                      ].map((item) => (
+                        <Tooltip key={item.key}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
+                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                            >
+                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
+                                <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
+                                <p className="text-xs text-muted-foreground">{item.desc}</p>
+                              </div>
+                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>
+                                {item.count}
+                              </span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
+                        </Tooltip>
+                      ))}
+
+                    </div>
+                    </div>
+
+                    {/* Needs Follow Up Card */}
+                    <div className="bg-card rounded-xl border border-border p-4 row-start-2 col-start-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-sm font-semibold text-card-foreground">Needs Follow Up</h3>
+                      </div>
+                      <div className="space-y-1">
+                      {[
+                        { key: 'noContractorsLeft' as const, label: 'No Contractors', desc: 'Re-dispatch or find new', count: noContractorsCount, icon: AlertTriangle, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
+                        { key: 'declined' as const, label: 'Landlord Declined', desc: 'Needs follow-up', count: declinedCount, icon: XCircle, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
+                        { key: 'landlordNoResponse' as const, label: 'Landlord No Response', desc: 'Contact directly', count: landlordNoResponseCount, icon: Clock, iconBg: 'bg-orange-500/15', iconColor: 'text-orange-500', countColor: 'text-orange-500' },
+                        { key: 'notCompleted' as const, label: 'Job Not Completed', desc: 'Needs follow-up', count: notCompletedCount, icon: CircleX, iconBg: 'bg-red-500/15', iconColor: 'text-red-500', countColor: 'text-red-500' },
+                      ].map((item) => (
+                        <Tooltip key={item.key}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
+                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                            >
+                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.count > 0 ? item.iconBg : 'bg-muted'}`}>
+                                <item.icon className={`h-4 w-4 ${item.count > 0 ? item.iconColor : 'text-muted-foreground/50'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
+                                <p className="text-xs text-muted-foreground">{item.desc}</p>
+                              </div>
+                              <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? item.countColor : 'text-muted-foreground/40'}`}>
+                                {item.count}
+                              </span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
+                        </Tooltip>
+                      ))}
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+
+              {/* RIGHT: Overview + In Progress (stacked, same height as left) */}
+              {/* Ticket Overview */}
+              <div className="bg-card rounded-xl border border-border p-4 row-start-1 col-start-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-primary" />
+                      <h3 className="text-sm font-semibold text-card-foreground">Ticket Overview</h3>
+                      <span className="text-xs text-muted-foreground">{stats?.totalTickets || 0} total</span>
+                    </div>
+                    <Link href="/tickets" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                      View all →
+                    </Link>
+                  </div>
+
+                  {/* Status bar */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
+                      {stats && stats.totalTickets > 0 && (
+                        <span className="text-[11px] text-muted-foreground">
+                          {getPercentage(stats.closedTickets, stats.totalTickets)}% complete
                         </span>
                       )}
                     </div>
-
-                    {/* Categories — gap-5 is structural: identical spacing regardless of whether tiles exist */}
-                    <div className="flex flex-col gap-5">
-
-                      {/* Needs review */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => totalHandoffs > 0 ? showAwaitingTickets('handoff') : undefined}
-                            className="flex-1 flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                          >
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${totalHandoffs > 0 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-muted text-muted-foreground/25'}`}>
-                              <Eye className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1 min-w-0 flex items-center gap-2">
-                              <span className={`text-sm font-medium ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Needs review</span>
-                              {hasEmergency && (
-                                <span className="text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full">Emergency</span>
-                              )}
-                            </div>
-                            <span className={`text-2xl font-bold tabular-nums ${totalHandoffs > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{totalHandoffs}</span>
-                          </button>
-                          <button
-                            onClick={() => showAwaitingTickets('handoff')}
-                            className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/40"
-                          >
-                            See all <ArrowRight className="h-2.5 w-2.5" />
-                          </button>
-                        </div>
-                        {renderPreviewRow(handoffPreview, 'All clear.', 'border-blue-400/50')}
+                    <div className="h-2.5 rounded-full overflow-hidden flex bg-muted">
+                      {stats && stats.totalTickets > 0 ? (
+                        <>
+                          <div className="h-full bg-blue-500 transition-all duration-500 ease-out" style={{ flex: stats.openTickets }} />
+                          <div className="h-full bg-emerald-500 transition-all duration-500 ease-out" style={{ flex: stats.closedTickets }} />
+                        </>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-xs text-muted-foreground">Open</span>
+                        <span className="text-xs font-semibold text-card-foreground">{stats?.openTickets || 0}</span>
                       </div>
-
-                      {/* No contractors */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => noContractorsCount > 0 ? showAwaitingTickets('noContractorsLeft') : undefined}
-                            className="flex-1 flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                          >
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${noContractorsCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground/25'}`}>
-                              <UserX className="h-5 w-5" />
-                            </div>
-                            <span className={`flex-1 text-sm font-medium ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>No contractors</span>
-                            <span className={`text-2xl font-bold tabular-nums ${noContractorsCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{noContractorsCount}</span>
-                          </button>
-                          <button
-                            onClick={() => showAwaitingTickets('noContractorsLeft')}
-                            className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/40"
-                          >
-                            See all <ArrowRight className="h-2.5 w-2.5" />
-                          </button>
-                        </div>
-                        {renderPreviewRow(noContractorsPreview, 'All clear.', 'border-amber-400/50')}
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-xs text-muted-foreground">Closed</span>
+                        <span className="text-xs font-semibold text-card-foreground">{stats?.closedTickets || 0}</span>
                       </div>
-
-                      {/* Follow-up needed */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => followUpCount > 0 ? router.push('/tickets') : undefined}
-                            className="flex-1 flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                          >
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${followUpCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-muted text-muted-foreground/25'}`}>
-                              <Clock className="h-5 w-5" />
-                            </div>
-                            <span className={`flex-1 text-sm font-medium ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/50'}`}>Follow-up needed</span>
-                            <span className={`text-2xl font-bold tabular-nums ${followUpCount > 0 ? 'text-card-foreground' : 'text-muted-foreground/25'}`}>{followUpCount}</span>
-                          </button>
-                          <button
-                            onClick={() => router.push('/tickets')}
-                            className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/40"
-                          >
-                            See all <ArrowRight className="h-2.5 w-2.5" />
-                          </button>
-                        </div>
-                        {renderPreviewRow(followUpPreview, 'Nothing pending.', 'border-rose-400/50')}
-                      </div>
-
                     </div>
                   </div>
-                )
-              })()}
 
-              {/* RIGHT: Scheduled jobs */}
-              {(() => {
-                const msPerDay = 86_400_000
-                const now = new Date()
-                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-                const scheduledAll = allTickets.filter((t) => {
-                  if (t.status?.toLowerCase() === 'closed') return false
-                  if (notCompletedIds.has(t.id)) return false
-                  const stage = (t.job_stage || '').toLowerCase()
-                  return stage === 'booked' || stage === 'scheduled' || t.scheduled_date !== null
-                })
-
-                const scheduledFiltered = scheduledAll
-                  .filter((t) => {
-                    if (!t.scheduled_date) return scheduledFilter === 'year'
-                    const d = new Date(t.scheduled_date)
-                    if (scheduledFilter === 'today') return d >= startOfDay && d < new Date(startOfDay.getTime() + msPerDay)
-                    if (scheduledFilter === 'week') return d >= startOfDay && d < new Date(startOfDay.getTime() + 7 * msPerDay)
-                    if (scheduledFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-                    return d.getFullYear() === now.getFullYear()
-                  })
-                  .sort((a, b) => {
-                    if (!a.scheduled_date) return 1
-                    if (!b.scheduled_date) return -1
-                    return new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
-                  })
-                  .slice(0, 6)
-
-                const filterOptions: { key: ScheduledFilter; label: string }[] = [
-                  { key: 'today', label: 'Today' },
-                  { key: 'week', label: 'Week' },
-                  { key: 'month', label: 'Month' },
-                  { key: 'year', label: 'Year' },
-                ]
-
-                return (
-                  <div className="bg-card rounded-xl border border-border p-5 flex flex-col">
-                    <div className="flex items-start justify-between gap-2 mb-5">
-                      <h3 className="text-lg font-semibold text-card-foreground">Scheduled</h3>
-                      <div className="flex items-center gap-1 flex-wrap justify-end">
-                        {filterOptions.map((opt) => (
-                          <button
-                            key={opt.key}
-                            onClick={() => setScheduledFilter(opt.key)}
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                              scheduledFilter === opt.key
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-muted-foreground/60 hover:text-muted-foreground'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                  {/* Category bar */}
+                  <div className="border-t border-border pt-3">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Category</span>
+                    <div className="h-2.5 rounded-full overflow-hidden flex bg-muted mt-1">
+                      {categoryChartData.map((item) => (
+                        <Tooltip key={item.fullName}>
+                          <TooltipTrigger asChild>
+                            <div className="h-full transition-all duration-500 ease-out" style={{ flex: item.value, backgroundColor: item.color }} />
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs font-medium">{item.fullName}: {item.value}</p></TooltipContent>
+                        </Tooltip>
+                      ))}
                     </div>
-                    <div className="space-y-1">
-                      {scheduledFiltered.length === 0 ? (
-                        <p className="text-sm text-muted-foreground/60 pt-3 pb-2">No scheduled jobs for this period</p>
-                      ) : (
-                        scheduledFiltered.map((ticket) => (
-                          <Link
-                            key={ticket.id}
-                            href={`/tickets?id=${ticket.id}`}
-                            className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
-                          >
-                            <span className="flex-shrink-0 text-xs font-medium text-muted-foreground w-10">
-                              {ticket.scheduled_date ? formatDate(ticket.scheduled_date) : '—'}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-card-foreground truncate">
-                                {ticket.issue_description || 'No description'}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
-                            </div>
-                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                          </Link>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                      {categoryChartData.length > 0 ? (
+                        categoryChartData.map((item) => (
+                          <div key={item.fullName} className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                            <span className="text-[11px] text-muted-foreground">{item.fullName}</span>
+                            <span className="text-[11px] font-semibold text-card-foreground">{item.value}</span>
+                          </div>
                         ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No categories yet</span>
                       )}
                     </div>
                   </div>
-                )
-              })()}
+                </div>
+
+              {/* In Progress */}
+              <div className="bg-card rounded-xl border border-border p-4 row-start-2 col-start-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-sm font-semibold text-card-foreground">In Progress</h3>
+                    {(() => {
+                      const totalProgress = (stats?.awaitingContractor || 0) + (stats?.awaitingBooking || 0) + (stats?.scheduledJobs || 0) + (stats?.awaitingLandlord || 0)
+                      return totalProgress > 0 ? (
+                        <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">{totalProgress}</span>
+                      ) : null
+                    })()}
+                  </div>
+                  <div className="space-y-1">
+                    {[
+                      { key: 'contractor' as const, label: 'Awaiting Contractor', count: stats?.awaitingContractor || 0, icon: Clock, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
+                      { key: 'booking' as const, label: 'Awaiting Booking', count: stats?.awaitingBooking || 0, icon: Send, iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500' },
+                      { key: 'scheduled' as const, label: 'Scheduled Jobs', count: stats?.scheduledJobs || 0, icon: CalendarClock, iconBg: 'bg-cyan-500/10', iconColor: 'text-cyan-500' },
+                      { key: 'landlord' as const, label: 'Awaiting Landlord', count: stats?.awaitingLandlord || 0, icon: Hourglass, iconBg: 'bg-violet-500/10', iconColor: 'text-violet-500' },
+                    ].map((item) => (
+                      <Tooltip key={item.key}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => item.count > 0 ? showAwaitingTickets(item.key) : undefined}
+                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 text-left"
+                          >
+                            <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconBg}`}>
+                              <item.icon className={`h-3.5 w-3.5 ${item.iconColor}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
+                            </div>
+                            <span className={`text-lg font-bold tabular-nums ${item.count > 0 ? 'text-card-foreground' : 'text-muted-foreground/40'}`}>
+                              {item.count}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">{ACTION_DESCRIPTIONS[item.key]}</p></TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </div>
             </div>
 
-            {/* Bottom: Recent tickets — secondary context */}
-            <div className="bg-card/60 rounded-xl border border-border/50 flex flex-col">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 flex-shrink-0">
-                <h3 className="text-base font-semibold text-card-foreground">Recent tickets</h3>
+            {/* Bottom: Recent Tickets — full width */}
+            <div className="flex-1 min-h-0 bg-card rounded-xl border border-border flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
+                <h3 className="text-sm font-semibold text-card-foreground">Recent Tickets</h3>
                 <Link href="/tickets">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
@@ -856,9 +675,9 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="divide-y divide-border/30">
+              <div className="divide-y divide-border flex-1 overflow-y-auto">
                 {recentTickets.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground/50">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     No tickets found for this period
                   </div>
                 ) : (
@@ -866,20 +685,23 @@ export default function DashboardPage() {
                     <Link
                       key={ticket.id}
                       href={`/tickets?id=${ticket.id}`}
-                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/30 transition-colors"
+                      className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 transition-all duration-200"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-card-foreground/80 truncate">
+                        <p className="text-sm font-medium text-card-foreground truncate">
                           {ticket.issue_description || 'No description'}
                         </p>
-                        <p className="text-xs text-muted-foreground/50 truncate">{ticket.address}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {ticket.address}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2 ml-3 flex-shrink-0 opacity-70">
-                        {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
-                        <span className="text-xs text-muted-foreground/50 whitespace-nowrap">
+                      <div className="flex items-center gap-2 ml-3">
+                        {ticket.display_stage && (
+                          <StatusBadge status={ticket.display_stage} />
+                        )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDate(ticket.date_logged)}
                         </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground/30" />
                       </div>
                     </Link>
                   ))
@@ -939,26 +761,6 @@ export default function DashboardPage() {
             </div>
           </SheetContent>
         </Sheet>
-
-        {/* Simple Create Ticket Dialog */}
-        <Dialog open={simpleCreateOpen} onOpenChange={setSimpleCreateOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle>Create Ticket</DialogTitle>
-              <DialogDescription>Log a new maintenance ticket</DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto pt-2">
-              <TicketForm
-                onSuccess={() => {
-                  setSimpleCreateOpen(false)
-                  toast.success('Ticket created')
-                  fetchData()
-                }}
-                onCancel={() => setSimpleCreateOpen(false)}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* Create Ticket from Handoff Dialog */}
         <Dialog open={createTicketOpen} onOpenChange={(open) => {

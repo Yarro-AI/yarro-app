@@ -15,12 +15,20 @@ import {
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
-import { Building2, User, Phone, Mail, Wrench, Ticket } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -29,6 +37,7 @@ import type { Json } from '@/types/database'
 interface PropertyHub {
   property_id: string | null
   address: string | null
+  landlord_id: string | null
   landlord_name: string | null
   landlord_phone: string | null
   landlord_email: string | null
@@ -41,12 +50,17 @@ interface PropertyHub {
   recent_tickets: Json | null
 }
 
+interface LandlordOption {
+  id: string
+  full_name: string
+  phone: string | null
+  email: string | null
+}
+
 interface PropertyEditable {
   id: string
   address: string
-  landlord_name: string | null
-  landlord_phone: string | null
-  landlord_email: string | null
+  landlord_id: string | null
   auto_approve_limit: number | null
   access_instructions: string | null
   emergency_access_contact: string | null
@@ -77,9 +91,7 @@ interface TicketSummary {
 const defaultPropertyData: PropertyEditable = {
   id: '',
   address: '',
-  landlord_name: null,
-  landlord_phone: null,
-  landlord_email: null,
+  landlord_id: null,
   auto_approve_limit: null,
   access_instructions: null,
   emergency_access_contact: null,
@@ -95,6 +107,7 @@ export default function PropertiesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -105,9 +118,7 @@ export default function PropertiesPage() {
     return {
       id: p.property_id,
       address: p.address || '',
-      landlord_name: p.landlord_name,
-      landlord_phone: p.landlord_phone,
-      landlord_email: p.landlord_email,
+      landlord_id: p.landlord_id,
       auto_approve_limit: p.auto_approve_limit,
       access_instructions: p.access_instructions,
       emergency_access_contact: p.emergency_access_contact,
@@ -134,11 +145,11 @@ export default function PropertiesPage() {
     const existingLog = (current?._audit_log as unknown[] || [])
     const newLog = [...existingLog, auditEntry]
 
+    // Look up the selected landlord to sync denormalized fields
+    const selectedLl = landlordOptions.find((l) => l.id === data.landlord_id)
+
     const normalized = normalizeRecord('properties', {
       address: data.address,
-      landlord_name: data.landlord_name,
-      landlord_phone: data.landlord_phone,
-      landlord_email: data.landlord_email,
       auto_approve_limit: data.auto_approve_limit,
       access_instructions: data.access_instructions,
       emergency_access_contact: data.emergency_access_contact,
@@ -148,6 +159,10 @@ export default function PropertiesPage() {
       .from('c1_properties')
       .update({
         ...normalized,
+        landlord_id: data.landlord_id,
+        landlord_name: selectedLl?.full_name || null,
+        landlord_phone: selectedLl?.phone || null,
+        landlord_email: selectedLl?.email || null,
         _audit_log: newLog,
       })
       .eq('id', data.id)
@@ -155,7 +170,7 @@ export default function PropertiesPage() {
     if (error) throw error
     toast.success('Property updated')
     await fetchProperties()
-  }, [supabase])
+  }, [supabase, landlordOptions])
 
   const {
     isEditing,
@@ -183,11 +198,10 @@ export default function PropertiesPage() {
     }
     setValidationErrors({})
 
+    const selectedLl = landlordOptions.find((l) => l.id === data.landlord_id)
+
     const normalized = normalizeRecord('properties', {
       address: data.address,
-      landlord_name: data.landlord_name,
-      landlord_phone: data.landlord_phone,
-      landlord_email: data.landlord_email,
       auto_approve_limit: data.auto_approve_limit,
       access_instructions: data.access_instructions,
       emergency_access_contact: data.emergency_access_contact,
@@ -197,13 +211,17 @@ export default function PropertiesPage() {
       .from('c1_properties')
       .insert({
         ...normalized,
+        landlord_id: data.landlord_id,
+        landlord_name: selectedLl?.full_name || null,
+        landlord_phone: selectedLl?.phone || null,
+        landlord_email: selectedLl?.email || null,
         property_manager_id: propertyManager!.id,
       })
 
     if (error) throw error
     toast.success('Property added')
     await fetchProperties()
-  }, [supabase, propertyManager])
+  }, [supabase, propertyManager, landlordOptions])
 
   const {
     isCreating,
@@ -219,9 +237,20 @@ export default function PropertiesPage() {
     onCreate: handleCreate,
   })
 
+  const fetchLandlords = async () => {
+    const { data } = await supabase
+      .from('c1_landlords')
+      .select('id, full_name, phone, email')
+      .eq('property_manager_id', propertyManager!.id)
+      .order('full_name')
+
+    if (data) setLandlordOptions(data)
+  }
+
   useEffect(() => {
     if (!propertyManager) return
     fetchProperties()
+    fetchLandlords()
   }, [propertyManager])
 
   useEffect(() => {
@@ -254,7 +283,7 @@ export default function PropertiesPage() {
 
   const handleRowClick = (property: PropertyHub) => {
     if (property.property_id) {
-      router.push(`/properties?id=${property.property_id}`)
+      router.push(`/properties/${property.property_id}`)
     }
   }
 
@@ -404,48 +433,28 @@ export default function PropertiesPage() {
       </div>
 
       <DetailSection title="Landlord">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Name</label>
-            <Input
-              value={data.landlord_name || ''}
-              onChange={(e) => update('landlord_name', e.target.value || null)}
-              placeholder="John Smith"
-              className="h-9"
-            />
-          </div>
-          <DetailGrid columns={2}>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">
-                Phone <span className="text-destructive">*</span>
-              </label>
-              <Input
-                type="tel"
-                value={data.landlord_phone || ''}
-                onChange={(e) => update('landlord_phone', e.target.value || null)}
-                placeholder="07700 900123"
-                className={`h-9 ${validationErrors.landlord_phone ? 'border-destructive' : ''}`}
-              />
-              {validationErrors.landlord_phone ? (
-                <p className="text-xs text-destructive">{validationErrors.landlord_phone}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">UK mobile format</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Email</label>
-              <Input
-                type="email"
-                value={data.landlord_email || ''}
-                onChange={(e) => update('landlord_email', e.target.value || null)}
-                placeholder="landlord@email.com"
-                className={`h-9 ${validationErrors.landlord_email ? 'border-destructive' : ''}`}
-              />
-              {validationErrors.landlord_email && (
-                <p className="text-xs text-destructive">{validationErrors.landlord_email}</p>
-              )}
-            </div>
-          </DetailGrid>
+        <div className="space-y-1.5">
+          <label className="text-xs text-muted-foreground">Select Landlord</label>
+          <Select
+            value={data.landlord_id || 'none'}
+            onValueChange={(v) => update('landlord_id', v === 'none' ? null : v)}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Select landlord..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No landlord</SelectItem>
+              {landlordOptions.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Manage landlords from the{' '}
+            <Link href="/landlords" className="text-primary hover:underline">Landlords page</Link>
+          </p>
         </div>
       </DetailSection>
 
@@ -481,11 +490,11 @@ export default function PropertiesPage() {
       </DetailSection>
 
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">Access Instructions</label>
+        <label className="text-xs text-muted-foreground">Access Details</label>
         <Textarea
           value={data.access_instructions || ''}
           onChange={(e) => update('access_instructions', e.target.value || null)}
-          placeholder="Key safe code, gate access, etc."
+          placeholder="Gate code, key safe number, entry instructions, etc."
           rows={3}
           className="text-sm"
         />
@@ -506,7 +515,12 @@ export default function PropertiesPage() {
             Manage your property portfolio
           </p>
         </div>
-        <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
+        </div>
       </div>
 
       {/* Data Table */}
@@ -552,26 +566,37 @@ export default function PropertiesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Landlord - compact */}
+              {/* Landlord - compact, clickable link */}
               <DetailSection title="Landlord">
-                <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
-                  <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{selectedProperty.landlord_name || 'Not set'}</p>
-                    {selectedProperty.landlord_phone && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Phone className="h-3 w-3" />
-                        {formatPhoneDisplay(selectedProperty.landlord_phone)}
-                      </p>
-                    )}
-                    {selectedProperty.landlord_email && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {selectedProperty.landlord_email}
-                      </p>
-                    )}
+                {selectedProperty.landlord_id ? (
+                  <Link
+                    href={`/landlords/${selectedProperty.landlord_id}`}
+                    className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    onClick={handleCloseDrawer}
+                  >
+                    <Contact className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{selectedProperty.landlord_name || 'Not set'}</p>
+                      {selectedProperty.landlord_phone && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Phone className="h-3 w-3" />
+                          {formatPhoneDisplay(selectedProperty.landlord_phone)}
+                        </p>
+                      )}
+                      {selectedProperty.landlord_email && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {selectedProperty.landlord_email}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+                    <Contact className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <p className="text-sm text-muted-foreground">No landlord assigned</p>
                   </div>
-                </div>
+                )}
               </DetailSection>
 
               {/* Details - compact */}
@@ -635,7 +660,7 @@ export default function PropertiesPage() {
                     {getTenants(selectedProperty.tenants).map((tenant) => (
                       <Link
                         key={tenant.id}
-                        href={`/tenants?id=${tenant.id}`}
+                        href={`/tenants/${tenant.id}`}
                         className="flex items-center justify-between p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                         onClick={handleCloseDrawer}
                       >
@@ -665,7 +690,7 @@ export default function PropertiesPage() {
                     {getContractors(selectedProperty.contractors).map((contractor) => (
                       <Link
                         key={contractor.id}
-                        href={`/contractors?id=${contractor.id}`}
+                        href={`/contractors/${contractor.id}`}
                         className="flex items-center gap-2 p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                         onClick={handleCloseDrawer}
                       >

@@ -38,11 +38,13 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   MessageCircle,
+  Contact,
 } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 
 interface SidebarCounts {
   properties: number
+  landlords: number
   tenants: number
   contractors: number
 }
@@ -50,6 +52,7 @@ interface SidebarCounts {
 const coreNavItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, countKey: null },
   { href: '/properties', label: 'Properties', icon: Building2, countKey: 'properties' as const },
+  { href: '/landlords', label: 'Landlords', icon: Contact, countKey: 'landlords' as const },
   { href: '/tenants', label: 'Tenants', icon: Users, countKey: 'tenants' as const },
   { href: '/contractors', label: 'Contractors', icon: Wrench, countKey: 'contractors' as const },
 ]
@@ -76,7 +79,7 @@ export function Sidebar() {
     }
     return false
   })
-  const [counts, setCounts] = useState<SidebarCounts>({ properties: 0, tenants: 0, contractors: 0 })
+  const [counts, setCounts] = useState<SidebarCounts>({ properties: 0, landlords: 0, tenants: 0, contractors: 0 })
   const supabase = createClient()
 
   useEffect(() => {
@@ -94,14 +97,16 @@ export function Sidebar() {
   const fetchCounts = useCallback(async () => {
     if (!propertyManager) return
 
-    const [propsRes, tenantsRes, contractorsRes] = await Promise.all([
+    const [propsRes, landlordsRes, tenantsRes, contractorsRes] = await Promise.all([
       supabase.from('c1_properties').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
+      supabase.from('c1_landlords').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_tenants').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_contractors').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id).eq('active', true),
     ])
 
     setCounts({
       properties: propsRes.count || 0,
+      landlords: landlordsRes.count || 0,
       tenants: tenantsRes.count || 0,
       contractors: contractorsRes.count || 0,
     })

@@ -20,6 +20,7 @@ export type Database = {
           _import_batch_id: string | null
           _imported_at: string | null
           active: boolean
+          categories: string[]
           category: string
           contractor_email: string | null
           contractor_name: string
@@ -28,12 +29,14 @@ export type Database = {
           id: string
           property_ids: string[] | null
           property_manager_id: string | null
+          service_areas: string[] | null
         }
         Insert: {
           _audit_log?: Json | null
           _import_batch_id?: string | null
           _imported_at?: string | null
           active?: boolean
+          categories?: string[]
           category: string
           contractor_email?: string | null
           contractor_name: string
@@ -42,12 +45,14 @@ export type Database = {
           id?: string
           property_ids?: string[] | null
           property_manager_id?: string | null
+          service_areas?: string[] | null
         }
         Update: {
           _audit_log?: Json | null
           _import_batch_id?: string | null
           _imported_at?: string | null
           active?: boolean
+          categories?: string[]
           category?: string
           contractor_email?: string | null
           contractor_name?: string
@@ -56,6 +61,7 @@ export type Database = {
           id?: string
           property_ids?: string[] | null
           property_manager_id?: string | null
+          service_areas?: string[] | null
         }
         Relationships: [
           {
@@ -69,6 +75,8 @@ export type Database = {
       }
       c1_conversations: {
         Row: {
+          archived: boolean | null
+          archived_at: string | null
           caller_name: string | null
           caller_phone: string | null
           caller_role: string | null
@@ -88,6 +96,8 @@ export type Database = {
           verification_type: string | null
         }
         Insert: {
+          archived?: boolean | null
+          archived_at?: string | null
           caller_name?: string | null
           caller_phone?: string | null
           caller_role?: string | null
@@ -107,6 +117,8 @@ export type Database = {
           verification_type?: string | null
         }
         Update: {
+          archived?: boolean | null
+          archived_at?: string | null
           caller_name?: string | null
           caller_phone?: string | null
           caller_role?: string | null
@@ -152,6 +164,51 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "c1_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      c1_feedback: {
+        Row: {
+          category: string
+          context: string | null
+          created_at: string | null
+          id: string
+          message: string
+          property_manager_id: string
+          ticket_id: string | null
+        }
+        Insert: {
+          category?: string
+          context?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          property_manager_id: string
+          ticket_id?: string | null
+        }
+        Update: {
+          category?: string
+          context?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          property_manager_id?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_feedback_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_feedback_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tickets"
             referencedColumns: ["id"]
           },
         ]
@@ -226,10 +283,132 @@ export type Database = {
           ticket_status_at_receive?: string | null
           total_amount?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "c1_job_completions_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "c1_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_job_completions_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "c1_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_job_completions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "c1_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_job_completions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_properties_hub"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "c1_job_completions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      c1_landlords: {
+        Row: {
+          _audit_log: Json | null
+          _import_batch_id: string | null
+          _imported_at: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          property_manager_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          _audit_log?: Json | null
+          _import_batch_id?: string | null
+          _imported_at?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          property_manager_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          _audit_log?: Json | null
+          _import_batch_id?: string | null
+          _imported_at?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          property_manager_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_landlords_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      c1_ledger: {
+        Row: {
+          actor_role: string
+          created_at: string
+          data: Json | null
+          event_type: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          actor_role?: string
+          created_at?: string
+          data?: Json | null
+          event_type: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          actor_role?: string
+          created_at?: string
+          data?: Json | null
+          event_type?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_ledger_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       c1_messages: {
         Row: {
+          archived: boolean | null
+          archived_at: string | null
+          completion_pm_escalated_at: string | null
+          completion_reminder_sent_at: string | null
           contractors: Json | null
           created_at: string | null
           landlord: Json | null
@@ -240,6 +419,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived?: boolean | null
+          archived_at?: string | null
+          completion_pm_escalated_at?: string | null
+          completion_reminder_sent_at?: string | null
           contractors?: Json | null
           created_at?: string | null
           landlord?: Json | null
@@ -250,6 +433,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived?: boolean | null
+          archived_at?: string | null
+          completion_pm_escalated_at?: string | null
+          completion_reminder_sent_at?: string | null
           contractors?: Json | null
           created_at?: string | null
           landlord?: Json | null
@@ -259,7 +446,65 @@ export type Database = {
           ticket_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "c1_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: true
+            referencedRelation: "c1_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      c1_outbound_log: {
+        Row: {
+          body: string | null
+          content_variables: Json | null
+          id: string
+          message_type: string
+          recipient_phone: string
+          recipient_role: string
+          sent_at: string | null
+          status: string | null
+          template_sid: string | null
+          ticket_id: string | null
+          twilio_sid: string | null
+        }
+        Insert: {
+          body?: string | null
+          content_variables?: Json | null
+          id?: string
+          message_type: string
+          recipient_phone: string
+          recipient_role: string
+          sent_at?: string | null
+          status?: string | null
+          template_sid?: string | null
+          ticket_id?: string | null
+          twilio_sid?: string | null
+        }
+        Update: {
+          body?: string | null
+          content_variables?: Json | null
+          id?: string
+          message_type?: string
+          recipient_phone?: string
+          recipient_role?: string
+          sent_at?: string | null
+          status?: string | null
+          template_sid?: string | null
+          ticket_id?: string | null
+          twilio_sid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_outbound_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       c1_properties: {
         Row: {
@@ -269,11 +514,13 @@ export type Database = {
           access_instructions: string | null
           address: string
           auto_approve_limit: number | null
+          city: string | null
           contractor_mapping: Json | null
           created_at: string
           emergency_access_contact: string | null
           id: string
           landlord_email: string | null
+          landlord_id: string | null
           landlord_name: string | null
           landlord_phone: string | null
           property_manager_id: string | null
@@ -285,11 +532,13 @@ export type Database = {
           access_instructions?: string | null
           address: string
           auto_approve_limit?: number | null
+          city?: string | null
           contractor_mapping?: Json | null
           created_at?: string
           emergency_access_contact?: string | null
           id?: string
           landlord_email?: string | null
+          landlord_id?: string | null
           landlord_name?: string | null
           landlord_phone?: string | null
           property_manager_id?: string | null
@@ -301,21 +550,39 @@ export type Database = {
           access_instructions?: string | null
           address?: string
           auto_approve_limit?: number | null
+          city?: string | null
           contractor_mapping?: Json | null
           created_at?: string
           emergency_access_contact?: string | null
           id?: string
           landlord_email?: string | null
+          landlord_id?: string | null
           landlord_name?: string | null
           landlord_phone?: string | null
           property_manager_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "c1_properties_landlord_id_fkey"
+            columns: ["landlord_id"]
+            isOneToOne: false
+            referencedRelation: "c1_landlords"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_properties_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       c1_property_managers: {
         Row: {
           business_name: string
           completion_reminder_hours: number | null
+          completion_timeout_hours: number | null
           contractor_reminder_minutes: number | null
           contractor_timeout_minutes: number | null
           created_at: string
@@ -332,6 +599,7 @@ export type Database = {
         Insert: {
           business_name: string
           completion_reminder_hours?: number | null
+          completion_timeout_hours?: number | null
           contractor_reminder_minutes?: number | null
           contractor_timeout_minutes?: number | null
           created_at?: string
@@ -348,6 +616,7 @@ export type Database = {
         Update: {
           business_name?: string
           completion_reminder_hours?: number | null
+          completion_timeout_hours?: number | null
           contractor_reminder_minutes?: number | null
           contractor_timeout_minutes?: number | null
           created_at?: string
@@ -406,7 +675,29 @@ export type Database = {
           role_tag?: string | null
           verified_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "c1_tenants_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenants_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "c1_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenants_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_properties_hub"
+            referencedColumns: ["property_id"]
+          },
+        ]
       }
       c1_tickets: {
         Row: {
@@ -419,6 +710,7 @@ export type Database = {
           category: string | null
           confirmation_date: string | null
           contractor_id: string | null
+          contractor_ids: string[] | null
           contractor_quote: number | null
           conversation_id: string | null
           date_logged: string
@@ -431,6 +723,8 @@ export type Database = {
           issue_title: string | null
           job_stage: string | null
           landlord_approved_on: string | null
+          next_action: string | null
+          next_action_reason: string | null
           priority: string | null
           property_id: string | null
           property_manager_id: string | null
@@ -440,6 +734,7 @@ export type Database = {
           tenant_id: string | null
           updates_recipient: string | null
           verified_by: string | null
+          was_handoff: boolean | null
         }
         Insert: {
           _audit_log?: Json | null
@@ -451,6 +746,7 @@ export type Database = {
           category?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
+          contractor_ids?: string[] | null
           contractor_quote?: number | null
           conversation_id?: string | null
           date_logged?: string
@@ -463,6 +759,8 @@ export type Database = {
           issue_title?: string | null
           job_stage?: string | null
           landlord_approved_on?: string | null
+          next_action?: string | null
+          next_action_reason?: string | null
           priority?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -472,6 +770,7 @@ export type Database = {
           tenant_id?: string | null
           updates_recipient?: string | null
           verified_by?: string | null
+          was_handoff?: boolean | null
         }
         Update: {
           _audit_log?: Json | null
@@ -483,6 +782,7 @@ export type Database = {
           category?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
+          contractor_ids?: string[] | null
           contractor_quote?: number | null
           conversation_id?: string | null
           date_logged?: string
@@ -495,6 +795,8 @@ export type Database = {
           issue_title?: string | null
           job_stage?: string | null
           landlord_approved_on?: string | null
+          next_action?: string | null
+          next_action_reason?: string | null
           priority?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -504,8 +806,52 @@ export type Database = {
           tenant_id?: string | null
           updates_recipient?: string | null
           verified_by?: string | null
+          was_handoff?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "c1_tickets_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "c1_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "c1_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "c1_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_properties_hub"
+            referencedColumns: ["property_id"]
+          },
+          {
+            foreignKeyName: "tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -517,6 +863,7 @@ export type Database = {
           contractors: Json | null
           emergency_access_contact: string | null
           landlord_email: string | null
+          landlord_id: string | null
           landlord_name: string | null
           landlord_phone: string | null
           open_tickets: Json | null
@@ -525,56 +872,28 @@ export type Database = {
           recent_tickets: Json | null
           tenants: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "c1_properties_landlord_id_fkey"
+            columns: ["landlord_id"]
+            isOneToOne: false
+            referencedRelation: "c1_landlords"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_properties_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
-      c1_ticket_context: {
-        Args: { ticket_uuid: string }
-        Returns: {
-          access: string
-          access_granted: boolean
-          access_instructions: string
-          auto_approve_limit: number
-          availability: string
-          caller_name: string
-          caller_phone: string
-          caller_role: string
-          caller_tag: string
-          category: string
-          contractor_mapping: Json
-          conversation_id: string
-          date_logged: string
-          emergency_access_contact: string
-          handoff: boolean
-          has_images: boolean
-          is_matched_tenant: boolean
-          issue_description: string
-          job_stage: string
-          label: string
-          landlord_email: string
-          landlord_name: string
-          landlord_phone: string
-          manager_email: string
-          manager_name: string
-          manager_phone: string
-          priority: string
-          property_address: string
-          property_id: string
-          property_manager_id: string
-          recipient: Json
-          reporter_role: string
-          tenant_contact: Json
-          tenant_email: string
-          tenant_name: string
-          tenant_phone: string
-          tenant_role_tag: string
-          tenant_verified_by: string
-          ticket_id: string
-          ticket_status: string
-          update_contact: Json
-          updates_recipient: string
-        }[]
+      [key: string]: {
+        Args: Record<string, unknown>
+        Returns: unknown
       }
     }
     Enums: {
@@ -668,3 +987,43 @@ export type TablesUpdate<
       ? U
       : never
     : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

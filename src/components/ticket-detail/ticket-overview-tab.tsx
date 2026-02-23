@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import { formatCurrency, getContractors, getRecipient } from '@/hooks/use-ticket-detail'
+import { SlaBadge } from '@/components/sla-badge'
+import { SLA_WINDOWS } from '@/lib/constants'
 
 interface TicketOverviewTabProps {
   context: TicketContext
@@ -81,6 +83,28 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
         </p>
       </div>
 
+      {/* SLA */}
+      {basic.sla_due_at && (
+        <div className="flex items-center gap-3 px-1">
+          <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">SLA</p>
+          <SlaBadge
+            slaDueAt={basic.sla_due_at}
+            resolvedAt={basic.resolved_at}
+            priority={basic.priority}
+            dateLogged={basic.date_logged}
+            archived={basic.archived}
+            ticketStatus={basic.status}
+          />
+          {basic.priority && SLA_WINDOWS[basic.priority] && (
+            <span className="text-xs text-muted-foreground">
+              ({basic.priority} — {SLA_WINDOWS[basic.priority] < 1440
+                ? `${SLA_WINDOWS[basic.priority] / 60}h window`
+                : `${SLA_WINDOWS[basic.priority] / 1440}d window`})
+            </span>
+          )}
+        </div>
+      )}
+
       <DashedLine />
 
       {/* Two-column layout: Left = known details, Right = progressing/financial */}
@@ -127,7 +151,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
         )}
 
         <Link
-          href={`/properties?id=${context.property_id}`}
+          href={`/properties/${context.property_id}`}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
         >
           <div className="h-7 w-7 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
@@ -141,7 +165,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
 
         {basic.contractor_name && basic.contractor_id && (
           <Link
-            href={`/contractors?id=${basic.contractor_id}`}
+            href={`/contractors/${basic.contractor_id}`}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
           >
             <div className="h-7 w-7 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
@@ -156,7 +180,7 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
 
         {context.landlord_name && (
           <Link
-            href={`/properties?id=${context.property_id}`}
+            href={`/properties/${context.property_id}`}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
           >
             <div className="h-7 w-7 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">

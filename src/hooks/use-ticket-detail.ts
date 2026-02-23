@@ -79,6 +79,10 @@ export interface TicketBasic {
   conversation_id: string | null
   archived: boolean | null
   images: string[] | null
+  next_action: string | null
+  next_action_reason: string | null
+  sla_due_at: string | null
+  resolved_at: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -377,7 +381,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
             property_id, tenant_id, contractor_id, conversation_id,
-            archived, images,
+            archived, images, next_action, next_action_reason, sla_due_at, resolved_at,
             c1_properties(address),
             c1_tenants(full_name),
             c1_contractors(contractor_name)
@@ -513,24 +517,25 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       })()
     : null
 
-  // Derive display stage — job progress takes priority over stale message stage
+  // Display stage from next_action_reason (single source of truth, computed by DB trigger)
   const displayStage = (() => {
     if (!basic) return null
-    const isClosed = basic.status?.toLowerCase() === 'closed'
-    if (isClosed) return 'Completed'
-    if (basic.handoff) return 'handoff'
-    // Job progress checked FIRST (fixes auto-approve showing "Awaiting Landlord")
-    if (hasCompletion && completion && !completion.completed) return 'Not Completed'
-    const jobStage = (basic.job_stage || '').toLowerCase()
-    if (jobStage === 'booked' || jobStage === 'scheduled' || basic.scheduled_date) return 'Scheduled'
-    if (jobStage === 'sent') return 'Awaiting Booking'
-    if (hasCompletion) return 'Completed'
-    // Message stage (only relevant when job hasn't progressed past this point)
-    const msgStage = (messages?.stage || '').toLowerCase()
-    if (msgStage === 'awaiting_manager') return 'Awaiting Manager'
-    if (msgStage === 'awaiting_landlord') return 'Awaiting Landlord'
-    if (msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') return 'Awaiting Contractor'
-    return 'Created'
+    const reasonMap: Record<string, string> = {
+      handoff_review: 'Handoff',
+      manager_approval: 'Awaiting Manager',
+      no_contractors: 'No Contractors',
+      landlord_declined: 'Landlord Declined',
+      landlord_no_response: 'Landlord No Response',
+      job_not_completed: 'Not Completed',
+      awaiting_contractor: 'Awaiting Contractor',
+      awaiting_landlord: 'Awaiting Landlord',
+      awaiting_booking: 'Awaiting Booking',
+      scheduled: 'Scheduled',
+      completed: 'Completed',
+      dismissed: 'Dismissed',
+      new: 'Created',
+    }
+    return reasonMap[basic.next_action_reason || ''] || reasonMap[basic.next_action || ''] || 'Created'
   })()
 
   return {

@@ -32,7 +32,7 @@ async function sendReminder(
       "2": reminder.property_address || "",
       "3": reminder.access_text || "",
       "4": shortRef(reminder.ticket_id),
-      "5": shortRef(reminder.ticket_id),
+      "5": reminder.ticket_id,
     },
   });
 

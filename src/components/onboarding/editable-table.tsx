@@ -10,14 +10,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Combobox } from '@/components/ui/combobox'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Check, ChevronDown } from 'lucide-react'
 
 export interface ColumnDef {
   key: string
   label: string
   required?: boolean
-  type?: 'text' | 'select' | 'combobox' | 'number'
+  type?: 'text' | 'select' | 'combobox' | 'number' | 'multiselect'
   options?: { value: string; label: string }[]
   placeholder?: string
   width?: string
@@ -43,7 +48,7 @@ export function EditableTable({ columns, rows, onChange, minRows = 1, highlightE
   const rowNeedsAttention = (row: Record<string, string>) => {
     if (!highlightEmptySelections) return false
     return columns.some(col =>
-      (col.type === 'combobox' || col.type === 'select') &&
+      (col.type === 'combobox' || col.type === 'select' || col.type === 'multiselect') &&
       col.options &&
       col.options.length > 0 &&
       !row[col.key]
@@ -134,7 +139,51 @@ export function EditableTable({ columns, rows, onChange, minRows = 1, highlightE
               <tr key={rowIdx} className={`border-b last:border-b-0 ${rowNeedsAttention(row) ? 'bg-amber-50 dark:bg-amber-950/30' : ''}`}>
                 {columns.map((col, colIdx) => (
                   <td key={col.key} className="px-2 py-1.5">
-                    {col.type === 'combobox' && col.options ? (
+                    {col.type === 'multiselect' && col.options ? (() => {
+                      const selected = row[col.key] ? row[col.key].split(',').filter(Boolean) : []
+                      return (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex items-center justify-between w-full h-8 px-2 text-sm rounded bg-transparent hover:bg-muted/50 transition-colors text-left"
+                            >
+                              <span className={selected.length > 0 ? 'truncate' : 'text-muted-foreground truncate'}>
+                                {selected.length > 0
+                                  ? selected.map(v => col.options!.find(o => o.value === v)?.label || v).join(', ')
+                                  : col.placeholder || 'Select...'}
+                              </span>
+                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 ml-1" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-1.5 max-h-64 overflow-y-auto" align="start">
+                            {col.options.map((opt) => {
+                              const isSelected = selected.includes(opt.value)
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => {
+                                    const newSelected = isSelected
+                                      ? selected.filter(v => v !== opt.value)
+                                      : [...selected, opt.value]
+                                    updateCell(rowIdx, col.key, newSelected.join(','))
+                                  }}
+                                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left"
+                                >
+                                  <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                                    isSelected ? 'bg-primary border-primary' : 'border-input'
+                                  }`}>
+                                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                  </div>
+                                  <span>{opt.label}</span>
+                                </button>
+                              )
+                            })}
+                          </PopoverContent>
+                        </Popover>
+                      )
+                    })() : col.type === 'combobox' && col.options ? (
                       <Combobox
                         options={col.options}
                         value={row[col.key] || ''}

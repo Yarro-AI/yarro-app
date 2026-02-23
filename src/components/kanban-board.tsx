@@ -19,7 +19,6 @@ interface KanbanTicket {
   issue_description: string | null
   status: string
   job_stage: string | null
-  message_stage?: string | null
   category: string | null
   priority: string | null
   date_logged: string
@@ -27,6 +26,8 @@ interface KanbanTicket {
   final_amount?: number | null
   address?: string
   handoff?: boolean
+  next_action?: string | null
+  next_action_reason?: string | null
 }
 
 interface KanbanBoardProps {
@@ -54,48 +55,46 @@ export function KanbanBoard({ tickets, onTicketClick, onHandoffReview }: KanbanB
     }
 
     tickets.forEach((ticket) => {
-      const jobStage = (ticket.job_stage || '').toLowerCase()
-      const msgStage = (ticket.message_stage || '').toLowerCase()
-      const status = (ticket.status || '').toLowerCase()
+      const reason = ticket.next_action_reason || ''
 
       // Done column
-      if (status === 'closed' || jobStage === 'completed' || jobStage === 'closed') {
+      if (reason === 'completed' || reason === 'dismissed') {
         result.done.push({ ...ticket, column: 'done' })
         return
       }
 
       // Scheduled column
-      if (jobStage === 'booked' || jobStage === 'scheduled' || ticket.scheduled_date) {
+      if (reason === 'scheduled') {
         result.scheduled.push({ ...ticket, column: 'scheduled' })
         return
       }
 
-      // Awaiting column - sub-grouped
-      if (jobStage === 'sent' || msgStage === 'waiting_contractor' || msgStage === 'contractor_notified') {
+      // Awaiting column - sub-grouped by next_action_reason
+      if (reason === 'awaiting_contractor' || reason === 'manager_approval' || reason === 'no_contractors') {
         const waitDays = differenceInDays(new Date(), new Date(ticket.date_logged))
         result.awaiting.push({ ...ticket, column: 'awaiting', subgroup: 'quote', waitDays })
         return
       }
 
-      if (msgStage === 'awaiting_landlord' || jobStage === 'pm_approved') {
+      if (reason === 'awaiting_landlord' || reason === 'landlord_declined' || reason === 'landlord_no_response') {
         const waitDays = differenceInDays(new Date(), new Date(ticket.date_logged))
         result.awaiting.push({ ...ticket, column: 'awaiting', subgroup: 'landlord', waitDays })
         return
       }
 
-      if (jobStage === 'll_approved') {
+      if (reason === 'awaiting_booking') {
         const waitDays = differenceInDays(new Date(), new Date(ticket.date_logged))
         result.awaiting.push({ ...ticket, column: 'awaiting', subgroup: 'booking', waitDays })
         return
       }
 
-      if (jobStage === 'quote_received' || msgStage === 'awaiting_manager') {
+      if (reason === 'job_not_completed') {
         const waitDays = differenceInDays(new Date(), new Date(ticket.date_logged))
         result.awaiting.push({ ...ticket, column: 'awaiting', subgroup: 'quote', waitDays })
         return
       }
 
-      // Open column (default)
+      // Open column (handoff_review, new, or anything else)
       result.open.push({ ...ticket, column: 'open' })
     })
 

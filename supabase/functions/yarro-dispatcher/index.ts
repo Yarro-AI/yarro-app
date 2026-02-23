@@ -186,7 +186,7 @@ async function handleLandlordSms(
       "2": prepData.contractor_name || "",
       "3": prepData.total_cost || "",
       "4": prepData.issue || "",
-      "5": prepData.quote_notes || "",
+      "5": prepData.quote_notes || "N/A",
     },
   });
 
