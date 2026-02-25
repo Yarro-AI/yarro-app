@@ -16,7 +16,6 @@ import { TicketOverviewTab } from './ticket-overview-tab'
 import { TicketConversationTab } from './ticket-conversation-tab'
 import { TicketDispatchTab } from './ticket-dispatch-tab'
 import { TicketCompletionTab } from './ticket-completion-tab'
-import { TicketActivityTab } from './ticket-activity-tab'
 
 interface TicketDetailModalProps {
   ticketId: string | null
@@ -197,14 +196,6 @@ export function TicketDetailModal({
                 {(hasDispatch || hasOutboundLog || ledger.length > 0) && (
                   <TabsContent value="dispatch" className="mt-4 flex-1 min-h-0 overflow-y-auto">
                     <TicketDispatchTab messages={messages} outboundLog={outboundLog} ticketId={ticketId || undefined} onRedispatched={onClose} />
-                    {(() => {
-                      const keyEvents = ledger.filter(e => e.event_type === 'ISSUE_REPORTED' || e.event_type === 'PRIORITY_CLASSIFIED')
-                      return keyEvents.length > 0 ? (
-                        <div className="mt-6 pt-4 border-t border-border/40">
-                          <TicketActivityTab ledger={keyEvents} />
-                        </div>
-                      ) : null
-                    })()}
                   </TabsContent>
                 )}
 
