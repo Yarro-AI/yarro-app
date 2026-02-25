@@ -123,6 +123,18 @@ const ACTION_CTA: Record<string, string> = {
   'Contractor unresponsive': 'Redispatch',
 }
 
+// Color-coded category badges per next_action_reason
+const REASON_BADGE: Record<string, { label: string; className: string }> = {
+  handoff_review:       { label: 'Handoff',           className: 'text-red-700 bg-red-500/15 border-red-500/25 dark:text-red-400' },
+  no_contractors:       { label: 'No contractors',    className: 'text-amber-700 bg-amber-500/15 border-amber-500/25 dark:text-amber-400' },
+  job_not_completed:    { label: 'Not completed',     className: 'text-purple-700 bg-purple-500/15 border-purple-500/25 dark:text-purple-400' },
+  landlord_declined:    { label: 'Landlord declined', className: 'text-orange-700 bg-orange-500/15 border-orange-500/25 dark:text-orange-400' },
+  landlord_no_response: { label: 'Landlord silent',   className: 'text-orange-700 bg-orange-500/15 border-orange-500/25 dark:text-orange-400' },
+  manager_approval:     { label: 'Needs approval',    className: 'text-blue-700 bg-blue-500/15 border-blue-500/25 dark:text-blue-400' },
+  awaiting_contractor:  { label: 'Awaiting reply',    className: 'text-sky-700 bg-sky-500/15 border-sky-500/25 dark:text-sky-400' },
+  awaiting_booking:     { label: 'Awaiting booking',  className: 'text-teal-700 bg-teal-500/15 border-teal-500/25 dark:text-teal-400' },
+}
+
 function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
   // Only actionable items — exclude FOLLOW_UP (awaiting contractor, booking, scheduled)
   const actionable = todoItems.filter(i => i.action_type !== 'FOLLOW_UP')
@@ -175,17 +187,17 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
                     {item.priority && <StatusBadge status={item.priority} size="sm" />}
-                    {item.sla_breached && (
-                      <span className="text-[9px] font-semibold text-red-600 bg-red-500/10 border border-red-500/20 rounded-full px-1.5 py-px leading-none flex-shrink-0">
-                        SLA
-                      </span>
-                    )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-medium text-card-foreground bg-muted rounded-full px-2.5 py-0.5 leading-tight flex-shrink-0">
-                      {item.action_context}
-                    </span>
+                    {(() => {
+                      const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, className: 'text-muted-foreground bg-muted border-border/60' }
+                      return (
+                        <span className={`text-xs font-semibold rounded-full px-2.5 py-0.5 leading-tight flex-shrink-0 border ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
                     <span className="text-[11px] text-muted-foreground/60">{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
                   </div>
                 </div>
@@ -760,29 +772,29 @@ export default function DashboardPage() {
                 </Button>
 
                 <div className={`flex-1 overflow-hidden grid gap-4 ${showHandoffConvo ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {/* Left: Conversation Context (collapsible) */}
+                  {/* Left: Conversation Context (collapsible) — mirrors ticket-conversation-tab exactly */}
                   {showHandoffConvo && (
-                    <div className="flex flex-col min-h-0 border rounded-lg p-3">
-                      {/* Caller info bar — matches ticket-conversation-tab design */}
-                      <div className="flex items-center gap-4 pb-2 mb-2 border-b flex-shrink-0">
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-mono text-xs">{selectedHandoff.phone || 'Unknown'}</span>
+                    <div className="flex flex-col min-h-0">
+                      {/* Caller info bar */}
+                      <div className="flex items-center gap-4 pb-3 mb-3 border-b flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-mono text-sm">{selectedHandoff.phone || 'Unknown'}</span>
                         </div>
                         {selectedHandoff.caller_name && (
-                          <div className="flex items-center gap-1.5">
-                            <User className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm">
                               {selectedHandoff.caller_name}
                               {selectedHandoff.caller_role && (
-                                <span className="text-muted-foreground text-[10px] ml-1">({selectedHandoff.caller_role})</span>
+                                <span className="text-muted-foreground text-xs ml-1">({selectedHandoff.caller_role})</span>
                               )}
                             </span>
                           </div>
                         )}
                       </div>
-                      {/* Chat bubbles */}
-                      <div className="flex-1 min-h-0 overflow-y-auto bg-muted/30 rounded-xl p-3">
+                      {/* Chat bubbles — same bg-muted/30 rounded-xl as conversation tab */}
+                      <div className="flex-1 min-h-0 overflow-y-auto bg-muted/30 rounded-xl p-4">
                         <ChatHistory
                           compact
                           messages={(() => {
@@ -797,12 +809,6 @@ export default function DashboardPage() {
                               }))
                           })()}
                         />
-                      </div>
-                      {/* Handoff reason hint */}
-                      <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 flex-shrink-0">
-                        <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                          <strong>Handoff:</strong> {selectedHandoff.stage === 'handoff' ? 'AI determined this needs human review' : `Stage: ${selectedHandoff.stage || 'unknown'}`}
-                        </p>
                       </div>
                     </div>
                   )}
