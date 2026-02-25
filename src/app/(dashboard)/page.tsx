@@ -410,6 +410,16 @@ export default function DashboardPage() {
       filtered = reason ? allTickets.filter((t) => t.next_action_reason === reason) : []
     }
 
+    // Sort scheduled drill-down by appointment date ASC, nulls last
+    if (type === 'scheduled') {
+      filtered = [...filtered].sort((a, b) => {
+        if (!a.scheduled_date && !b.scheduled_date) return 0
+        if (!a.scheduled_date) return 1
+        if (!b.scheduled_date) return -1
+        return new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
+      })
+    }
+
     setAwaitingTickets(filtered)
     setAwaitingType(type)
   }
@@ -683,6 +693,34 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Dev-only acceptance test debug panel */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="p-4 bg-muted/40 border border-border rounded-xl text-xs font-mono flex-shrink-0">
+              <p className="font-semibold text-card-foreground mb-2">Debug — acceptance test counts</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground font-semibold">todoItems (RPC) — {todoItems.length}</p>
+                  {(['URGENT', 'HIGH', 'NORMAL', 'LOW'] as const).map(b => (
+                    <p key={b}>&nbsp;&nbsp;{b}: {todoItems.filter(i => i.priority_bucket === b).length}</p>
+                  ))}
+                  <p className="text-muted-foreground mt-1">buckets present: {[...new Set(todoItems.map(i => i.priority_bucket))].join(', ') || '—'}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground font-semibold">allTickets (query) — {allTickets.length}</p>
+                  <p className="text-muted-foreground mt-1">next_action</p>
+                  {(['needs_attention', 'assign_contractor', 'follow_up'] as const).map(a => (
+                    <p key={a}>&nbsp;&nbsp;{a}: {allTickets.filter(t => t.next_action === a).length}</p>
+                  ))}
+                  <p className="text-muted-foreground mt-1">next_action_reason</p>
+                  {(['awaiting_contractor', 'awaiting_booking', 'scheduled', 'awaiting_landlord'] as const).map(r => (
+                    <p key={r}>&nbsp;&nbsp;{r}: {allTickets.filter(t => t.next_action_reason === r).length}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Awaiting Tickets Sheet */}
@@ -709,8 +747,8 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-card-foreground leading-snug">{ticket.issue_description || 'No description'}</p>
-                          <p className="text-sm text-muted-foreground mt-1.5 truncate">{ticket.address}</p>
+                          <p className="font-medium text-card-foreground leading-snug">{ticket.issue_description || '(No description)'}</p>
+                          <p className="text-sm text-muted-foreground mt-1.5 truncate">{ticket.address || 'Unknown property'}</p>
                         </div>
                         <span className="text-xs text-muted-foreground/70 whitespace-nowrap flex-shrink-0">
                           {formatDate(ticket.date_logged)}
