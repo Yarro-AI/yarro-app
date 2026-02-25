@@ -233,7 +233,7 @@ export default function PropertyDetailPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header — aligned with sidebar */}
-      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4 border-b">
+      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4">
         <button onClick={() => router.push('/properties')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -305,7 +305,7 @@ export default function PropertyDetailPage() {
           ) : (
             <>
               {/* Property fields */}
-              <div className="grid grid-cols-3 gap-x-10 gap-y-6">
+              <div className="grid grid-cols-2 gap-x-10 gap-y-6">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Auto-Approve Limit</p>
                   <p className="text-sm">{formatCurrency(property.auto_approve_limit)}</p>
@@ -317,23 +317,18 @@ export default function PropertyDetailPage() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Landlord</p>
                   {property.landlord_id ? (
-                    <div>
-                      <Link href={`/landlords/${property.landlord_id}`} className="text-sm font-medium hover:underline">{property.landlord_name}</Link>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {[property.landlord_phone && formatPhoneDisplay(property.landlord_phone), property.landlord_email].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
+                    <Link href={`/landlords/${property.landlord_id}`} className="text-sm font-medium hover:underline">{property.landlord_name}</Link>
                   ) : (
                     <p className="text-sm text-muted-foreground">Not assigned</p>
                   )}
                 </div>
+                {property.access_instructions && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Access Instructions</p>
+                    <p className="text-sm">{property.access_instructions}</p>
+                  </div>
+                )}
               </div>
-              {property.access_instructions && (
-                <div className="mt-6">
-                  <p className="text-xs text-muted-foreground mb-1">Access Instructions</p>
-                  <p className="text-sm">{property.access_instructions}</p>
-                </div>
-              )}
             </>
           )}
 

@@ -148,7 +148,7 @@ export default function ContractorDetailPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header — aligned with sidebar */}
-      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4 border-b">
+      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4">
         <button onClick={() => router.push('/contractors')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
           <ArrowLeft className="h-4 w-4" />
         </button>

@@ -496,7 +496,7 @@ export default function TicketsPage() {
   return (
     <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between pb-4 mb-3 border-b">
+      <div className="flex-shrink-0 flex items-center justify-between mb-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
             <Ticket className="h-5 w-5" />

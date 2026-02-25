@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, ReactNode } from 'react'
+import { useState, useMemo, useEffect, ReactNode } from 'react'
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react'
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Eye, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type Column<T> = {
@@ -57,6 +57,10 @@ export function DataTable<T>({
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [navigatingId, setNavigatingId] = useState<string | null>(null)
+
+  // Reset navigating state when data changes (came back to page)
+  useEffect(() => { setNavigatingId(null) }, [data])
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -196,38 +200,53 @@ export function DataTable<T>({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((row) => (
-                <TableRow
-                  key={getRowId(row)}
-                  className={cn(
-                    'group',
-                    onRowClick && 'cursor-pointer hover:bg-muted/40',
-                    getRowClassName?.(row)
-                  )}
-                  onClick={() => onRowClick?.(row)}
-                >
-                  {columns.map((col) => (
-                    <TableCell key={col.key} className="py-3">
-                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
-                    </TableCell>
-                  ))}
-                  {onViewClick && (
-                    <TableCell className="py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onViewClick(row)
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
+              filteredData.map((row) => {
+                const rowId = getRowId(row)
+                const isNavigating = navigatingId === rowId
+                return (
+                  <TableRow
+                    key={rowId}
+                    className={cn(
+                      'group transition-colors',
+                      onRowClick && 'cursor-pointer hover:bg-muted/40 active:bg-muted/60',
+                      isNavigating && 'bg-muted/40',
+                      getRowClassName?.(row)
+                    )}
+                    onClick={() => {
+                      if (onRowClick) {
+                        setNavigatingId(rowId)
+                        onRowClick(row)
+                      }
+                    }}
+                  >
+                    {columns.map((col) => (
+                      <TableCell key={col.key} className="py-3">
+                        {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
+                      </TableCell>
+                    ))}
+                    {onViewClick && (
+                      <TableCell className="py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onViewClick(row)
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                    {isNavigating && (
+                      <TableCell className="py-3 w-8">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>
