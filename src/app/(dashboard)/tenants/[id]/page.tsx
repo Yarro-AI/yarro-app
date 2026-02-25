@@ -171,41 +171,39 @@ export default function TenantDetailPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 px-10 pt-8 pb-5">
-        <button onClick={() => router.push('/tenants')} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-3.5 w-3.5" /> Tenants
+      {/* Header — aligned with sidebar */}
+      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4 border-b">
+        <button onClick={() => router.push('/tenants')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+          <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="flex items-end justify-between mt-4">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight">{tenant.full_name || 'Unknown Tenant'}</h1>
-            <p className="text-sm text-muted-foreground mt-1.5">
-              {[
-                ((tenant.role_tag || 'tenant').replace(/_/g, ' ')).replace(/\b\w/g, (c) => c.toUpperCase()),
-                property?.address,
-                tenant.phone && formatPhoneDisplay(tenant.phone),
-              ].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-6">
-            {isEditing ? (
-              <>
-                <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}><X className="h-4 w-4 mr-1" /> Cancel</Button>
-                <Button size="sm" onClick={saveChanges} disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save</Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={startEditing}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
-                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialogOpen(true)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
-              </>
-            )}
-          </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold tracking-tight truncate">{tenant.full_name || 'Unknown Tenant'}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {[
+              ((tenant.role_tag || 'tenant').replace(/_/g, ' ')).replace(/\b\w/g, (c) => c.toUpperCase()),
+              property?.address,
+              tenant.phone && formatPhoneDisplay(tenant.phone),
+            ].filter(Boolean).join(' · ')}
+          </p>
         </div>
-        {editError && <div className="mt-3 p-3 bg-destructive/10 text-destructive text-sm rounded-lg">{editError}</div>}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isEditing ? (
+            <>
+              <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}><X className="h-4 w-4 mr-1" /> Cancel</Button>
+              <Button size="sm" onClick={saveChanges} disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={startEditing}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialogOpen(true)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+            </>
+          )}
+        </div>
       </div>
+      {editError && <div className="px-8 py-2 bg-destructive/10 text-destructive text-sm">{editError}</div>}
 
       {/* Two-column content */}
-      <div className="flex-1 min-h-0 flex border-t">
+      <div className="flex-1 min-h-0 flex">
         {/* Left: Details */}
         <div className="flex-1 overflow-y-auto px-10 py-8">
           {isEditing && editedData ? (
