@@ -13,17 +13,14 @@ import {
   Phone,
   User,
   Search,
-  Menu,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
   Sheet,
-  SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Sidebar } from '@/components/sidebar'
 import {
   Dialog,
   DialogContent,
@@ -479,18 +476,8 @@ export default function DashboardPage() {
     <div className="h-full flex flex-col overflow-hidden">
         {/* Header bar */}
         <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 gap-4">
-          {/* LEFT: hamburger (mobile only) + search */}
+          {/* LEFT: search */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 flex-shrink-0">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64 overflow-y-auto bg-card">
-                <Sidebar />
-              </SheetContent>
-            </Sheet>
             <div className="relative w-full max-w-72 min-w-0">
               <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
                 <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />

@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
+import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { Menu } from 'lucide-react'
 import { usePM } from '@/contexts/pm-context'
 import { DateRangeProvider } from '@/contexts/date-range-context'
 import { createClient } from '@/lib/supabase/client'
@@ -95,13 +98,28 @@ export default function DashboardLayout({
       <div className="hidden lg:flex">
         <Sidebar />
       </div>
-      <main className="flex-1 overflow-auto">
-        <DateRangeProvider>
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
-        </DateRangeProvider>
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Mobile-only hamburger bar — hidden on lg+ where docked sidebar is visible */}
+        <div className="lg:hidden flex items-center px-3 h-12 border-b border-border/40 flex-shrink-0 bg-background">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-64 overflow-y-auto bg-card">
+              <Sidebar />
+            </SheetContent>
+          </Sheet>
+        </div>
+        <main className="flex-1 overflow-auto">
+          <DateRangeProvider>
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+          </DateRangeProvider>
+        </main>
+      </div>
     </div>
   )
 }
