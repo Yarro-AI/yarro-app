@@ -236,7 +236,7 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
               <p className="text-sm text-muted-foreground">No items in this priority</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1">
+            <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
               {visible.map(item => {
                 const isEmergency = item.priority === 'Emergency'
                 const isHandoff = item.action_type === 'NEEDS_ATTENTION'
@@ -247,38 +247,31 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
                   <Link
                     key={item.id}
                     href={`/tickets?id=${item.ticket_id}`}
-                    className={`flex items-start gap-3 py-3 px-3 rounded-xl transition-all min-w-0 border ${
+                    className={`flex items-start gap-2 py-2.5 px-2 -mx-2 rounded-lg transition-colors min-w-0 ${
                       isEmergency
-                        ? 'bg-red-500/8 dark:bg-red-500/10 border-red-500/30 hover:bg-red-500/15 hover:border-red-500/50'
-                        : isHandoff
-                          ? 'bg-amber-500/5 dark:bg-amber-500/8 border-amber-500/20 hover:bg-amber-500/10 hover:border-amber-500/40'
-                          : 'bg-transparent border-border/40 hover:bg-muted/30 hover:border-border/60'
+                        ? 'bg-red-500/8 dark:bg-red-500/10 hover:bg-red-500/15'
+                        : 'hover:bg-muted/30'
                     }`}
                   >
-                    {/* Action type icon */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 ${
-                      isEmergency ? 'bg-red-500/15' : actionConfig.bg
-                    }`}>
-                      <ActionIcon className={`h-4 w-4 ${isEmergency ? 'text-red-500' : actionConfig.color}`} />
-                    </div>
+                    {/* Left accent bar */}
+                    <div className={`w-1 rounded-full flex-shrink-0 self-stretch ${
+                      isEmergency ? 'bg-red-500' : isHandoff ? 'bg-amber-400' : BUCKET_STYLE[item.priority_bucket].dot
+                    }`} />
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className={`text-sm font-medium truncate ${
-                          isEmergency ? 'text-red-700 dark:text-red-300' : 'text-card-foreground'
-                        }`}>
-                          {item.property_label}
-                        </p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
                         {isEmergency && (
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 dark:text-red-400 bg-red-500/15 rounded px-1.5 py-0.5 leading-none flex-shrink-0">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/15 rounded px-1 py-px leading-none flex-shrink-0">
                             Emergency
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                      <div className="flex items-center gap-1.5 mt-1 min-w-0">
-                        <span className={`text-xs font-semibold truncate ${
+                      <p className="text-xs text-muted-foreground truncate">{item.issue_summary}</p>
+                      <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                        <ActionIcon className={`h-3 w-3 flex-shrink-0 ${isEmergency ? 'text-red-500' : actionConfig.color}`} />
+                        <span className={`text-xs font-medium truncate ${
                           isEmergency ? 'text-red-600 dark:text-red-400' : actionConfig.label_color
                         }`}>
                           {item.action_label}
@@ -290,7 +283,7 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
                     </div>
 
                     {/* Right: time + SLA */}
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 mt-0.5">
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
                       <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                         {formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}
                       </span>

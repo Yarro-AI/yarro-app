@@ -25,7 +25,8 @@ export async function sendWhatsApp(
       console.warn(`[twilio] Variable "${key}" was ${value}, coercing to ""`);
       cleanVars[key] = "";
     } else {
-      cleanVars[key] = String(value);
+      // Strip newlines + control chars — Twilio Content API rejects them with HTTP 400
+      cleanVars[key] = String(value).replace(/[\r\n\t]+/g, " ").trim();
     }
   }
 
