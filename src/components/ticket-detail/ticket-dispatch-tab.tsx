@@ -9,6 +9,7 @@ import { getContractors, getRecipient, getContractorStatus, formatAmount } from 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Combobox } from '@/components/ui/combobox'
 import { toast } from 'sonner'
 
 // ─── Config ───
@@ -503,8 +504,14 @@ function RedispatchAction({ ticketId, onDispatched }: { ticketId: string; onDisp
     )
   }
 
+  const contractorOptions = contractors.map((c) => ({
+    value: c.id,
+    label: c.contractor_name,
+    description: c.contractor_phone,
+  }))
+
   return (
-    <div className="mt-2 p-3 border border-border rounded-lg bg-muted/20 space-y-2">
+    <div className="mt-2 p-3 rounded-xl border border-border/60 space-y-3">
       <p className="text-xs font-medium text-card-foreground">Select a contractor to dispatch</p>
       {loading ? (
         <div className="flex items-center gap-2 py-2">
@@ -513,18 +520,15 @@ function RedispatchAction({ ticketId, onDispatched }: { ticketId: string; onDisp
         </div>
       ) : (
         <>
-          <select
+          <Combobox
+            options={contractorOptions}
             value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full text-sm border border-border rounded-md px-2 py-1.5 bg-background"
-          >
-            <option value="">Choose contractor...</option>
-            {contractors.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.contractor_name} ({c.contractor_phone})
-              </option>
-            ))}
-          </select>
+            onValueChange={setSelectedId}
+            placeholder="Choose contractor..."
+            searchPlaceholder="Search contractors..."
+            emptyText="No contractors found."
+            className="text-sm"
+          />
           <div className="flex items-center gap-2">
             <Button size="sm" disabled={!selectedId || dispatching} onClick={handleDispatch}>
               {dispatching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}

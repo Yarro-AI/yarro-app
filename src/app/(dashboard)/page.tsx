@@ -156,11 +156,15 @@ function TodoPanel({ todoItems }: { todoItems: TodoItem[] }) {
         <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {actionable.map(item => {
             const ctaText = ACTION_CTA[item.action_label] || 'View'
+            const isHandoff = item.next_action_reason === 'handoff_review'
+            const href = isHandoff
+              ? `/tickets?id=${item.ticket_id}&action=complete`
+              : `/tickets?id=${item.ticket_id}`
 
             return (
               <Link
                 key={item.id}
-                href={`/tickets?id=${item.ticket_id}`}
+                href={href}
                 className="flex items-center gap-3 py-3 px-5 transition-colors min-w-0 hover:bg-muted/30 group"
               >
                 {/* Left: info */}
@@ -448,8 +452,8 @@ export default function DashboardPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-        {/* Header bar — aligned with sidebar logo section border */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border/40 flex-shrink-0 gap-4">
+        {/* Header bar */}
+        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 gap-4">
           {/* LEFT: hamburger (mobile only) + search */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Sheet>
