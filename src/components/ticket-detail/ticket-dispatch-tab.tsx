@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
-import { ChevronRight, ChevronDown, X, MessageCircle } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2 } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
 import type { MessageData, OutboundLogEntry } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 // ─── Config ───
 
@@ -59,6 +62,7 @@ interface PurposeEntry {
   timestamp: string
   isEscalation: boolean
   isCompleted?: boolean
+  isRedispatchable?: boolean
   chatMessages: ChatMsg[]
   subEntries: SubEntry[]
 }
@@ -182,6 +186,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       status: 'escalation',
       timestamp: entry.sent_at,
       isEscalation: true,
+      isRedispatchable: true,
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
@@ -432,15 +437,124 @@ function subEntryLabel(subs: SubEntry[]): string {
 
 // ─── Component ───
 
+// ─── Re-dispatch contractor selector ───
+
+interface ContractorOption {
+  id: string
+  contractor_name: string
+  contractor_phone: string
+  contractor_email: string | null
+}
+
+function RedispatchAction({ ticketId, onDispatched }: { ticketId: string; onDispatched: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [contractors, setContractors] = useState<ContractorOption[]>([])
+  const [selectedId, setSelectedId] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  const [dispatching, setDispatching] = useState(false)
+  const supabase = createClient()
+
+  const loadContractors = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('c1_contractors')
+      .select('id, contractor_name, contractor_phone, contractor_email')
+      .order('contractor_name')
+    setContractors(data || [])
+    setLoading(false)
+  }, [supabase])
+
+  const handleOpen = () => {
+    setOpen(true)
+    loadContractors()
+  }
+
+  const handleDispatch = async () => {
+    if (!selectedId) return
+    setDispatching(true)
+    const { data, error } = await supabase.rpc('c1_redispatch_contractor' as never, {
+      p_ticket_id: ticketId,
+      p_contractor_id: selectedId,
+    } as never)
+    setDispatching(false)
+
+    if (error) {
+      toast.error('Failed to dispatch', { description: error.message })
+      return
+    }
+
+    const result = data as unknown as { ok: boolean; contractor_name: string }
+    if (result?.ok) {
+      toast.success(`Dispatched to ${result.contractor_name}`)
+      setOpen(false)
+      setSelectedId('')
+      onDispatched()
+    } else {
+      toast.error('Dispatch failed')
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" className="mt-2 gap-1.5" onClick={handleOpen}>
+        <Plus className="h-3.5 w-3.5" />
+        Add Contractor & Dispatch
+      </Button>
+    )
+  }
+
+  return (
+    <div className="mt-2 p-3 border border-border rounded-lg bg-muted/20 space-y-2">
+      <p className="text-xs font-medium text-card-foreground">Select a contractor to dispatch</p>
+      {loading ? (
+        <div className="flex items-center gap-2 py-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Loading contractors...</span>
+        </div>
+      ) : (
+        <>
+          <select
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="w-full text-sm border border-border rounded-md px-2 py-1.5 bg-background"
+          >
+            <option value="">Choose contractor...</option>
+            {contractors.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.contractor_name} ({c.contractor_phone})
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2">
+            <Button size="sm" disabled={!selectedId || dispatching} onClick={handleDispatch}>
+              {dispatching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+              Dispatch
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setSelectedId('') }}>
+              Cancel
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Component ───
+
 interface TicketDispatchTabProps {
   messages: MessageData | null
   outboundLog: OutboundLogEntry[]
+  ticketId?: string
+  onRedispatched?: () => void
 }
 
-export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabProps) {
+export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched }: TicketDispatchTabProps) {
   const [overlay, setOverlay] = useState<{ title: string; messages: ChatMsg[] } | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const entries = useMemo(() => buildEntries(messages, outboundLog), [messages, outboundLog])
+
+  const hasNoContractors = entries.some(e => e.label === 'No Contractors Available')
 
   const toggleExpand = (id: string) => {
     setExpanded(prev => {
@@ -542,6 +656,11 @@ export function TicketDispatchTab({ messages, outboundLog }: TicketDispatchTabPr
                     }
                     <span>{subEntryLabel(entry.subEntries)}</span>
                   </button>
+                )}
+
+                {/* Re-dispatch action */}
+                {entry.isRedispatchable && ticketId && (
+                  <RedispatchAction ticketId={ticketId} onDispatched={() => onRedispatched?.()} />
                 )}
 
                 {/* Expanded sub-entries */}
