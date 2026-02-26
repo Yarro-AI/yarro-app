@@ -14,13 +14,9 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
-  Users,
-  Bell,
-  ShieldCheck,
   SlidersHorizontal,
   Save,
   Check,
-  ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -190,59 +186,64 @@ export default function RulesPage() {
 
   return (
     <div className="h-full flex flex-col p-6">
-      <div className="flex items-center gap-2 mb-6 flex-shrink-0">
-        <SlidersHorizontal className="h-5 w-5" />
-        <h1 className="text-xl font-semibold">Rules & Preferences</h1>
+      <div className="mb-8 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-5 w-5" />
+          <h1 className="text-2xl font-semibold">Rules & Preferences</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">Configure how Yarro handles dispatching, approvals, and follow-ups.</p>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto pb-4">
+      <div className="flex-1 space-y-6 overflow-y-auto pb-4 max-w-3xl">
 
         {/* ─── CONTRACTOR DISPATCH ─── */}
-        <section className="border rounded-lg p-4">
-          <h2 className="text-sm font-semibold mb-4">Contractor Dispatch</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 space-y-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Dispatch Mode</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {(['sequential', 'broadcast'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => updateDraft({ dispatch_mode: mode })}
-                    className={cn(
-                      'rounded-lg border-2 p-3 text-left transition-colors',
-                      draft.dispatch_mode === mode
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-muted-foreground/30'
-                    )}
-                  >
-                    <span className="text-sm font-medium block">
-                      {mode === 'sequential' ? 'One at a time' : 'All at once'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {mode === 'sequential' ? 'Auto-advance on timeout' : 'Choose best quote'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+        <section className="bg-card rounded-xl border p-6">
+          <div className="mb-5">
+            <h2 className="text-base font-semibold">Contractor Dispatch</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">How Yarro contacts contractors when a job comes in.</p>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Follow-up Reminder</span>
-                </div>
-                <Switch checked={draft.contractor_reminder_on} onCheckedChange={(on) => handleToggle('contractor', on)} />
-              </div>
+          {/* Dispatch Mode */}
+          <div className="space-y-3">
+            <span className="text-sm font-medium">Dispatch Mode</span>
+            <div className="grid grid-cols-2 gap-3">
+              {(['sequential', 'broadcast'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => updateDraft({ dispatch_mode: mode })}
+                  className={cn(
+                    'rounded-xl border p-4 text-left transition-all',
+                    draft.dispatch_mode === mode
+                      ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                      : 'border-border hover:border-muted-foreground/30'
+                  )}
+                >
+                  <span className="text-sm font-medium block">
+                    {mode === 'sequential' ? 'One at a time' : 'All at once'}
+                  </span>
+                  <span className="text-xs text-muted-foreground mt-0.5 block">
+                    {mode === 'sequential' ? 'Auto-advance on timeout' : 'Choose best quote'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t my-5" />
+
+          {/* Follow-up Reminder */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Follow-up Reminder</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Nudge contractor(s) if no response.</p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
               <Select
                 value={draft.contractor_reminder}
                 onValueChange={(v) => updateDraft({ contractor_reminder: v })}
                 disabled={!draft.contractor_reminder_on}
               >
-                <SelectTrigger className={cn(!draft.contractor_reminder_on && 'opacity-50')}>
+                <SelectTrigger className={cn('w-[140px]', !draft.contractor_reminder_on && 'opacity-50')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,21 +252,28 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className={cn('text-xs text-muted-foreground', !draft.contractor_reminder_on && 'opacity-50')}>
-                Nudge contractor(s) if no response.
+              <Switch checked={draft.contractor_reminder_on} onCheckedChange={(on) => handleToggle('contractor', on)} />
+            </div>
+          </div>
+
+          <div className="border-t my-5" />
+
+          {/* Escalate Timeout */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Escalate to You</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {draft.dispatch_mode === 'broadcast'
+                  ? 'Give up if no quotes received.'
+                  : 'Advance to next contractor.'}
               </p>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Escalate to You</span>
-              </div>
+            <div className="flex-shrink-0">
               <Select
                 value={draft.contractor_timeout}
                 onValueChange={(v) => updateDraft({ contractor_timeout: v })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,33 +282,30 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {draft.dispatch_mode === 'broadcast'
-                  ? 'Give up if no quotes received.'
-                  : 'Advance to next contractor.'}
-              </p>
             </div>
           </div>
         </section>
 
         {/* ─── LANDLORD APPROVAL ─── */}
-        <section className="border rounded-lg p-4">
-          <h2 className="text-sm font-semibold mb-4">Landlord Approval</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Follow-up Reminder</span>
-                </div>
-                <Switch checked={draft.landlord_reminder_on} onCheckedChange={(on) => handleToggle('landlord', on)} />
-              </div>
+        <section className="bg-card rounded-xl border p-6">
+          <div className="mb-5">
+            <h2 className="text-base font-semibold">Landlord Approval</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">How Yarro handles landlord approval for quotes above auto-approve limits.</p>
+          </div>
+
+          {/* Follow-up Reminder */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Follow-up Reminder</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Remind landlord if no response.</p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
               <Select
                 value={draft.landlord_reminder}
                 onValueChange={(v) => updateDraft({ landlord_reminder: v })}
                 disabled={!draft.landlord_reminder_on}
               >
-                <SelectTrigger className={cn(!draft.landlord_reminder_on && 'opacity-50')}>
+                <SelectTrigger className={cn('w-[140px]', !draft.landlord_reminder_on && 'opacity-50')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,20 +314,24 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className={cn('text-xs text-muted-foreground', !draft.landlord_reminder_on && 'opacity-50')}>
-                Remind landlord if no response.
-              </p>
+              <Switch checked={draft.landlord_reminder_on} onCheckedChange={(on) => handleToggle('landlord', on)} />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Escalate to You</span>
-              </div>
+          </div>
+
+          <div className="border-t my-5" />
+
+          {/* Escalate Timeout */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Escalate to You</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Alert you if landlord hasn&apos;t responded.</p>
+            </div>
+            <div className="flex-shrink-0">
               <Select
                 value={draft.landlord_timeout}
                 onValueChange={(v) => updateDraft({ landlord_timeout: v })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -331,29 +340,30 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Alert you if landlord hasn&apos;t responded.</p>
             </div>
           </div>
         </section>
 
         {/* ─── JOB COMPLETION ─── */}
-        <section className="border rounded-lg p-4">
-          <h2 className="text-sm font-semibold mb-4">Job Completion</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Outcome Form Reminder</span>
-                </div>
-                <Switch checked={draft.completion_reminder_on} onCheckedChange={(on) => handleToggle('completion', on)} />
-              </div>
+        <section className="bg-card rounded-xl border p-6">
+          <div className="mb-5">
+            <h2 className="text-base font-semibold">Job Completion</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">After a contractor is booked, ensure they submit an outcome form.</p>
+          </div>
+
+          {/* Outcome Form Reminder */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Outcome Form Reminder</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Nudge contractor to submit.</p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
               <Select
                 value={draft.completion_reminder}
                 onValueChange={(v) => updateDraft({ completion_reminder: v })}
                 disabled={!draft.completion_reminder_on}
               >
-                <SelectTrigger className={cn(!draft.completion_reminder_on && 'opacity-50')}>
+                <SelectTrigger className={cn('w-[140px]', !draft.completion_reminder_on && 'opacity-50')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -362,20 +372,24 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className={cn('text-xs text-muted-foreground', !draft.completion_reminder_on && 'opacity-50')}>
-                Nudge contractor to submit.
-              </p>
+              <Switch checked={draft.completion_reminder_on} onCheckedChange={(on) => handleToggle('completion', on)} />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Escalate to You</span>
-              </div>
+          </div>
+
+          <div className="border-t my-5" />
+
+          {/* Escalate Timeout */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Escalate to You</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Alert you if no submission received.</p>
+            </div>
+            <div className="flex-shrink-0">
               <Select
                 value={draft.completion_timeout}
                 onValueChange={(v) => updateDraft({ completion_timeout: v })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -384,14 +398,13 @@ export default function RulesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Alert you if no submission received.</p>
             </div>
           </div>
         </section>
       </div>
 
       {/* Save bar */}
-      <div className="flex-shrink-0 border-t pt-3 flex items-center justify-end gap-3">
+      <div className="flex-shrink-0 border-t pt-4 mt-2 flex items-center justify-end gap-3 max-w-3xl">
         {isDirty && (
           <span className="text-xs text-muted-foreground">Unsaved changes</span>
         )}

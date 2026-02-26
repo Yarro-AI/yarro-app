@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
-import { Archive, AlertTriangle, Loader2, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
+import { Archive, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
 import { TicketOverviewTab } from './ticket-overview-tab'
 import { TicketConversationTab } from './ticket-conversation-tab'
@@ -62,9 +62,16 @@ export function TicketDetailModal({
         {/* Header — tightened padding */}
         <DialogHeader>
           {loading ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <DialogTitle>Loading ticket...</DialogTitle>
+            <div className="space-y-2 animate-pulse">
+              <div className="flex items-center justify-between gap-3">
+                <div className="h-5 w-52 bg-muted rounded" />
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-20 bg-muted rounded-full" />
+                  <div className="h-6 w-16 bg-muted rounded-full" />
+                </div>
+              </div>
+              <div className="h-4 w-80 bg-muted rounded" />
+              <DialogTitle className="sr-only">Loading ticket...</DialogTitle>
             </div>
           ) : error ? (
             <DialogTitle className="text-destructive">Error loading ticket</DialogTitle>
@@ -106,15 +113,26 @@ export function TicketDetailModal({
         {/* Body — fixed height, internal scroll per tab */}
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col px-6 pb-6">
           {loading ? (
-            <div className="flex items-center justify-center flex-1">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex-1 space-y-4 pt-4 animate-pulse">
+              <div className="flex gap-4 border-b pb-2.5">
+                <div className="h-4 w-16 bg-muted rounded" />
+                <div className="h-4 w-20 bg-muted rounded" />
+                <div className="h-4 w-16 bg-muted rounded" />
+              </div>
+              <div className="space-y-3 pt-2">
+                <div className="h-4 w-full bg-muted rounded" />
+                <div className="h-4 w-3/4 bg-muted rounded" />
+                <div className="h-20 w-full bg-muted rounded-lg" />
+                <div className="h-4 w-1/2 bg-muted rounded" />
+                <div className="h-4 w-2/3 bg-muted rounded" />
+              </div>
             </div>
           ) : error ? (
             <div className="text-center flex-1 flex items-center justify-center">
               <p className="text-sm text-destructive">{error}</p>
             </div>
           ) : context && basic ? (
-            <>
+            <div className="flex-1 min-h-0 flex flex-col animate-in fade-in-0 duration-200">
               {/* Handoff warning */}
               {isHandoff && (
                 <div className="p-3 mt-2 mb-1 bg-red-500/10 dark:bg-red-500/15 rounded-lg border border-red-300 dark:border-red-500/30 flex-shrink-0">
@@ -205,7 +223,7 @@ export function TicketDetailModal({
                   </TabsContent>
                 )}
               </Tabs>
-            </>
+            </div>
           ) : (
             <div className="text-center flex-1 flex items-center justify-center text-muted-foreground">
               <p className="text-sm">No ticket selected</p>

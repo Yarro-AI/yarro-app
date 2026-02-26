@@ -106,7 +106,7 @@ export default function LandlordGuidePage() {
                     />
                   </div>
 
-                  <div className="bg-amber-500/10 rounded-xl p-5 border border-amber-500/20">
+                  <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Auto-Approve Limits</h4>
                     <p className="text-sm text-muted-foreground">
                       Each property can have a different limit. Work below this amount proceeds without your approval. Talk to your PM to adjust.

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
@@ -33,6 +34,8 @@ import {
   Crown,
   Phone,
   KeyRound,
+  Check,
+  ChevronDown,
 } from 'lucide-react'
 
 // --- Types ---
@@ -79,6 +82,7 @@ interface ContractorRow {
   category: string | null
   categories: string[] | null
   contractor_phone: string | null
+  property_ids: string[] | null
 }
 
 interface TicketRow {
@@ -144,6 +148,7 @@ export default function PropertyDetailPage() {
   const [property, setProperty] = useState<PropertyDetail | null>(null)
   const [tenants, setTenants] = useState<TenantRow[]>([])
   const [contractors, setContractors] = useState<ContractorRow[]>([])
+  const [allContractors, setAllContractors] = useState<ContractorRow[]>([])
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -176,6 +181,7 @@ export default function PropertyDetailPage() {
     ])
     if (tenantsRes.data) setTenants(tenantsRes.data as TenantRow[])
     if (contractorsRes.data) {
+      setAllContractors(contractorsRes.data as ContractorRow[])
       const assigned = contractorsRes.data.filter((c: any) => Array.isArray(c.property_ids) && c.property_ids.includes(propertyId))
       setContractors(assigned as ContractorRow[])
     }
@@ -222,6 +228,17 @@ export default function PropertyDetailPage() {
     if (error) throw error
     toast.success('Property deleted')
     router.push('/properties')
+  }
+
+  const handleContractorToggle = async (contractorId: string) => {
+    const contractor = allContractors.find((c) => c.id === contractorId)
+    if (!contractor) return
+    const currentIds = contractor.property_ids || []
+    const isAssigned = currentIds.includes(propertyId)
+    const newIds = isAssigned ? currentIds.filter((id) => id !== propertyId) : [...currentIds, propertyId]
+    const { error } = await supabase.from('c1_contractors').update({ property_ids: newIds }).eq('id', contractorId)
+    if (error) { toast.error('Failed to update contractor'); return }
+    await fetchRelated()
   }
 
   const openTickets = tickets.filter((t) => t.status?.toLowerCase() !== 'closed' && !t.archived)
@@ -425,21 +442,36 @@ export default function PropertyDetailPage() {
                   Contractors
                   {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
                 </h3>
-                {contractors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No contractors assigned</p>
-                ) : (
-                  <div className="space-y-0.5">
+                {contractors.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2 max-h-[300px] overflow-y-auto">
                     {contractors.map((c) => (
-                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
-                        <span className="text-sm text-muted-foreground truncate pl-11">
-                          {(c.categories || (c.category ? [c.category] : [])).join(', ')}
-                          {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
-                        </span>
-                      </Link>
+                      <span key={c.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
+                        <span className="truncate max-w-[200px]">{c.contractor_name}</span>
+                        <button type="button" onClick={() => handleContractorToggle(c.id)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
+                      </span>
                     ))}
                   </div>
                 )}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left">
+                      <span className="text-muted-foreground">{contractors.length === 0 ? 'Select contractors...' : 'Add more...'}</span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
+                    {allContractors.map((c) => {
+                      const isSel = contractors.some((ac) => ac.id === c.id)
+                      return (
+                        <button key={c.id} type="button" onClick={() => handleContractorToggle(c.id)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-input'}`}>{isSel && <Check className="h-3 w-3 text-primary-foreground" />}</div>
+                          <span className="truncate">{c.contractor_name}</span>
+                          <span className="text-xs text-muted-foreground ml-auto truncate">{(c.categories || (c.category ? [c.category] : [])).join(', ')}</span>
+                        </button>
+                      )
+                    })}
+                  </PopoverContent>
+                </Popover>
               </div>
             </>
           )}

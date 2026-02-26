@@ -63,7 +63,7 @@ const activityNavItems = [
 
 const dataManagementItems = [
   { href: '/guide/rules', label: 'Rules & Preferences', icon: SlidersHorizontal },
-  { href: '/guide', label: 'Product Guide', icon: BookOpen },
+  { href: '/guide', label: 'Product Guide', icon: BookOpen, exact: true },
   { href: '/guide/import', label: 'Import Data', icon: Upload },
   { href: '/feedback', label: 'Feedback', icon: MessageCircle },
 ]
@@ -120,8 +120,8 @@ export function Sidebar() {
   const logoSrc = isDark ? '/logo-white.png' : '/logo-wordmark.png'
 
   // Shared nav link renderer
-  const NavLink = ({ href, label, icon: Icon, count }: { href: string; label: string; icon: React.ElementType; count?: number | null }) => {
-    const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
+  const NavLink = ({ href, label, icon: Icon, count, exact }: { href: string; label: string; icon: React.ElementType; count?: number | null; exact?: boolean }) => {
+    const isActive = pathname === href || (!exact && href !== '/' && pathname.startsWith(href + '/'))
 
     const link = (
       <Link
@@ -265,7 +265,7 @@ export function Sidebar() {
               </p>
             )}
             {dataManagementItems.map((item) => (
-              <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />
+              <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} exact={'exact' in item ? (item as any).exact : undefined} />
             ))}
           </div>
         </nav>
