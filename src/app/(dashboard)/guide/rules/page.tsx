@@ -47,9 +47,6 @@ const TIMEOUT_OPTIONS = [
   { value: '4320', label: '3 days' },
 ]
 
-// Landlord & completion columns store integer hours — exclude sub-hour options
-const HOUR_REMINDER_OPTIONS = REMINDER_OPTIONS.filter(o => parseInt(o.value) >= 60)
-
 // ─── Draft (all stored in minutes internally) ───
 
 interface DraftSettings {
@@ -120,7 +117,7 @@ export default function RulesPage() {
         if (!next[onKey]) continue
         const rem = parseInt(next[remKey] as string)
         const to = parseInt(next[toKey] as string)
-        const baseRemOpts = onKey === 'contractor_reminder_on' ? REMINDER_OPTIONS : HOUR_REMINDER_OPTIONS
+        const baseRemOpts = REMINDER_OPTIONS
         if (rem >= to) {
           if (partial.hasOwnProperty(toKey)) {
             // Timeout lowered → auto-lower reminder
@@ -141,11 +138,10 @@ export default function RulesPage() {
   const handleToggle = (key: 'contractor' | 'landlord' | 'completion', on: boolean) => {
     const updates: Partial<DraftSettings> = { [`${key}_reminder_on`]: on } as any
     if (on) {
-      const baseRemOpts = key === 'contractor' ? REMINDER_OPTIONS : HOUR_REMINDER_OPTIONS
       const timeout = parseInt((draft as any)[`${key}_timeout`])
       const reminder = parseInt((draft as any)[`${key}_reminder`])
-      if (reminder >= timeout || (key !== 'contractor' && parseInt((draft as any)[`${key}_reminder`]) < 60)) {
-        const valid = baseRemOpts.filter(o => parseInt(o.value) < timeout)
+      if (reminder >= timeout) {
+        const valid = REMINDER_OPTIONS.filter(o => parseInt(o.value) < timeout)
         if (valid.length > 0) (updates as any)[`${key}_reminder`] = valid[valid.length - 1].value
       }
     }
@@ -160,10 +156,10 @@ export default function RulesPage() {
       dispatch_mode: draft.dispatch_mode,
       contractor_reminder_minutes: draft.contractor_reminder_on ? parseInt(draft.contractor_reminder) : null,
       contractor_timeout_minutes: parseInt(draft.contractor_timeout),
-      landlord_followup_hours: draft.landlord_reminder_on ? Math.round(parseInt(draft.landlord_reminder) / 60) : null,
-      landlord_timeout_hours: Math.round(parseInt(draft.landlord_timeout) / 60),
-      completion_reminder_hours: draft.completion_reminder_on ? Math.round(parseInt(draft.completion_reminder) / 60) : null,
-      completion_timeout_hours: Math.round(parseInt(draft.completion_timeout) / 60),
+      landlord_followup_hours: draft.landlord_reminder_on ? parseInt(draft.landlord_reminder) / 60 : null,
+      landlord_timeout_hours: parseInt(draft.landlord_timeout) / 60,
+      completion_reminder_hours: draft.completion_reminder_on ? parseInt(draft.completion_reminder) / 60 : null,
+      completion_timeout_hours: parseInt(draft.completion_timeout) / 60,
     }
 
     const { error } = await supabase
@@ -182,10 +178,9 @@ export default function RulesPage() {
     setSaving(false)
   }
 
-  const reminderOpts = (timeoutVal: string, on: boolean, hourOnly = false) => {
-    const base = hourOnly ? HOUR_REMINDER_OPTIONS : REMINDER_OPTIONS
-    if (!on) return base
-    return base.filter(o => parseInt(o.value) < parseInt(timeoutVal))
+  const reminderOpts = (timeoutVal: string, on: boolean) => {
+    if (!on) return REMINDER_OPTIONS
+    return REMINDER_OPTIONS.filter(o => parseInt(o.value) < parseInt(timeoutVal))
   }
 
   const timeoutOpts = (reminderVal: string, on: boolean) => {
@@ -334,7 +329,7 @@ export default function RulesPage() {
               reminderOnChange={(v) => updateDraft({ landlord_reminder: v })}
               reminderOn={draft.landlord_reminder_on}
               onToggle={(on) => handleToggle('landlord', on)}
-              reminderOptions={reminderOpts(draft.landlord_timeout, draft.landlord_reminder_on, true)}
+              reminderOptions={reminderOpts(draft.landlord_timeout, draft.landlord_reminder_on)}
               escalateDesc="Alert you if no response."
               escalateValue={draft.landlord_timeout}
               escalateOnChange={(v) => updateDraft({ landlord_timeout: v })}
@@ -349,7 +344,7 @@ export default function RulesPage() {
               reminderOnChange={(v) => updateDraft({ completion_reminder: v })}
               reminderOn={draft.completion_reminder_on}
               onToggle={(on) => handleToggle('completion', on)}
-              reminderOptions={reminderOpts(draft.completion_timeout, draft.completion_reminder_on, true)}
+              reminderOptions={reminderOpts(draft.completion_timeout, draft.completion_reminder_on)}
               escalateDesc="Alert you if not submitted."
               escalateValue={draft.completion_timeout}
               escalateOnChange={(v) => updateDraft({ completion_timeout: v })}

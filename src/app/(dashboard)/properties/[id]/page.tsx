@@ -36,6 +36,7 @@ import {
   KeyRound,
   Check,
   ChevronDown,
+  Plus,
 } from 'lucide-react'
 
 // --- Types ---
@@ -147,6 +148,7 @@ export default function PropertyDetailPage() {
 
   const [property, setProperty] = useState<PropertyDetail | null>(null)
   const [tenants, setTenants] = useState<TenantRow[]>([])
+  const [allTenants, setAllTenants] = useState<TenantRow[]>([])
   const [contractors, setContractors] = useState<ContractorRow[]>([])
   const [allContractors, setAllContractors] = useState<ContractorRow[]>([])
   const [tickets, setTickets] = useState<TicketRow[]>([])
@@ -173,13 +175,15 @@ export default function PropertyDetailPage() {
 
   const fetchRelated = useCallback(async () => {
     if (!propertyId || !propertyManager) return
-    const [tenantsRes, contractorsRes, ticketsRes, landlordsRes] = await Promise.all([
+    const [tenantsRes, allTenantsRes, contractorsRes, ticketsRes, landlordsRes] = await Promise.all([
       supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_id', propertyId).order('full_name'),
+      supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_manager_id', propertyManager.id).order('full_name'),
       supabase.from('c1_contractors').select('id, contractor_name, category, categories, contractor_phone, property_ids').eq('property_manager_id', propertyManager.id).eq('active', true),
       supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, scheduled_date, archived').eq('property_id', propertyId).order('date_logged', { ascending: false }).limit(50),
       supabase.from('c1_landlords').select('id, full_name, phone, email').eq('property_manager_id', propertyManager.id).order('full_name'),
     ])
     if (tenantsRes.data) setTenants(tenantsRes.data as TenantRow[])
+    if (allTenantsRes.data) setAllTenants(allTenantsRes.data as TenantRow[])
     if (contractorsRes.data) {
       setAllContractors(contractorsRes.data as ContractorRow[])
       const assigned = contractorsRes.data.filter((c: any) => Array.isArray(c.property_ids) && c.property_ids.includes(propertyId))
@@ -238,6 +242,18 @@ export default function PropertyDetailPage() {
     const newIds = isAssigned ? currentIds.filter((id) => id !== propertyId) : [...currentIds, propertyId]
     const { error } = await supabase.from('c1_contractors').update({ property_ids: newIds }).eq('id', contractorId)
     if (error) { toast.error('Failed to update contractor'); return }
+    await fetchRelated()
+  }
+
+  const handleTenantRemove = async (tenantId: string) => {
+    const { error } = await supabase.from('c1_tenants').update({ property_id: null }).eq('id', tenantId)
+    if (error) { toast.error('Failed to remove tenant'); return }
+    await fetchRelated()
+  }
+
+  const handleTenantAdd = async (tenantId: string) => {
+    const { error } = await supabase.from('c1_tenants').update({ property_id: propertyId }).eq('id', tenantId)
+    if (error) { toast.error('Failed to add tenant'); return }
     await fetchRelated()
   }
 
@@ -338,53 +354,66 @@ export default function PropertyDetailPage() {
 
               <div className="border-t border-border/40 mt-8 flex-shrink-0" />
 
-              <div className="mt-6 flex-shrink-0">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
+              {/* Tenants — editable, same row layout as view */}
+              <div className="mt-6 flex-shrink-0 max-h-[200px] flex flex-col">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
                   Tenants
                   {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="ml-auto h-6 w-6 rounded-md border border-input bg-background hover:bg-accent/50 flex items-center justify-center transition-colors">
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-1.5 max-h-64 overflow-y-auto" align="end">
+                      {(() => {
+                        const unassigned = allTenants.filter((t) => !tenants.some((at) => at.id === t.id))
+                        if (unassigned.length === 0) return <p className="text-xs text-muted-foreground px-2 py-1.5">No available tenants</p>
+                        return unassigned.map((t) => (
+                          <button key={t.id} type="button" onClick={() => handleTenantAdd(t.id)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
+                            <Plus className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="truncate">{t.full_name}</span>
+                            {t.phone && <span className="text-xs text-muted-foreground ml-auto truncate">{formatPhoneDisplay(t.phone)}</span>}
+                          </button>
+                        ))
+                      })()}
+                    </PopoverContent>
+                  </Popover>
                 </h3>
-                {tenants.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tenants assigned</p>
-                ) : (
-                  <div className="space-y-0.5">
-                    {tenants.map((t) => (
-                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate pl-11">{t.full_name}</span>
-                        <span className="text-sm text-muted-foreground truncate pl-11">
-                          {(t.role_tag || 'tenant').replace(/_/g, ' ')}
-                          {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+                  {tenants.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No tenants assigned</p>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {tenants.map((t) => (
+                        <div key={t.id} className="grid grid-cols-[3fr_2fr_auto] gap-x-8 items-center py-2.5 -mx-3 px-3 rounded-lg group hover:bg-muted/30 transition-colors">
+                          <span className="text-[15px] truncate pl-11">{t.full_name}</span>
+                          <span className="text-sm text-muted-foreground truncate pl-11">
+                            {(t.role_tag || 'tenant').replace(/_/g, ' ')}
+                            {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
+                          </span>
+                          <button type="button" onClick={() => handleTenantRemove(t.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Contractors — editable */}
+              {/* Contractors — editable, same row layout as view */}
               <div className="mt-8 flex-1 min-h-0 flex flex-col">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
                   Contractors
                   {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
-                </h3>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                  {contractors.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {contractors.map((c) => (
-                        <span key={c.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
-                          <span className="truncate max-w-[200px]">{c.contractor_name}</span>
-                          <button type="button" onClick={() => handleContractorToggle(c.id)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left">
-                        <span className="text-muted-foreground">{contractors.length === 0 ? 'Select contractors...' : 'Add more...'}</span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <button type="button" className="ml-auto h-6 w-6 rounded-md border border-input bg-background hover:bg-accent/50 flex items-center justify-center transition-colors">
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
+                    <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="end">
                       {allContractors.map((c) => {
                         const isSel = contractors.some((ac) => ac.id === c.id)
                         return (
@@ -397,6 +426,26 @@ export default function PropertyDetailPage() {
                       })}
                     </PopoverContent>
                   </Popover>
+                </h3>
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+                  {contractors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No contractors assigned</p>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {contractors.map((c) => (
+                        <div key={c.id} className="grid grid-cols-[3fr_2fr_auto] gap-x-8 items-center py-2.5 -mx-3 px-3 rounded-lg group hover:bg-muted/30 transition-colors">
+                          <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
+                          <span className="text-sm text-muted-foreground truncate pl-11">
+                            {(c.categories || (c.category ? [c.category] : [])).join(', ')}
+                            {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
+                          </span>
+                          <button type="button" onClick={() => handleContractorToggle(c.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
