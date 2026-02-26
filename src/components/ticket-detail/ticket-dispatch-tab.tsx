@@ -177,8 +177,19 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
     }
   }
 
-  // No contractors available
-  for (const entry of contractorLogs.filter(e => e.message_type === 'no_more_contractors')) {
+  // No contractors available — only show redispatch on last entry if no contractor dispatched after it
+  const noContractorEntries = contractorLogs.filter(e => e.message_type === 'no_more_contractors')
+  const latestContractorDispatchTime = messages
+    ? Math.max(...getContractors(messages.contractors).filter(c => c.sent_at).map(c => new Date(c.sent_at!).getTime()), 0)
+    : 0
+
+  for (let i = 0; i < noContractorEntries.length; i++) {
+    const entry = noContractorEntries[i]
+    const isLastNoContractor = i === noContractorEntries.length - 1
+    const entryTime = new Date(entry.sent_at).getTime()
+    // Only show redispatch button on the last "No Contractors" entry AND only if no contractor was dispatched after it
+    const canRedispatch = isLastNoContractor && entryTime > latestContractorDispatchTime
+
     entries.push({
       id: entry.id,
       phase: 'Contractor Quotes',
@@ -187,7 +198,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       status: 'escalation',
       timestamp: entry.sent_at,
       isEscalation: true,
-      isRedispatchable: true,
+      isRedispatchable: canRedispatch,
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
@@ -421,6 +432,13 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       subEntries: [],
     })
   }
+
+  // Sort all entries chronologically — dispatch tab is a timeline, not phase-grouped
+  entries.sort((a, b) => {
+    const tA = a.timestamp ? new Date(a.timestamp).getTime() : 0
+    const tB = b.timestamp ? new Date(b.timestamp).getTime() : 0
+    return tA - tB
+  })
 
   return entries
 }

@@ -16,7 +16,7 @@ import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
-import { ArrowLeft, Pencil, Save, X, Check, Trash2, Loader2, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Pencil, Save, X, Check, Trash2, Loader2, ChevronDown, Phone as PhoneIcon, Mail, Tag } from 'lucide-react'
 
 // --- Types ---
 
@@ -153,15 +153,7 @@ export default function ContractorDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight truncate">{contractor.contractor_name}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {[
-              categories.join(', '),
-              contractor.contractor_phone && formatPhoneDisplay(contractor.contractor_phone),
-            ].filter(Boolean).join(' · ')}
-            {' · '}
-            <span className={contractor.active ? 'text-emerald-600 dark:text-emerald-400' : ''}>{contractor.active ? 'Active' : 'Inactive'}</span>
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight truncate">{contractor.contractor_name}</h1>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isEditing ? (
@@ -182,7 +174,7 @@ export default function ContractorDetailPage() {
       {/* Two-column content */}
       <div className="flex-1 min-h-0 flex">
         {/* Left: Details */}
-        <div className="flex-1 overflow-y-auto px-10 py-8">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           {isEditing && editedData ? (
             <div className="space-y-6">
               <div>
@@ -282,38 +274,67 @@ export default function ContractorDetailPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-x-10 gap-y-6">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Phone</p>
-                  <p className="text-sm">{contractor.contractor_phone ? formatPhoneDisplay(contractor.contractor_phone) : '—'}</p>
+              {/* Meta info grid — icon + label + value */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="text-[15px] font-medium mt-0.5">{contractor.contractor_phone ? formatPhoneDisplay(contractor.contractor_phone) : <span className="text-muted-foreground/50 font-normal">None</span>}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Email</p>
-                  <p className="text-sm">{contractor.contractor_email || '—'}</p>
+
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="text-[15px] font-medium mt-0.5">{contractor.contractor_email || <span className="text-muted-foreground/50 font-normal">None</span>}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Categories</p>
-                  <p className="text-sm">{categories.length > 0 ? categories.join(', ') : '—'}</p>
+
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Categories</p>
+                    <p className="text-[15px] font-medium mt-0.5">{categories.length > 0 ? categories.join(', ') : <span className="text-muted-foreground/50 font-normal">None</span>}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className={`h-8 w-8 rounded-lg ${contractor.active ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center shrink-0 mt-0.5`}>
+                    <div className={`h-2.5 w-2.5 rounded-full ${contractor.active ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <p className="text-[15px] font-medium mt-0.5">{contractor.active ? 'Active' : 'Inactive'}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Properties */}
-              <div className="mt-10">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-                  Properties{assignedProperties.length > 0 && <span className="ml-2 normal-case font-normal text-muted-foreground/60">{assignedProperties.length}</span>}
-                </h3>
-                {assignedProperties.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No properties assigned</p>
-                ) : (
-                  <div className="space-y-0.5">
-                    {assignedProperties.map((prop) => (
-                      <Link key={prop.id} href={`/properties/${prop.id}`} className="flex items-center py-2 hover:bg-muted/30 -mx-3 px-3 rounded transition-colors">
-                        <span className="text-sm font-medium">{prop.address}</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* Properties */}
+            <div className="mt-8">
+              <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                Properties
+                {assignedProperties.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{assignedProperties.length}</span>}
+              </h3>
+              {assignedProperties.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No properties assigned</p>
+              ) : (
+                <div className="space-y-0.5">
+                  {assignedProperties.map((prop) => (
+                    <Link key={prop.id} href={`/properties/${prop.id}`} className="flex items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                      <span className="text-[15px] font-medium">{prop.address}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             </>
           )}
         </div>
@@ -321,7 +342,7 @@ export default function ContractorDetailPage() {
         {/* Right: Tickets */}
         <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Tickets</h3>
+            <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || closedTickets.length > 0) && (
               <p className="text-xs text-muted-foreground/60 mt-1">
                 {[openTickets.length > 0 && `${openTickets.length} open`, closedTickets.length > 0 && `${closedTickets.length} closed`].filter(Boolean).join(' · ')}

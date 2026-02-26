@@ -29,6 +29,10 @@ import {
   X,
   Trash2,
   Loader2,
+  Banknote,
+  Crown,
+  Phone,
+  KeyRound,
 } from 'lucide-react'
 
 // --- Types ---
@@ -232,20 +236,13 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header — aligned with sidebar */}
+      {/* Header */}
       <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4">
         <button onClick={() => router.push('/properties')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight truncate">{property.address}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {[
-              property.landlord_name,
-              `${formatCurrency(property.auto_approve_limit)} auto-approve`,
-              openTickets.length > 0 ? `${openTickets.length} open ticket${openTickets.length !== 1 ? 's' : ''}` : null,
-            ].filter(Boolean).join(' · ')}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight truncate">{property.address}</h1>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isEditing ? (
@@ -268,7 +265,7 @@ export default function PropertyDetailPage() {
       {/* Two-column content */}
       <div className="flex-1 min-h-0 flex">
         {/* Left: Details */}
-        <div className="flex-1 overflow-y-auto px-10 py-8">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           {isEditing && editedData ? (
             <div className="space-y-6">
               <div>
@@ -304,57 +301,73 @@ export default function PropertyDetailPage() {
             </div>
           ) : (
             <>
-              {/* Property fields */}
-              <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Auto-Approve Limit</p>
-                  <p className="text-sm">{formatCurrency(property.auto_approve_limit)}</p>
+              {/* Meta info grid — icon + label + value */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Auto-Approve</p>
+                    <p className="text-[15px] font-medium mt-0.5">{formatCurrency(property.auto_approve_limit)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Landlord</p>
-                  {property.landlord_id ? (
-                    <Link href={`/landlords/${property.landlord_id}`} className="text-sm font-medium hover:underline">{property.landlord_name}</Link>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not assigned</p>
-                  )}
-                </div>
-              </div>
 
-              {/* Emergency & Access — below grid, above tenants/contractors */}
-              {(property.emergency_access_contact || property.access_instructions) && (
-                <div className="mt-8 space-y-4">
-                  {property.emergency_access_contact && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Emergency Contact</p>
-                      <p className="text-sm">{property.emergency_access_contact}</p>
-                    </div>
-                  )}
-                  {property.access_instructions && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Access Instructions</p>
-                      <p className="text-sm">{property.access_instructions}</p>
-                    </div>
-                  )}
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Landlord</p>
+                    {property.landlord_id ? (
+                      <Link href={`/landlords/${property.landlord_id}`} className="text-[15px] font-medium mt-0.5 hover:underline block">{property.landlord_name}</Link>
+                    ) : (
+                      <p className="text-[15px] text-muted-foreground/50 mt-0.5">Not assigned</p>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Emergency Contact</p>
+                    <p className="text-[15px] font-medium mt-0.5">{property.emergency_access_contact ? formatPhoneDisplay(property.emergency_access_contact) : <span className="text-muted-foreground/50 font-normal">None</span>}</p>
+                  </div>
+                </div>
+
+                {property.access_instructions && (
+                  <div className="flex items-start gap-3 col-span-2 lg:col-span-3">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Access Instructions</p>
+                      <p className="text-[15px] mt-0.5">{property.access_instructions}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
           {/* Tenants */}
-          <div className="mt-10">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-              Tenants{tenants.length > 0 && <span className="ml-2 normal-case font-normal text-muted-foreground/60">{tenants.length}</span>}
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+              Tenants
+              {tenants.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
             </h3>
             {tenants.length === 0 ? (
               <p className="text-sm text-muted-foreground">No tenants assigned</p>
             ) : (
               <div className="space-y-0.5">
                 {tenants.map((t) => (
-                  <Link key={t.id} href={`/tenants/${t.id}`} className="flex items-center justify-between py-2 hover:bg-muted/30 -mx-3 px-3 rounded transition-colors">
-                    <span className="text-sm font-medium">{t.full_name}</span>
-                    <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                  <Link key={t.id} href={`/tenants/${t.id}`} className="flex items-center justify-between py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                    <span className="text-[15px] font-medium">{t.full_name}</span>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
                       <span className="capitalize">{(t.role_tag || 'tenant').replace(/_/g, ' ')}</span>
-                      {t.phone && <span>{formatPhoneDisplay(t.phone)}</span>}
+                      {t.phone && <span className="font-mono text-xs">{formatPhoneDisplay(t.phone)}</span>}
                     </div>
                   </Link>
                 ))}
@@ -363,20 +376,21 @@ export default function PropertyDetailPage() {
           </div>
 
           {/* Contractors */}
-          <div className="mt-10">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-              Contractors{contractors.length > 0 && <span className="ml-2 normal-case font-normal text-muted-foreground/60">{contractors.length}</span>}
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+              Contractors
+              {contractors.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
             </h3>
             {contractors.length === 0 ? (
               <p className="text-sm text-muted-foreground">No contractors assigned</p>
             ) : (
               <div className="space-y-0.5">
                 {contractors.map((c) => (
-                  <Link key={c.id} href={`/contractors/${c.id}`} className="flex items-center justify-between py-2 hover:bg-muted/30 -mx-3 px-3 rounded transition-colors">
-                    <span className="text-sm font-medium">{c.contractor_name}</span>
-                    <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                  <Link key={c.id} href={`/contractors/${c.id}`} className="flex items-center justify-between py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                    <span className="text-[15px] font-medium">{c.contractor_name}</span>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
                       <span>{(c.categories || (c.category ? [c.category] : [])).join(', ')}</span>
-                      {c.contractor_phone && <span>{formatPhoneDisplay(c.contractor_phone)}</span>}
+                      {c.contractor_phone && <span className="font-mono text-xs">{formatPhoneDisplay(c.contractor_phone)}</span>}
                     </div>
                   </Link>
                 ))}
@@ -388,9 +402,9 @@ export default function PropertyDetailPage() {
         {/* Right: Tickets */}
         <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Tickets</h3>
+            <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || completedTickets.length > 0) && (
-              <p className="text-xs text-muted-foreground/60 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {[openTickets.length > 0 && `${openTickets.length} open`, completedTickets.length > 0 && `${completedTickets.length} completed`].filter(Boolean).join(' · ')}
               </p>
             )}

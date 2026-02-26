@@ -660,7 +660,7 @@ export default function TicketsPage() {
 
       {/* Create / Complete Ticket Modal */}
       <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
-        <DialogContent size="lg">
+        <DialogContent size="lg" className="h-[80vh]">
           <DialogHeader>
             <DialogTitle>{handoffTicketId ? 'Complete Ticket' : 'New Ticket'}</DialogTitle>
             <DialogDescription>

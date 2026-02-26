@@ -620,7 +620,7 @@ export function TicketForm({
             </div>
           )}
           {showConversation && conversationLog.length > 0 && (
-            <div className="max-h-64 overflow-y-auto rounded-xl bg-muted/30 p-4">
+            <div className="max-h-48 overflow-y-auto rounded-xl bg-muted/30 p-4">
               <ChatHistory
                 compact
                 messages={conversationLog
