@@ -275,7 +275,7 @@ export default function ContractorDetailPage() {
           ) : (
             <>
               {/* Meta info grid — icon + label + value */}
-              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -319,9 +319,9 @@ export default function ContractorDetailPage() {
 
             {/* Properties */}
             <div className="mt-8">
-              <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                 Properties
-                {assignedProperties.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{assignedProperties.length}</span>}
+                {assignedProperties.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{assignedProperties.length}</span>}
               </h3>
               {assignedProperties.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No properties assigned</p>
@@ -329,7 +329,7 @@ export default function ContractorDetailPage() {
                 <div className="space-y-0.5">
                   {assignedProperties.map((prop) => (
                     <Link key={prop.id} href={`/properties/${prop.id}`} className="flex items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                      <span className="text-[15px] font-medium">{prop.address}</span>
+                      <span className="text-[15px]">{prop.address}</span>
                     </Link>
                   ))}
                 </div>

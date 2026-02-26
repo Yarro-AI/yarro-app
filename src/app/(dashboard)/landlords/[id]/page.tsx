@@ -183,7 +183,7 @@ export default function LandlordDetailPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -217,18 +217,18 @@ export default function LandlordDetailPage() {
 
           {/* Properties */}
           <div className="mt-8">
-            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
               Properties
-              {properties.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{properties.length}</span>}
+              {properties.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{properties.length}</span>}
             </h3>
             {properties.length === 0 ? (
               <p className="text-sm text-muted-foreground">No properties linked</p>
             ) : (
               <div className="space-y-0.5">
                 {properties.map((p) => (
-                  <Link key={p.id} href={`/properties/${p.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] font-medium truncate">{p.address}</span>
-                    <span className="text-sm text-muted-foreground">{tenantCounts[p.id] || 0} tenant{(tenantCounts[p.id] || 0) !== 1 ? 's' : ''}</span>
+                  <Link key={p.id} href={`/properties/${p.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                    <span className="text-[15px] truncate">{p.address}</span>
+                    <span className="text-sm text-muted-foreground pl-11">{tenantCounts[p.id] || 0} tenant{(tenantCounts[p.id] || 0) !== 1 ? 's' : ''}</span>
                   </Link>
                 ))}
               </div>

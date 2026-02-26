@@ -301,9 +301,8 @@ export default function PropertyDetailPage() {
             </div>
           ) : (
             <>
-              {/* Meta info — 2-column aligned layout */}
-              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                {/* Row 1 */}
+              {/* Meta info — 2-column aligned layout, 60/40 split */}
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -327,7 +326,6 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
 
-                {/* Row 2 */}
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -348,20 +346,20 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
-              {/* Tenants — same 2-col grid alignment */}
+              {/* Tenants — pl-11 offsets text to align with icon grid text (32px icon + 12px gap) */}
               <div className="mt-8">
-                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Tenants
-                  {tenants.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+                  {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
                 </h3>
                 {tenants.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No tenants assigned</p>
                 ) : (
                   <div className="space-y-0.5">
                     {tenants.map((t) => (
-                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] font-medium truncate">{t.full_name}</span>
-                        <span className="text-sm text-muted-foreground truncate">
+                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] truncate">{t.full_name}</span>
+                        <span className="text-sm text-muted-foreground truncate pl-11">
                           {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                           {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
                         </span>
@@ -371,20 +369,20 @@ export default function PropertyDetailPage() {
                 )}
               </div>
 
-              {/* Contractors — same 2-col grid alignment */}
+              {/* Contractors */}
               <div className="mt-8">
-                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Contractors
-                  {contractors.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
+                  {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
                 </h3>
                 {contractors.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No contractors assigned</p>
                 ) : (
                   <div className="space-y-0.5">
                     {contractors.map((c) => (
-                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] font-medium truncate">{c.contractor_name}</span>
-                        <span className="text-sm text-muted-foreground truncate">
+                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] truncate">{c.contractor_name}</span>
+                        <span className="text-sm text-muted-foreground truncate pl-11">
                           {(c.categories || (c.category ? [c.category] : [])).join(', ')}
                           {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
                         </span>
@@ -396,22 +394,22 @@ export default function PropertyDetailPage() {
             </>
           )}
 
-          {/* Edit-mode tenants/contractors still need to show */}
+          {/* Edit-mode tenants/contractors */}
           {isEditing && (
             <>
               <div className="mt-8">
-                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Tenants
-                  {tenants.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+                  {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
                 </h3>
                 {tenants.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No tenants assigned</p>
                 ) : (
                   <div className="space-y-0.5">
                     {tenants.map((t) => (
-                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] font-medium truncate">{t.full_name}</span>
-                        <span className="text-sm text-muted-foreground truncate">
+                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] truncate">{t.full_name}</span>
+                        <span className="text-sm text-muted-foreground truncate pl-11">
                           {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                           {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
                         </span>
@@ -421,18 +419,18 @@ export default function PropertyDetailPage() {
                 )}
               </div>
               <div className="mt-8">
-                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Contractors
-                  {contractors.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
+                  {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
                 </h3>
                 {contractors.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No contractors assigned</p>
                 ) : (
                   <div className="space-y-0.5">
                     {contractors.map((c) => (
-                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] font-medium truncate">{c.contractor_name}</span>
-                        <span className="text-sm text-muted-foreground truncate">
+                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] truncate">{c.contractor_name}</span>
+                        <span className="text-sm text-muted-foreground truncate pl-11">
                           {(c.categories || (c.category ? [c.category] : [])).join(', ')}
                           {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
                         </span>

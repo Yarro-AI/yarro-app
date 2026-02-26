@@ -245,7 +245,7 @@ export default function TenantDetailPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -286,10 +286,10 @@ export default function TenantDetailPage() {
 
               {/* Property */}
               <div className="mt-8">
-                <h3 className="text-sm font-semibold mb-3">Property</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Property</h3>
                 {property ? (
                   <Link href={`/properties/${property.id}`} className="flex items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] font-medium hover:underline">{property.address}</span>
+                    <span className="text-[15px] hover:underline">{property.address}</span>
                   </Link>
                 ) : (
                   <p className="text-sm text-muted-foreground">No property assigned</p>
