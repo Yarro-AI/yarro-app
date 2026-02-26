@@ -346,8 +346,9 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
-              {/* Tenants — pl-11 offsets text to align with icon grid text (32px icon + 12px gap) */}
-              <div className="mt-8">
+              <div className="border-t border-border/40 mt-8" />
+
+              <div className="mt-6">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Tenants
                   {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
@@ -397,7 +398,8 @@ export default function PropertyDetailPage() {
           {/* Edit-mode tenants/contractors */}
           {isEditing && (
             <>
-              <div className="mt-8">
+              <div className="border-t border-border/40 mt-8" />
+              <div className="mt-6">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
                   Tenants
                   {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
