@@ -182,6 +182,7 @@ export default function TicketsPage() {
     if (data) {
       // Map next_action_reason → display label
       const reasonToDisplayStage: Record<string, string> = {
+        on_hold: 'On Hold',
         handoff_review: 'Handoff',
         manager_approval: 'Awaiting Manager',
         no_contractors: 'No Contractors',

@@ -10,7 +10,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
-import { Archive, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
+import { Archive, Pause, Play, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
 import { TicketOverviewTab } from './ticket-overview-tab'
 import { TicketConversationTab } from './ticket-conversation-tab'
@@ -50,11 +51,21 @@ export function TicketDetailModal({
     hasOutboundLog,
     previouslyApprovedContractor,
     displayStage,
+    refetch,
   } = useTicketDetail(open ? ticketId : null)
 
   const isHandoff = context?.handoff && basic?.status === 'open' && !basic?.archived
+  const isOnHold = basic?.on_hold === true
+  const isOpen = basic?.status === 'open' && !basic?.archived
   // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
   const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
+
+  const handleToggleHold = async () => {
+    if (!ticketId) return
+    const supabase = createClient()
+    await supabase.rpc('c1_toggle_hold', { p_ticket_id: ticketId, p_on_hold: !isOnHold })
+    refetch()
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
@@ -91,6 +102,15 @@ export function TicketDetailModal({
                       className="w-28 text-xs h-9"
                       onClick={onReview}
                     />
+                  )}
+                  {isOpen && (
+                    <Button variant="ghost" size="sm" onClick={handleToggleHold}>
+                      {isOnHold ? (
+                        <><Play className="h-3.5 w-3.5 mr-1" />Resume</>
+                      ) : (
+                        <><Pause className="h-3.5 w-3.5 mr-1" />Hold</>
+                      )}
+                    </Button>
                   )}
                   {onArchive && !basic?.archived && (
                     <Button variant="ghost" size="sm" onClick={onArchive}>

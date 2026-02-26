@@ -126,6 +126,7 @@ const ACTION_CTA: Record<string, string> = {
 
 // Dot + text badges per next_action_reason (distinct from StatusBadge pills)
 const REASON_BADGE: Record<string, { label: string; dot: string; text: string }> = {
+  on_hold:              { label: 'On Hold',           dot: 'bg-gray-400',   text: 'text-gray-500 dark:text-gray-400' },
   handoff_review:       { label: 'Handoff',           dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
   no_contractors:       { label: 'No contractors',    dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
   job_not_completed:    { label: 'Not completed',     dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },

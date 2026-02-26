@@ -81,6 +81,7 @@ export interface TicketBasic {
   images: string[] | null
   next_action: string | null
   next_action_reason: string | null
+  on_hold: boolean | null
   sla_due_at: string | null
   resolved_at: string | null
   address?: string
@@ -381,7 +382,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
             property_id, tenant_id, contractor_id, conversation_id,
-            archived, images, next_action, next_action_reason, sla_due_at, resolved_at,
+            archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
             c1_properties(address),
             c1_tenants(full_name),
             c1_contractors(contractor_name)
@@ -521,6 +522,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const displayStage = (() => {
     if (!basic) return null
     const reasonMap: Record<string, string> = {
+      on_hold: 'On Hold',
       handoff_review: 'Handoff',
       manager_approval: 'Awaiting Manager',
       no_contractors: 'No Contractors',
