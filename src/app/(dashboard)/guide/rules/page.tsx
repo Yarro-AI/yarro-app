@@ -151,21 +151,24 @@ export default function RulesPage() {
     if (!propertyManager) return
     setSaving(true)
 
+    const payload = {
+      dispatch_mode: draft.dispatch_mode,
+      contractor_reminder_minutes: draft.contractor_reminder_on ? parseInt(draft.contractor_reminder) : null,
+      contractor_timeout_minutes: parseInt(draft.contractor_timeout),
+      landlord_followup_hours: draft.landlord_reminder_on ? Math.round(parseInt(draft.landlord_reminder) / 60) : null,
+      landlord_timeout_hours: Math.round(parseInt(draft.landlord_timeout) / 60),
+      completion_reminder_hours: draft.completion_reminder_on ? Math.round(parseInt(draft.completion_reminder) / 60) : null,
+      completion_timeout_hours: Math.round(parseInt(draft.completion_timeout) / 60),
+    }
+
     const { error } = await supabase
       .from('c1_property_managers')
-      .update({
-        dispatch_mode: draft.dispatch_mode,
-        contractor_reminder_minutes: draft.contractor_reminder_on ? parseInt(draft.contractor_reminder) : null,
-        contractor_timeout_minutes: parseInt(draft.contractor_timeout),
-        landlord_followup_hours: draft.landlord_reminder_on ? parseInt(draft.landlord_reminder) / 60 : null,
-        landlord_timeout_hours: parseInt(draft.landlord_timeout) / 60,
-        completion_reminder_hours: draft.completion_reminder_on ? parseInt(draft.completion_reminder) / 60 : null,
-        completion_timeout_hours: parseInt(draft.completion_timeout) / 60,
-      })
+      .update(payload)
       .eq('id', propertyManager.id)
 
     if (error) {
-      toast.error('Failed to save')
+      console.error('Rules save error:', error)
+      toast.error(error.message || 'Failed to save')
     } else {
       toast.success('Settings saved')
       setSaved({ ...draft })

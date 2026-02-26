@@ -396,7 +396,7 @@ export default function PropertyDetailPage() {
                 {contractors.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No contractors assigned</p>
                 ) : (
-                  <div className="space-y-0.5 overflow-y-auto min-h-0">
+                  <div className="space-y-0.5 overflow-y-auto overflow-x-hidden min-h-0">
                     {contractors.map((c) => (
                       <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
                         <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
