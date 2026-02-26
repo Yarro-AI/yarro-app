@@ -301,8 +301,9 @@ export default function PropertyDetailPage() {
             </div>
           ) : (
             <>
-              {/* Meta info grid — 2x2 symmetric layout */}
-              <div className="grid grid-cols-2 gap-6">
+              {/* Meta info — 2-column aligned layout */}
+              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                {/* Row 1 */}
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -312,7 +313,6 @@ export default function PropertyDetailPage() {
                     <p className="text-[15px] font-medium mt-0.5">{formatCurrency(property.auto_approve_limit)}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
@@ -327,6 +327,7 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
 
+                {/* Row 2 */}
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -336,7 +337,6 @@ export default function PropertyDetailPage() {
                     <p className="text-[15px] font-medium mt-0.5">{property.emergency_access_contact ? formatPhoneDisplay(property.emergency_access_contact) : <span className="text-muted-foreground/50 font-normal">None</span>}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -347,58 +347,106 @@ export default function PropertyDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Tenants — same 2-col grid alignment */}
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                  Tenants
+                  {tenants.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+                </h3>
+                {tenants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No tenants assigned</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {tenants.map((t) => (
+                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] font-medium truncate">{t.full_name}</span>
+                        <span className="text-sm text-muted-foreground truncate">
+                          {(t.role_tag || 'tenant').replace(/_/g, ' ')}
+                          {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Contractors — same 2-col grid alignment */}
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                  Contractors
+                  {contractors.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
+                </h3>
+                {contractors.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No contractors assigned</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {contractors.map((c) => (
+                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] font-medium truncate">{c.contractor_name}</span>
+                        <span className="text-sm text-muted-foreground truncate">
+                          {(c.categories || (c.category ? [c.category] : [])).join(', ')}
+                          {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
 
-          {/* Tenants */}
-          <div className="mt-8">
-            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-              Tenants
-              {tenants.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
-            </h3>
-            {tenants.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tenants assigned</p>
-            ) : (
-              <div className="space-y-0.5">
-                {tenants.map((t) => (
-                  <Link key={t.id} href={`/tenants/${t.id}`} className="flex items-center justify-between py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] font-medium">{t.full_name}</span>
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <span className="capitalize">{(t.role_tag || 'tenant').replace(/_/g, ' ')}</span>
-                      {t.phone && <span className="font-mono text-xs">{formatPhoneDisplay(t.phone)}</span>}
-                    </div>
-                  </Link>
-                ))}
+          {/* Edit-mode tenants/contractors still need to show */}
+          {isEditing && (
+            <>
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                  Tenants
+                  {tenants.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+                </h3>
+                {tenants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No tenants assigned</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {tenants.map((t) => (
+                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] font-medium truncate">{t.full_name}</span>
+                        <span className="text-sm text-muted-foreground truncate">
+                          {(t.role_tag || 'tenant').replace(/_/g, ' ')}
+                          {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          {/* Contractors */}
-          <div className="mt-8">
-            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-              Contractors
-              {contractors.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
-            </h3>
-            {contractors.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No contractors assigned</p>
-            ) : (
-              <div className="space-y-0.5">
-                {contractors.map((c) => (
-                  <Link key={c.id} href={`/contractors/${c.id}`} className="flex items-center justify-between py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] font-medium">{c.contractor_name}</span>
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <span>{(c.categories || (c.category ? [c.category] : [])).join(', ')}</span>
-                      {c.contractor_phone && <span className="font-mono text-xs">{formatPhoneDisplay(c.contractor_phone)}</span>}
-                    </div>
-                  </Link>
-                ))}
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                  Contractors
+                  {contractors.length > 0 && <span className="text-xs font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
+                </h3>
+                {contractors.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No contractors assigned</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {contractors.map((c) => (
+                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-2 gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] font-medium truncate">{c.contractor_name}</span>
+                        <span className="text-sm text-muted-foreground truncate">
+                          {(c.categories || (c.category ? [c.category] : [])).join(', ')}
+                          {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Right: Tickets */}
-        <div className="w-[480px] flex-shrink-0 border-l flex flex-col">
+        <div className="w-[540px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
             <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || completedTickets.length > 0) && (

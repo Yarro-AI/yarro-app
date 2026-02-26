@@ -245,7 +245,7 @@ export default function TenantDetailPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -300,7 +300,7 @@ export default function TenantDetailPage() {
         </div>
 
         {/* Right: Tickets */}
-        <div className="w-[480px] flex-shrink-0 border-l flex flex-col">
+        <div className="w-[540px] flex-shrink-0 border-l flex flex-col">
           <div className="px-6 py-5 flex-shrink-0">
             <h3 className="text-sm font-semibold">Tickets</h3>
             {(openTickets.length > 0 || closedTickets.length > 0) && (
