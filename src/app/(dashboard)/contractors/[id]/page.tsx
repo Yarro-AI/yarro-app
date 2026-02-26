@@ -176,68 +176,91 @@ export default function ContractorDetailPage() {
         {/* Left: Details */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {isEditing && editedData ? (
-            <div className="space-y-6">
-              <div>
+            <>
+              <div className="mb-5">
                 <label className="text-xs text-muted-foreground mb-1.5 block">Name</label>
                 <Input value={editedData.contractor_name} onChange={(e) => updateField('contractor_name', e.target.value)} placeholder="ABC Plumbing" className={validationErrors.contractor_name ? 'border-destructive' : ''} />
                 {validationErrors.contractor_name && <p className="text-xs text-destructive mt-1">{validationErrors.contractor_name}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Phone</label>
-                  <Input type="tel" value={editedData.contractor_phone} onChange={(e) => updateField('contractor_phone', e.target.value)} placeholder="07700 900123" className={validationErrors.contractor_phone ? 'border-destructive' : ''} />
-                  {validationErrors.contractor_phone && <p className="text-xs text-destructive mt-1">{validationErrors.contractor_phone}</p>}
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Email</label>
-                  <Input type="email" value={editedData.contractor_email || ''} onChange={(e) => updateField('contractor_email', e.target.value || null)} placeholder="contractor@email.com" className={validationErrors.contractor_email ? 'border-destructive' : ''} />
-                  {validationErrors.contractor_email && <p className="text-xs text-destructive mt-1">{validationErrors.contractor_email}</p>}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-xs text-muted-foreground">Active</label>
-                <Switch checked={editedData.active} onCheckedChange={(checked) => updateField('active', checked)} />
-                <span className="text-sm text-muted-foreground">{editedData.active ? 'Active' : 'Inactive'}</span>
-              </div>
-
-              {/* Categories edit */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Categories</label>
-                {editedData.categories.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {editedData.categories.map((cat) => (
-                      <span key={cat} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
-                        {cat}
-                        <button type="button" onClick={() => handleCategoryToggle(cat)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
-                      </span>
-                    ))}
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
-                )}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button type="button" className={`flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border bg-background hover:bg-accent/50 transition-colors text-left ${validationErrors.category ? 'border-destructive' : 'border-input'}`}>
-                      <span className="text-muted-foreground">{editedData.categories.length === 0 ? 'Select categories...' : 'Add more...'}</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-1.5 max-h-64 overflow-y-auto" align="start">
-                    {CATEGORY_OPTIONS.map((opt) => {
-                      const isSel = editedData.categories.includes(opt.value)
-                      return (
-                        <button key={opt.value} type="button" onClick={() => handleCategoryToggle(opt.value)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
-                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-input'}`}>{isSel && <Check className="h-3 w-3 text-primary-foreground" />}</div>
-                          <span>{opt.label}</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                    <Input type="tel" value={editedData.contractor_phone} onChange={(e) => updateField('contractor_phone', e.target.value)} placeholder="07700 900123" className={`h-8 ${validationErrors.contractor_phone ? 'border-destructive' : ''}`} />
+                    {validationErrors.contractor_phone && <p className="text-xs text-destructive mt-1">{validationErrors.contractor_phone}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Email</p>
+                    <Input type="email" value={editedData.contractor_email || ''} onChange={(e) => updateField('contractor_email', e.target.value || null)} placeholder="contractor@email.com" className={`h-8 ${validationErrors.contractor_email ? 'border-destructive' : ''}`} />
+                    {validationErrors.contractor_email && <p className="text-xs text-destructive mt-1">{validationErrors.contractor_email}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Categories</p>
+                    {editedData.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-1.5">
+                        {editedData.categories.map((cat) => (
+                          <span key={cat} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-foreground">
+                            {cat}
+                            <button type="button" onClick={() => handleCategoryToggle(cat)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className={`flex items-center justify-between w-full h-8 px-3 text-sm rounded-md border bg-background hover:bg-accent/50 transition-colors text-left ${validationErrors.category ? 'border-destructive' : 'border-input'}`}>
+                          <span className="text-muted-foreground text-xs">{editedData.categories.length === 0 ? 'Select categories...' : 'Add more...'}</span>
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
-                      )
-                    })}
-                  </PopoverContent>
-                </Popover>
-                {validationErrors.category && <p className="text-xs text-destructive mt-1">{validationErrors.category}</p>}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-1.5 max-h-64 overflow-y-auto" align="start">
+                        {CATEGORY_OPTIONS.map((opt) => {
+                          const isSel = editedData.categories.includes(opt.value)
+                          return (
+                            <button key={opt.value} type="button" onClick={() => handleCategoryToggle(opt.value)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
+                              <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-input'}`}>{isSel && <Check className="h-3 w-3 text-primary-foreground" />}</div>
+                              <span>{opt.label}</span>
+                            </button>
+                          )
+                        })}
+                      </PopoverContent>
+                    </Popover>
+                    {validationErrors.category && <p className="text-xs text-destructive mt-1">{validationErrors.category}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className={`h-8 w-8 rounded-lg ${editedData.active ? 'bg-emerald-500/10' : 'bg-red-500/10'} flex items-center justify-center shrink-0 mt-0.5`}>
+                    <div className={`h-2.5 w-2.5 rounded-full ${editedData.active ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Status</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={editedData.active} onCheckedChange={(checked) => updateField('active', checked)} />
+                      <span className="text-sm">{editedData.active ? 'Active' : 'Inactive'}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Properties edit */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Properties</label>
+              <div className="mt-8">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
+                  Properties
+                  {editedData.property_ids.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{editedData.property_ids.length}</span>}
+                </h3>
                 {editedData.property_ids.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {editedData.property_ids.map((id) => {
@@ -253,9 +276,9 @@ export default function ContractorDetailPage() {
                 )}
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button type="button" className="flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left">
-                      <span className="text-muted-foreground">{editedData.property_ids.length === 0 ? 'Select properties...' : 'Add more...'}</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <button type="button" className="flex items-center justify-between w-full max-w-sm h-8 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left">
+                      <span className="text-muted-foreground text-xs">{editedData.property_ids.length === 0 ? 'Select properties...' : 'Add more...'}</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
@@ -271,7 +294,7 @@ export default function ContractorDetailPage() {
                   </PopoverContent>
                 </Popover>
               </div>
-            </div>
+            </>
           ) : (
             <>
               {/* Meta info grid — icon + label + value */}

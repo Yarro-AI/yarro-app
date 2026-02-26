@@ -162,25 +162,44 @@ export default function LandlordDetailPage() {
         {/* Left: Details */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {isEditing && editedData ? (
-            <div className="space-y-6">
-              <div>
+            <>
+              <div className="mb-5">
                 <label className="text-xs text-muted-foreground mb-1.5 block">Full Name</label>
                 <Input value={editedData.full_name} onChange={(e) => updateField('full_name', e.target.value)} placeholder="John Smith" className={validationErrors.full_name ? 'border-destructive' : ''} />
                 {validationErrors.full_name && <p className="text-xs text-destructive mt-1">{validationErrors.full_name}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Phone</label>
-                  <Input value={editedData.phone || ''} onChange={(e) => updateField('phone', e.target.value || null)} placeholder="07123 456789" className={validationErrors.phone ? 'border-destructive' : ''} />
-                  {validationErrors.phone && <p className="text-xs text-destructive mt-1">{validationErrors.phone}</p>}
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                    <Input value={editedData.phone || ''} onChange={(e) => updateField('phone', e.target.value || null)} placeholder="07123 456789" className={`h-8 ${validationErrors.phone ? 'border-destructive' : ''}`} />
+                    {validationErrors.phone && <p className="text-xs text-destructive mt-1">{validationErrors.phone}</p>}
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Email</label>
-                  <Input value={editedData.email || ''} onChange={(e) => updateField('email', e.target.value || null)} placeholder="john@example.com" className={validationErrors.email ? 'border-destructive' : ''} />
-                  {validationErrors.email && <p className="text-xs text-destructive mt-1">{validationErrors.email}</p>}
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Email</p>
+                    <Input value={editedData.email || ''} onChange={(e) => updateField('email', e.target.value || null)} placeholder="john@example.com" className={`h-8 ${validationErrors.email ? 'border-destructive' : ''}`} />
+                    {validationErrors.email && <p className="text-xs text-destructive mt-1">{validationErrors.email}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Properties</p>
+                    <p className="text-[15px] font-medium mt-0.5">{properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           ) : (
             <>
               <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">

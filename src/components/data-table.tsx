@@ -219,37 +219,24 @@ export function DataTable<T>({
                       }
                     }}
                   >
-                    {columns.map((col, colIdx) => (
+                    {columns.map((col) => (
                       <TableCell key={col.key} className="py-3">
-                        {isNavigating && colIdx === columns.length - 1 ? (
-                          <div className="flex items-center gap-2">
-                            <span className="truncate opacity-60">
-                              {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
-                            </span>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground flex-shrink-0" />
-                          </div>
-                        ) : (
-                          col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')
-                        )}
+                        {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
                       </TableCell>
                     ))}
                     {onViewClick && (
                       <TableCell className="py-3">
-                        {isNavigating ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onViewClick(row)
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onViewClick(row)
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>

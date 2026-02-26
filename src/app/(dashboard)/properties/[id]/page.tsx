@@ -284,36 +284,120 @@ export default function PropertyDetailPage() {
         {/* Left: Details */}
         <div className="flex-1 overflow-hidden px-8 py-6 flex flex-col">
           {isEditing && editedData ? (
-            <div className="space-y-6 flex-1 overflow-y-auto min-h-0">
-              <div>
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="mb-5 flex-shrink-0">
                 <label className="text-xs text-muted-foreground mb-1.5 block">Address</label>
                 <Input value={editedData.address} onChange={(e) => updateField('address', e.target.value)} placeholder="123 Main Street, Manchester, M1 1AA" className={validationErrors.address ? 'border-destructive' : ''} />
                 {validationErrors.address && <p className="text-xs text-destructive mt-1">{validationErrors.address}</p>}
               </div>
-              <div className="grid grid-cols-3 gap-6">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Auto-Approve Limit</label>
-                  <Input type="number" value={editedData.auto_approve_limit ?? ''} onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" className={validationErrors.auto_approve_limit ? 'border-destructive' : ''} />
-                  {validationErrors.auto_approve_limit && <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>}
+              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5 flex-shrink-0">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Auto-Approve</p>
+                    <Input type="number" value={editedData.auto_approve_limit ?? ''} onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" className={`h-8 ${validationErrors.auto_approve_limit ? 'border-destructive' : ''}`} />
+                    {validationErrors.auto_approve_limit && <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>}
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Emergency Contact</label>
-                  <Input value={editedData.emergency_access_contact || ''} onChange={(e) => updateField('emergency_access_contact', e.target.value || null)} placeholder="Name / Phone" />
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Landlord</p>
+                    <Select value={editedData.landlord_id || 'none'} onValueChange={(v) => updateField('landlord_id', v === 'none' ? null : v)}>
+                      <SelectTrigger className="h-8"><SelectValue placeholder="Select landlord..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No landlord</SelectItem>
+                        {landlordOptions.map((l) => <SelectItem key={l.id} value={l.id}>{l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Landlord</label>
-                  <Select value={editedData.landlord_id || 'none'} onValueChange={(v) => updateField('landlord_id', v === 'none' ? null : v)}>
-                    <SelectTrigger><SelectValue placeholder="Select landlord..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No landlord</SelectItem>
-                      {landlordOptions.map((l) => <SelectItem key={l.id} value={l.id}>{l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Emergency Contact</p>
+                    <Input value={editedData.emergency_access_contact || ''} onChange={(e) => updateField('emergency_access_contact', e.target.value || null)} placeholder="Name / Phone" className="h-8" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Access Instructions</p>
+                    <Textarea value={editedData.access_instructions || ''} onChange={(e) => updateField('access_instructions', e.target.value || null)} placeholder="Gate code, key safe, entry instructions..." rows={2} className="text-sm" />
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Access Instructions</label>
-                <Textarea value={editedData.access_instructions || ''} onChange={(e) => updateField('access_instructions', e.target.value || null)} placeholder="Gate code, key safe number, entry instructions..." rows={2} />
+
+              <div className="border-t border-border/40 mt-8 flex-shrink-0" />
+
+              <div className="mt-6 flex-shrink-0">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
+                  Tenants
+                  {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+                </h3>
+                {tenants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No tenants assigned</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {tenants.map((t) => (
+                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                        <span className="text-[15px] truncate pl-11">{t.full_name}</span>
+                        <span className="text-sm text-muted-foreground truncate pl-11">
+                          {(t.role_tag || 'tenant').replace(/_/g, ' ')}
+                          {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Contractors — editable */}
+              <div className="mt-8 flex-1 min-h-0 flex flex-col">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
+                  Contractors
+                  {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
+                </h3>
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+                  {contractors.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {contractors.map((c) => (
+                        <span key={c.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
+                          <span className="truncate max-w-[200px]">{c.contractor_name}</span>
+                          <button type="button" onClick={() => handleContractorToggle(c.id)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left">
+                        <span className="text-muted-foreground">{contractors.length === 0 ? 'Select contractors...' : 'Add more...'}</span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
+                      {allContractors.map((c) => {
+                        const isSel = contractors.some((ac) => ac.id === c.id)
+                        return (
+                          <button key={c.id} type="button" onClick={() => handleContractorToggle(c.id)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
+                            <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-input'}`}>{isSel && <Check className="h-3 w-3 text-primary-foreground" />}</div>
+                            <span className="truncate">{c.contractor_name}</span>
+                            <span className="text-xs text-muted-foreground ml-auto truncate">{(c.categories || (c.category ? [c.category] : [])).join(', ')}</span>
+                          </button>
+                        )
+                      })}
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
           ) : (
@@ -412,69 +496,6 @@ export default function PropertyDetailPage() {
             </div>
           )}
 
-          {/* Edit-mode tenants/contractors */}
-          {isEditing && (
-            <>
-              <div className="border-t border-border/40 mt-8" />
-              <div className="mt-6">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
-                  Tenants
-                  {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
-                </h3>
-                {tenants.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tenants assigned</p>
-                ) : (
-                  <div className="space-y-0.5">
-                    {tenants.map((t) => (
-                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate pl-11">{t.full_name}</span>
-                        <span className="text-sm text-muted-foreground truncate pl-11">
-                          {(t.role_tag || 'tenant').replace(/_/g, ' ')}
-                          {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="mt-8">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
-                  Contractors
-                  {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
-                </h3>
-                {contractors.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2 max-h-[300px] overflow-y-auto">
-                    {contractors.map((c) => (
-                      <span key={c.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-foreground">
-                        <span className="truncate max-w-[200px]">{c.contractor_name}</span>
-                        <button type="button" onClick={() => handleContractorToggle(c.id)} className="hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button type="button" className="flex items-center justify-between w-full max-w-sm h-9 px-3 text-sm rounded-md border border-input bg-background hover:bg-accent/50 transition-colors text-left">
-                      <span className="text-muted-foreground">{contractors.length === 0 ? 'Select contractors...' : 'Add more...'}</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="start">
-                    {allContractors.map((c) => {
-                      const isSel = contractors.some((ac) => ac.id === c.id)
-                      return (
-                        <button key={c.id} type="button" onClick={() => handleContractorToggle(c.id)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
-                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-input'}`}>{isSel && <Check className="h-3 w-3 text-primary-foreground" />}</div>
-                          <span className="truncate">{c.contractor_name}</span>
-                          <span className="text-xs text-muted-foreground ml-auto truncate">{(c.categories || (c.category ? [c.category] : [])).join(', ')}</span>
-                        </button>
-                      )
-                    })}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </>
-          )}
         </div>
 
         {/* Right: Tickets */}
