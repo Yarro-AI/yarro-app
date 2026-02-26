@@ -289,7 +289,7 @@ export default function TenantDetailPage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Property</h3>
                 {property ? (
                   <Link href={`/properties/${property.id}`} className="flex items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] hover:underline">{property.address}</span>
+                    <span className="text-[15px] hover:underline pl-11">{property.address}</span>
                   </Link>
                 ) : (
                   <p className="text-sm text-muted-foreground">No property assigned</p>

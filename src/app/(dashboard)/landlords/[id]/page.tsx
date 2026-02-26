@@ -227,7 +227,7 @@ export default function LandlordDetailPage() {
               <div className="space-y-0.5">
                 {properties.map((p) => (
                   <Link key={p.id} href={`/properties/${p.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] truncate">{p.address}</span>
+                    <span className="text-[15px] truncate pl-11">{p.address}</span>
                     <span className="text-sm text-muted-foreground pl-11">{tenantCounts[p.id] || 0} tenant{(tenantCounts[p.id] || 0) !== 1 ? 's' : ''}</span>
                   </Link>
                 ))}

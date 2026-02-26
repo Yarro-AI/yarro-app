@@ -329,7 +329,7 @@ export default function ContractorDetailPage() {
                 <div className="space-y-0.5">
                   {assignedProperties.map((prop) => (
                     <Link key={prop.id} href={`/properties/${prop.id}`} className="flex items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                      <span className="text-[15px]">{prop.address}</span>
+                      <span className="text-[15px] pl-11">{prop.address}</span>
                     </Link>
                   ))}
                 </div>

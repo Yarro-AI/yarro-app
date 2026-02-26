@@ -358,7 +358,7 @@ export default function PropertyDetailPage() {
                   <div className="space-y-0.5">
                     {tenants.map((t) => (
                       <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate">{t.full_name}</span>
+                        <span className="text-[15px] truncate pl-11">{t.full_name}</span>
                         <span className="text-sm text-muted-foreground truncate pl-11">
                           {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                           {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
@@ -381,7 +381,7 @@ export default function PropertyDetailPage() {
                   <div className="space-y-0.5">
                     {contractors.map((c) => (
                       <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate">{c.contractor_name}</span>
+                        <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
                         <span className="text-sm text-muted-foreground truncate pl-11">
                           {(c.categories || (c.category ? [c.category] : [])).join(', ')}
                           {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
@@ -408,7 +408,7 @@ export default function PropertyDetailPage() {
                   <div className="space-y-0.5">
                     {tenants.map((t) => (
                       <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate">{t.full_name}</span>
+                        <span className="text-[15px] truncate pl-11">{t.full_name}</span>
                         <span className="text-sm text-muted-foreground truncate pl-11">
                           {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                           {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
@@ -429,7 +429,7 @@ export default function PropertyDetailPage() {
                   <div className="space-y-0.5">
                     {contractors.map((c) => (
                       <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate">{c.contractor_name}</span>
+                        <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
                         <span className="text-sm text-muted-foreground truncate pl-11">
                           {(c.categories || (c.category ? [c.category] : [])).join(', ')}
                           {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
