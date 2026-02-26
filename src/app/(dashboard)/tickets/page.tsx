@@ -23,7 +23,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, Filter, Check, X } from 'lucide-react'
+import { Ticket, Filter, Check, X, Pause, Play } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
@@ -53,6 +53,7 @@ interface TicketRow {
   contractor_id: string | null
   conversation_id: string | null
   archived: boolean | null
+  on_hold?: boolean | null
   sla_due_at?: string | null
   resolved_at?: string | null
   message_stage?: string | null
@@ -73,6 +74,7 @@ const STAGE_OPTIONS = [
   'Scheduled',
   'Not Completed',
   'Completed',
+  'On Hold',
 ] as const
 
 export default function TicketsPage() {
@@ -158,6 +160,7 @@ export default function TicketsPage() {
         images,
         next_action,
         next_action_reason,
+        on_hold,
         sla_due_at,
         resolved_at,
         c1_properties(address),
@@ -368,6 +371,13 @@ export default function TicketsPage() {
     await fetchTickets()
   }
 
+  const handleToggleHold = async (e: React.MouseEvent, ticket: TicketRow) => {
+    e.stopPropagation()
+    const newHold = !ticket.on_hold
+    await supabase.rpc('c1_toggle_hold', { p_ticket_id: ticket.id, p_on_hold: newHold })
+    fetchTickets()
+  }
+
   const getRowClassName = (ticket: TicketRow) => {
     if (ticket.archived) return 'opacity-50'
     if (ticket.status?.toLowerCase() === 'closed') return 'opacity-60'
@@ -445,6 +455,28 @@ export default function TicketsPage() {
         />
       ),
       getValue: (ticket) => ticket.sla_due_at ? new Date(ticket.sla_due_at).getTime() : 0,
+    },
+    {
+      key: 'hold',
+      header: '',
+      width: '80px',
+      render: (ticket) => {
+        if (ticket.status !== 'open' || ticket.archived) return null
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={(e) => handleToggleHold(e, ticket)}
+          >
+            {ticket.on_hold ? (
+              <><Play className="h-3 w-3 mr-1" />Resume</>
+            ) : (
+              <><Pause className="h-3 w-3 mr-1" />Hold</>
+            )}
+          </Button>
+        )
+      },
     },
     {
       key: 'actions',
@@ -649,6 +681,7 @@ export default function TicketsPage() {
         open={modalOpen}
         onClose={handleCloseModal}
         onArchive={() => setArchiveDialogOpen(true)}
+        onTicketUpdated={fetchTickets}
         defaultTab={defaultTab || undefined}
         onReview={() => {
           if (selectedTicketBasic) {

@@ -24,6 +24,7 @@ interface TicketDetailModalProps {
   onClose: () => void
   onArchive?: () => void
   onReview?: () => void
+  onTicketUpdated?: () => void
   defaultTab?: string
 }
 
@@ -33,6 +34,7 @@ export function TicketDetailModal({
   onClose,
   onArchive,
   onReview,
+  onTicketUpdated,
   defaultTab,
 }: TicketDetailModalProps) {
   const {
@@ -65,6 +67,7 @@ export function TicketDetailModal({
     const supabase = createClient()
     await supabase.rpc('c1_toggle_hold', { p_ticket_id: ticketId, p_on_hold: !isOnHold })
     refetch()
+    onTicketUpdated?.()
   }
 
   return (
