@@ -24,7 +24,6 @@ import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
 import { Ticket, Filter, Check, X } from 'lucide-react'
-import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
@@ -53,6 +52,8 @@ interface TicketRow {
   contractor_id: string | null
   conversation_id: string | null
   archived: boolean | null
+  next_action?: string | null
+  next_action_reason?: string | null
   sla_due_at?: string | null
   resolved_at?: string | null
   message_stage?: string | null
@@ -63,6 +64,7 @@ interface TicketRow {
 }
 
 type TicketFilter = 'all' | 'system' | 'manual'
+type ScopeTab = 'all' | 'open' | 'needs_action' | 'closed' | 'archived'
 
 const STAGE_OPTIONS = [
   'Created',
@@ -88,8 +90,7 @@ export default function TicketsPage() {
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
-  const [showArchived, setShowArchived] = useState(false)
-  const [showClosed, setShowClosed] = useState(false)
+  const [scopeTab, setScopeTab] = useState<ScopeTab>('open')
   const [stageFilter, setStageFilter] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
@@ -101,7 +102,7 @@ export default function TicketsPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchTickets()
-  }, [propertyManager, dateRange, showArchived, showClosed])
+  }, [propertyManager, dateRange])
 
   useEffect(() => {
     if (shouldCreate === 'true') {
@@ -168,14 +169,6 @@ export default function TicketsPage() {
       .gte('date_logged', dateRange.from.toISOString())
       .lte('date_logged', dateRange.to.toISOString())
       .order('date_logged', { ascending: false })
-
-    if (!showArchived) {
-      query = query.or('archived.is.null,archived.eq.false')
-    }
-
-    if (!showClosed) {
-      query = query.not('status', 'ilike', 'closed')
-    }
 
     const { data } = await query
 
@@ -467,7 +460,11 @@ export default function TicketsPage() {
   ]
 
   // Open handoffs only show in the banner, not in the table
-  const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && !t.archived
+  const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
+
+  const NEEDS_ACTION_VALUES = ['needs_attention', 'assign_contractor', 'follow_up'] as const
+  const isNeedsAction = (next_action: string | null | undefined): boolean =>
+    NEEDS_ACTION_VALUES.includes(next_action as typeof NEEDS_ACTION_VALUES[number])
 
   const toggleStageFilter = (stage: string) => {
     setStageFilter(prev => {
@@ -478,20 +475,40 @@ export default function TicketsPage() {
     })
   }
 
-  const filteredTickets = tickets.filter((t) => {
-    if (isOpenHandoff(t)) return false // always excluded from table — banner handles these
+  const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
+
+  // Scope counts — always from the full nonHandoff set
+  const scopeCounts: Record<ScopeTab, number> = {
+    all:          nonHandoff.length,
+    open:         nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true).length,
+    needs_action: nonHandoff.filter(t => isNeedsAction(t.next_action)).length,
+    closed:       nonHandoff.filter(t => t.status === 'closed').length,
+    archived:     nonHandoff.filter(t => t.archived === true).length,
+  }
+
+  // Scoped base: nonHandoff after scope tab applied, before secondary filters
+  const scopedBase = nonHandoff.filter(t => {
+    if (scopeTab === 'open')         return t.status !== 'closed' && t.archived !== true
+    if (scopeTab === 'closed')       return t.status === 'closed'
+    if (scopeTab === 'archived')     return t.archived === true
+    if (scopeTab === 'needs_action') return isNeedsAction(t.next_action)
+    return true // 'all'
+  })
+
+  // Secondary filter counts — contextual to current scope
+  const filterCounts = {
+    all:    scopedBase.length,
+    system: scopedBase.filter(t => !t.handoff && !t.is_manual).length,
+    manual: scopedBase.filter(t => t.is_manual === true).length,
+  }
+
+  // Final filtered set: secondary filters applied on top of scope
+  const filteredTickets = scopedBase.filter((t) => {
     if (activeFilter === 'manual' && t.is_manual !== true) return false
     if (activeFilter === 'system' && (t.handoff || t.is_manual)) return false
     if (stageFilter.size > 0 && !stageFilter.has(t.display_stage || '')) return false
     return true
   })
-
-  const nonHandoff = tickets.filter((t) => !isOpenHandoff(t))
-  const filterCounts = {
-    all: nonHandoff.length,
-    system: nonHandoff.filter((t) => !t.handoff && !t.is_manual).length,
-    manual: nonHandoff.filter((t) => t.is_manual === true).length,
-  }
 
   return (
     <div className="p-8 flex flex-col h-full overflow-hidden">
@@ -527,7 +544,7 @@ export default function TicketsPage() {
 
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
-        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open' && !t.archived)}
+        tickets={tickets.filter((t) => t.handoff === true && t.status === 'open' && t.archived !== true)}
         onReview={(ticketId) => {
           const ticket = tickets.find(t => t.id === ticketId)
           if (ticket) {
@@ -537,6 +554,36 @@ export default function TicketsPage() {
           }
         }}
       />
+
+      {/* Scope tabs */}
+      <div className="flex-shrink-0 flex items-end gap-1 border-b border-border/40 mt-3 mb-0">
+        {([
+          { key: 'all',          label: 'All' },
+          { key: 'open',         label: 'Open' },
+          { key: 'needs_action', label: 'Needs action' },
+          { key: 'closed',       label: 'Closed' },
+          { key: 'archived',     label: 'Archived' },
+        ] as { key: ScopeTab; label: string }[]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setScopeTab(key)}
+            className={cn(
+              'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+              scopeTab === key
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {label}
+            <span className={cn(
+              'ml-1.5 text-xs tabular-nums',
+              scopeTab === key ? 'text-muted-foreground' : 'text-muted-foreground/50'
+            )}>
+              {scopeCounts[key]}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* Data Table */}
       <div className="flex-1 min-h-0">
@@ -617,15 +664,6 @@ export default function TicketsPage() {
                 </PopoverContent>
               </Popover>
 
-              {/* Toggles */}
-              <div className="flex items-center gap-1.5">
-                <Switch id="show-closed" checked={showClosed} onCheckedChange={setShowClosed} className="scale-90" />
-                <label htmlFor="show-closed" className="text-xs text-muted-foreground cursor-pointer">Closed</label>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} className="scale-90" />
-                <label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">Archived</label>
-              </div>
             </div>
           }
           emptyMessage={
@@ -696,7 +734,7 @@ export default function TicketsPage() {
         open={archiveDialogOpen}
         onOpenChange={setArchiveDialogOpen}
         title="Archive Ticket"
-        description="This ticket will be moved to the archive. You can view archived tickets using the 'Show archived' toggle. Archived tickets are excluded from automation."
+        description="This ticket will be moved to the archive. You can view archived tickets in the Archived tab. Archived tickets are excluded from automation."
         itemName={selectedTicketBasic?.issue_description?.slice(0, 50) || undefined}
         onConfirm={handleArchive}
         confirmLabel="Archive"
