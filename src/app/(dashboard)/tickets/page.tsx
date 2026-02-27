@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -65,7 +65,7 @@ interface TicketRow {
 
 type TicketFilter = 'all' | 'system' | 'manual'
 type ScopeTab = 'all' | 'open' | 'closed' | 'archived'
-type OpenGroup = 'needsMgr' | 'waiting' | 'scheduled' | 'other'
+type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled' | 'other' | null
 
 const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking'] as const
 const NEEDS_MGR_REASONS = ['needs_attention', 'no_contractors', 'landlord_declined',
@@ -90,6 +90,7 @@ export default function TicketsPage() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [scopeTab, setScopeTab] = useState<ScopeTab>('open')
   const [search, setSearch] = useState('')
+  const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>(null)
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -108,6 +109,10 @@ export default function TicketsPage() {
       router.replace('/tickets')
     }
   }, [shouldCreate])
+
+  useEffect(() => {
+    if (scopeTab !== 'open') setWorkflowFilter(null)
+  }, [scopeTab])
 
   useEffect(() => {
     if (selectedId && tickets.length > 0) {
@@ -470,7 +475,7 @@ export default function TicketsPage() {
     archived: nonHandoff.filter(t => t.archived === true).length,
   }
 
-  // Page-level helpers: search + origin filter
+  // Filter helpers
   const applySearch = (arr: TicketRow[]): TicketRow[] => {
     if (!search.trim()) return arr
     const q = search.toLowerCase()
@@ -485,107 +490,65 @@ export default function TicketsPage() {
     if (activeFilter === 'system') return arr.filter(t => !t.handoff && !t.is_manual)
     return arr
   }
-  const applyFilters = (arr: TicketRow[]) => applySearch(applyOriginFilter(arr))
+  const applyWorkflowFilter = (arr: TicketRow[]): TicketRow[] => {
+    if (workflowFilter === 'needsMgr')  return arr.filter(t => isNeedsMgrReason(t.next_action_reason))
+    if (workflowFilter === 'waiting')   return arr.filter(t => isWaitingReason(t.next_action_reason))
+    if (workflowFilter === 'scheduled') return arr.filter(t => isScheduledReason(t.next_action_reason))
+    if (workflowFilter === 'other')     return arr.filter(t =>
+      !isNeedsMgrReason(t.next_action_reason) &&
+      !isWaitingReason(t.next_action_reason) &&
+      !isScheduledReason(t.next_action_reason)
+    )
+    return arr
+  }
+  const applyFilters = (arr: TicketRow[]) => applySearch(applyOriginFilter(applyWorkflowFilter(arr)))
 
-  // Lifecycle bases (before search/origin filter)
+  // Lifecycle bases
   const openBase     = nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true)
   const closedBase   = nonHandoff.filter(t => t.status === 'closed')
   const archivedBase = nonHandoff.filter(t => t.archived === true)
 
-  // Origin filter counts — contextual to current lifecycle tab (no search applied to counts)
-  const scopeBaseForCounts = scopeTab === 'closed' ? closedBase
-    : scopeTab === 'archived' ? archivedBase
-    : scopeTab === 'open'     ? openBase
-    : nonHandoff
+  // Scope base for current lifecycle tab
+  const scopeBase = scopeTab === 'open'     ? openBase
+                  : scopeTab === 'closed'   ? closedBase
+                  : scopeTab === 'archived' ? archivedBase
+                  : nonHandoff
+
+  // Origin filter counts (from scopeBase, no search or workflow filter applied)
   const filterCounts = {
-    all:    scopeBaseForCounts.length,
-    system: scopeBaseForCounts.filter(t => !t.handoff && !t.is_manual).length,
-    manual: scopeBaseForCounts.filter(t => t.is_manual === true).length,
+    all:    scopeBase.length,
+    system: scopeBase.filter(t => !t.handoff && !t.is_manual).length,
+    manual: scopeBase.filter(t => t.is_manual === true).length,
   }
 
-  // Single-pass bucketing for open tickets (precedence: needsMgr → waiting → scheduled → other)
-  const bucketOpen = (t: TicketRow): OpenGroup => {
-    if (isNeedsMgrReason(t.next_action_reason)) return 'needsMgr'
-    if (isWaitingReason(t.next_action_reason))  return 'waiting'
-    if (isScheduledReason(t.next_action_reason)) return 'scheduled'
-    return 'other'
-  }
-  const openGroups: Record<OpenGroup, TicketRow[]> = { needsMgr: [], waiting: [], scheduled: [], other: [] }
-  applyFilters(openBase).forEach(t => openGroups[bucketOpen(t)].push(t))
-
-  // Flat filtered sets for closed / archived
-  const closedFiltered   = applyFilters(closedBase)
-  const archivedFiltered = applyFilters(archivedBase)
-
-  // ── Section helpers (closures — use columns/handlers from component scope) ──────
-
-  function SectionHeading({ label, count }: { label: string; count: number }) {
-    return (
-      <div className="px-4 pt-4 pb-1 flex items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-        <span className="text-xs tabular-nums text-muted-foreground/60">{count}</span>
-      </div>
-    )
+  // Workflow chip counts — always from openBase (open tickets only)
+  const workflowCounts = {
+    needsMgr:  openBase.filter(t => isNeedsMgrReason(t.next_action_reason)).length,
+    waiting:   openBase.filter(t => isWaitingReason(t.next_action_reason)).length,
+    scheduled: openBase.filter(t => isScheduledReason(t.next_action_reason)).length,
+    other:     openBase.filter(t =>
+      !isNeedsMgrReason(t.next_action_reason) &&
+      !isWaitingReason(t.next_action_reason) &&
+      !isScheduledReason(t.next_action_reason)
+    ).length,
   }
 
-  function FlatSection({ data, isFirst = true }: { data: TicketRow[]; isFirst?: boolean }) {
-    return (
-      <DataTable
-        data={data}
-        columns={columns}
-        searchKeys={[]}
-        hideToolbar
-        showHeader={isFirst}
-        disableBodyScroll
-        getRowId={t => t.id}
-        getRowClassName={getRowClassName}
-        onRowClick={handleRowClick}
-        onViewClick={handleRowClick}
-      />
-    )
+  // Visible rows — memoized for search performance at 500+ tickets
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const visibleRows = useMemo(() => applyFilters(scopeBase), [tickets, scopeTab, workflowFilter, activeFilter, search])
+
+  // Active filter state
+  const WORKFLOW_LABELS: Record<NonNullable<WorkflowFilter>, string> = {
+    needsMgr:  'Needs action',
+    waiting:   'Waiting',
+    scheduled: 'Scheduled',
+    other:     'Other',
   }
-
-  const openSections: { label: string; key: OpenGroup }[] = [
-    { label: 'Needs manager action', key: 'needsMgr'  },
-    { label: 'Waiting',              key: 'waiting'   },
-    { label: 'Scheduled',            key: 'scheduled' },
-    { label: 'Other',                key: 'other'     },
-  ]
-
-  function OpenSectionsView() {
-    if (loading) {
-      return (
-        <DataTable
-          data={[]}
-          columns={columns}
-          searchKeys={[]}
-          hideToolbar
-          disableBodyScroll
-          getRowId={t => t.id}
-          loading={true}
-        />
-      )
-    }
-    const visible = openSections.filter(s => openGroups[s.key].length > 0)
-    if (visible.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-          <p className="font-medium">No open tickets</p>
-          <p className="text-sm text-muted-foreground mt-1">No tickets match the current filters.</p>
-        </div>
-      )
-    }
-    return (
-      <>
-        {visible.map((s, i) => (
-          <div key={s.key}>
-            <SectionHeading label={s.label} count={openGroups[s.key].length} />
-            <FlatSection data={openGroups[s.key]} isFirst={i === 0} />
-          </div>
-        ))}
-      </>
-    )
+  const hasActiveFilters = workflowFilter !== null || activeFilter !== 'all' || search.trim() !== ''
+  const clearFilters = () => {
+    setWorkflowFilter(null)
+    setActiveFilter('all')
+    setSearch('')
   }
 
   return (
@@ -662,6 +625,33 @@ export default function TicketsPage() {
         ))}
       </div>
 
+      {/* Workflow filter chips — only visible on Open tab */}
+      {scopeTab === 'open' && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/20">
+          <span className="text-xs text-muted-foreground mr-1">Workflow</span>
+          {([
+            { key: 'needsMgr',  label: 'Needs action' },
+            { key: 'waiting',   label: 'Waiting'       },
+            { key: 'scheduled', label: 'Scheduled'     },
+            { key: 'other',     label: 'Other'         },
+          ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
+                workflowFilter === key
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
+              )}
+            >
+              {label}
+              <span className="tabular-nums opacity-60">{workflowCounts[key]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Search + origin filter — page-level, apply across all sections */}
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border/20">
         <div className="relative max-w-xs flex-1">
@@ -691,41 +681,55 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Scrollable data region — single scroll container */}
+      {/* Active filters — visible when any filter is active */}
+      {hasActiveFilters && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/20">
+          <span className="text-xs text-muted-foreground">Active:</span>
+          {workflowFilter && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
+              Workflow: {WORKFLOW_LABELS[workflowFilter]}
+              <button onClick={() => setWorkflowFilter(null)} className="ml-0.5 hover:text-foreground">×</button>
+            </span>
+          )}
+          {activeFilter !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
+              Type: {activeFilter === 'system' ? 'Auto' : 'Manual'}
+              <button onClick={() => setActiveFilter('all')} className="ml-0.5 hover:text-foreground">×</button>
+            </span>
+          )}
+          {search.trim() && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
+              &ldquo;{search.trim()}&rdquo;
+              <button onClick={() => setSearch('')} className="ml-0.5 hover:text-foreground">×</button>
+            </span>
+          )}
+          <button onClick={clearFilters} className="ml-auto text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {/* Scrollable data region — single table */}
       <div className="flex-1 overflow-auto min-h-0">
-
-        {/* Open tab — 4 grouped sections */}
-        {scopeTab === 'open' && <OpenSectionsView />}
-
-        {/* Closed tab — flat list */}
-        {scopeTab === 'closed' && (
-          loading
-            ? <DataTable data={[]} columns={columns} searchKeys={[]} hideToolbar disableBodyScroll getRowId={t => t.id} loading />
-            : <FlatSection data={closedFiltered} />
-        )}
-
-        {/* Archived tab — flat list */}
-        {scopeTab === 'archived' && (
-          loading
-            ? <DataTable data={[]} columns={columns} searchKeys={[]} hideToolbar disableBodyScroll getRowId={t => t.id} loading />
-            : <FlatSection data={archivedFiltered} />
-        )}
-
-        {/* All tab — open groups + closed section + archived section */}
-        {scopeTab === 'all' && (
-          <>
-            <OpenSectionsView />
-            {!loading && (
-              <>
-                <SectionHeading label="Closed" count={closedFiltered.length} />
-                <FlatSection data={closedFiltered} isFirst={false} />
-                <SectionHeading label="Archived" count={archivedFiltered.length} />
-                <FlatSection data={archivedFiltered} isFirst={false} />
-              </>
-            )}
-          </>
-        )}
-
+        <DataTable
+          data={visibleRows}
+          columns={columns}
+          searchKeys={[]}
+          hideToolbar
+          disableBodyScroll
+          getRowId={t => t.id}
+          getRowClassName={getRowClassName}
+          onRowClick={handleRowClick}
+          onViewClick={handleRowClick}
+          loading={loading}
+          emptyMessage={
+            <div className="text-center py-12">
+              <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="font-medium">No tickets</p>
+              <p className="text-sm text-muted-foreground mt-1">No tickets match the current filters.</p>
+            </div>
+          }
+        />
       </div>
 
       {/* Ticket Detail Modal (replaces old DetailDrawer) */}
