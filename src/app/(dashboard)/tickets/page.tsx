@@ -24,11 +24,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, Search, ChevronDown } from 'lucide-react'
+import { Ticket, Search, RefreshCw, SlidersHorizontal } from 'lucide-react'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
 import { SlaBadge } from '@/components/sla-badge'
-import { RefreshCw } from 'lucide-react'
 
 interface TicketRow {
   id: string
@@ -63,9 +63,9 @@ interface TicketRow {
   contractor_name?: string
 }
 
-type TicketFilter = 'all' | 'system' | 'manual'
-type ScopeTab = 'all' | 'open' | 'closed' | 'archived'
-type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled' | null
+type LifecycleFilter = 'open' | 'closed' | 'archived'
+type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled'
+type TypeFilter = 'auto' | 'manual'
 
 const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking'] as const
 const NEEDS_MGR_REASONS = ['needs_attention', 'no_contractors', 'landlord_declined',
@@ -84,13 +84,13 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
-  const [activeFilter, setActiveFilter] = useState<TicketFilter>('all')
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
-  const [scopeTab, setScopeTab] = useState<ScopeTab>('open')
   const [search, setSearch] = useState('')
-  const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>(null)
+  const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleFilter[]>([])
+  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowFilter[]>([])
+  const [selectedType, setSelectedType] = useState<TypeFilter[]>([])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -111,8 +111,10 @@ export default function TicketsPage() {
   }, [shouldCreate])
 
   useEffect(() => {
-    if (scopeTab !== 'open') setWorkflowFilter(null)
-  }, [scopeTab])
+    if (!selectedLifecycle.includes('open') && selectedWorkflow.length > 0) {
+      setSelectedWorkflow([])
+    }
+  }, [selectedLifecycle, selectedWorkflow.length])
 
   useEffect(() => {
     if (selectedId && tickets.length > 0) {
@@ -464,98 +466,79 @@ export default function TicketsPage() {
 
   // Open handoffs only show in the banner, not in the table
   const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
-
   const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
 
-  // Scope counts — 4 lifecycle tabs
-  const scopeCounts: Record<ScopeTab, number> = {
-    all:      nonHandoff.length,
-    open:     nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true).length,
-    closed:   nonHandoff.filter(t => t.status === 'closed').length,
-    archived: nonHandoff.filter(t => t.archived === true).length,
-  }
-
-  // Filter helpers
-  const applySearch = (arr: TicketRow[]): TicketRow[] => {
-    if (!search.trim()) return arr
-    const q = search.toLowerCase()
-    return arr.filter(t =>
-      t.issue_description?.toLowerCase().includes(q) ||
-      t.address?.toLowerCase().includes(q) ||
-      t.category?.toLowerCase().includes(q)
-    )
-  }
-  const applyOriginFilter = (arr: TicketRow[]): TicketRow[] => {
-    if (activeFilter === 'manual') return arr.filter(t => t.is_manual === true)
-    if (activeFilter === 'system') return arr.filter(t => !t.handoff && !t.is_manual)
-    return arr
-  }
-  const applyWorkflowFilter = (arr: TicketRow[]): TicketRow[] => {
-    if (workflowFilter === 'needsMgr')  return arr.filter(t => isNeedsMgrReason(t.next_action_reason))
-    if (workflowFilter === 'waiting')   return arr.filter(t => isWaitingReason(t.next_action_reason))
-    if (workflowFilter === 'scheduled') return arr.filter(t => isScheduledReason(t.next_action_reason))
-    return arr
-  }
-  const applyFilters = (arr: TicketRow[]) => applySearch(applyOriginFilter(applyWorkflowFilter(arr)))
-
-  // Lifecycle bases
-  const openBase     = nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true)
-  const closedBase   = nonHandoff.filter(t => t.status === 'closed')
-  const archivedBase = nonHandoff.filter(t => t.archived === true)
-
-  // Scope base for current lifecycle tab
-  const scopeBase = scopeTab === 'open'     ? openBase
-                  : scopeTab === 'closed'   ? closedBase
-                  : scopeTab === 'archived' ? archivedBase
-                  : nonHandoff
-
-  // Origin filter counts (from scopeBase, no search or workflow filter applied)
-  const filterCounts = {
-    all:    scopeBase.length,
-    system: scopeBase.filter(t => !t.handoff && !t.is_manual).length,
-    manual: scopeBase.filter(t => t.is_manual === true).length,
-  }
-
-  // Workflow chip counts — always from openBase (open tickets only)
-  const workflowCounts = {
-    needsMgr:  openBase.filter(t => isNeedsMgrReason(t.next_action_reason)).length,
-    waiting:   openBase.filter(t => isWaitingReason(t.next_action_reason)).length,
-    scheduled: openBase.filter(t => isScheduledReason(t.next_action_reason)).length,
-  }
-
-  // Visible rows — memoized for search performance at 500+ tickets
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const visibleRows = useMemo(() => applyFilters(scopeBase), [tickets, scopeTab, workflowFilter, activeFilter, search])
-
   // Active filter state
-  const WORKFLOW_LABELS: Record<NonNullable<WorkflowFilter>, string> = {
-    needsMgr:  'Needs action',
-    waiting:   'Waiting',
-    scheduled: 'Scheduled',
-  }
-  const hasActiveFilters = workflowFilter !== null || activeFilter !== 'all' || search.trim() !== ''
+  const hasActiveFilters = selectedLifecycle.length > 0 || selectedWorkflow.length > 0 || selectedType.length > 0 || search.trim() !== ''
+  const activeFilterCount = selectedLifecycle.length + selectedWorkflow.length + selectedType.length + (search.trim() ? 1 : 0)
+
   const clearFilters = () => {
-    setWorkflowFilter(null)
-    setActiveFilter('all')
+    setSelectedLifecycle([])
+    setSelectedWorkflow([])
+    setSelectedType([])
     setSearch('')
   }
 
+  // Visible rows — single memoized pipeline; nonHandoff recomputed inside to keep deps clean
+  const visibleRows = useMemo(() => {
+    const isHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
+    let result = tickets.filter(t => !isHandoff(t))
+
+    // 1. Lifecycle (OR across selections; empty = show all)
+    if (selectedLifecycle.length > 0) {
+      result = result.filter(t =>
+        selectedLifecycle.some(lc => {
+          if (lc === 'open')     return t.status !== 'closed' && t.archived !== true
+          if (lc === 'closed')   return t.status === 'closed'
+          if (lc === 'archived') return t.archived === true
+          return false
+        })
+      )
+    }
+
+    // 2. Workflow — when active, restricts to open tickets matching workflow only
+    if (selectedWorkflow.length > 0) {
+      result = result.filter(t => {
+        const isOpen = t.status !== 'closed' && t.archived !== true
+        if (!isOpen) return false
+        return selectedWorkflow.some(wf => {
+          if (wf === 'needsMgr')  return isNeedsMgrReason(t.next_action_reason)
+          if (wf === 'waiting')   return isWaitingReason(t.next_action_reason)
+          if (wf === 'scheduled') return isScheduledReason(t.next_action_reason)
+          return false
+        })
+      })
+    }
+
+    // 3. Type (OR across selections)
+    if (selectedType.length > 0) {
+      result = result.filter(t =>
+        selectedType.some(tp => {
+          if (tp === 'auto')   return !t.handoff && !t.is_manual
+          if (tp === 'manual') return t.is_manual === true
+          return false
+        })
+      )
+    }
+
+    // 4. Search
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(t =>
+        t.issue_description?.toLowerCase().includes(q) ||
+        t.address?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q)
+      )
+    }
+
+    return result
+  }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
+
   return (
     <div className="p-8 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center gap-4 mb-3">
-        <div className="shrink-0">
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Ticket className="h-5 w-5" />
-            Tickets
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage maintenance tickets across your properties
-          </p>
-        </div>
-
-        {/* Search — in header */}
-        <div className="relative min-w-[220px] max-w-sm flex-1">
+      {/* Search + actions — top command layer */}
+      <div className="flex-shrink-0 flex items-center gap-3 mb-4">
+        <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
           <Input
             placeholder="Search tickets..."
@@ -564,7 +547,6 @@ export default function TicketsPage() {
             className="pl-8 h-9 text-sm"
           />
         </div>
-
         <div className="flex items-center gap-2 ml-auto shrink-0">
           <Button
             variant="ghost"
@@ -583,6 +565,17 @@ export default function TicketsPage() {
         </div>
       </div>
 
+      {/* Title */}
+      <div className="flex-shrink-0 mb-3">
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <Ticket className="h-5 w-5" />
+          Tickets
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Manage maintenance tickets across your properties
+        </p>
+      </div>
+
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
         tickets={tickets.filter((t) => t.handoff === true && t.status === 'open' && t.archived !== true)}
@@ -596,105 +589,119 @@ export default function TicketsPage() {
         }}
       />
 
-      {/* Scope tabs */}
-      <div className="flex-shrink-0 flex items-end gap-1 border-b border-border/40 mt-3 mb-0">
-        {([
-          { key: 'all',      label: 'All'      },
-          { key: 'open',     label: 'Open'     },
-          { key: 'closed',   label: 'Closed'   },
-          { key: 'archived', label: 'Archived' },
-        ] as { key: ScopeTab; label: string }[]).map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setScopeTab(key)}
-            className={cn(
-              'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
-              scopeTab === key
-                ? 'border-[#1677FF] text-[#1677FF]'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {label}
-            <span className={cn(
-              'ml-1.5 text-xs tabular-nums',
-              scopeTab === key ? 'text-muted-foreground' : 'text-muted-foreground/50'
-            )}>
-              {scopeCounts[key]}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Workflow bucket cards — Open tab only */}
-      {scopeTab === 'open' && (
-        <div className="flex-shrink-0 flex gap-4 mt-3 mb-3">
-          {([
-            { key: 'needsMgr',  label: 'Needs action' },
-            { key: 'waiting',   label: 'Waiting'      },
-            { key: 'scheduled', label: 'Scheduled'    },
-          ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
+      {/* Filters + DateFilter */}
+      <div className="flex-shrink-0 flex items-center gap-3 mb-3">
+        <Popover>
+          <PopoverTrigger asChild>
             <button
-              key={key}
-              onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
               className={cn(
-                'flex flex-col justify-center h-16 px-6 rounded-xl border cursor-pointer transition-colors text-left',
-                workflowFilter === key
-                  ? 'border-[#1677FF] bg-[#1677FF]/[0.06] text-[#1677FF]'
-                  : 'border-border/40 bg-transparent text-foreground hover:border-border'
+                'h-9 px-3 rounded-md border text-sm flex items-center gap-2 transition-colors',
+                hasActiveFilters
+                  ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
+                  : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-border'
               )}
             >
-              <span className="text-sm font-medium">{label}</span>
-              <span className="text-lg font-semibold tabular-nums">{workflowCounts[key]}</span>
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {hasActiveFilters && (
+                <span className="text-xs tabular-nums opacity-70">{activeFilterCount}</span>
+              )}
             </button>
-          ))}
-        </div>
-      )}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-72 p-4 space-y-4">
 
-      {/* Filter bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 py-2.5 border-b border-border/20">
-        <div className="flex items-center gap-2 ml-auto shrink-0">
-          <div className="relative">
-            <select
-              value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value as TicketFilter)}
-              className="h-9 appearance-none text-xs pl-3 pr-8 rounded-md border border-border/40 bg-background text-muted-foreground cursor-pointer hover:border-border hover:text-foreground transition-colors"
-            >
-              <option value="all">Type: All</option>
-              <option value="system">Type: Auto</option>
-              <option value="manual">Type: Manual</option>
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          </div>
-          <DateFilter value={dateRange} onChange={setDateRange} />
-        </div>
+            {/* Lifecycle */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Lifecycle</p>
+              {(['open', 'closed', 'archived'] as const).map(lc => (
+                <label key={lc} className="flex items-center gap-2 py-1 cursor-pointer text-sm capitalize">
+                  <input
+                    type="checkbox"
+                    checked={selectedLifecycle.includes(lc)}
+                    onChange={() => {
+                      const isAdding = !selectedLifecycle.includes(lc)
+                      if (isAdding && (lc === 'closed' || lc === 'archived') && selectedWorkflow.length > 0) {
+                        setSelectedWorkflow([])
+                      }
+                      setSelectedLifecycle(prev =>
+                        prev.includes(lc) ? prev.filter(x => x !== lc) : [...prev, lc]
+                      )
+                    }}
+                    className="rounded border-border"
+                  />
+                  {lc.charAt(0).toUpperCase() + lc.slice(1)}
+                </label>
+              ))}
+            </div>
+
+            {/* Workflow — only when Open lifecycle is selected */}
+            {selectedLifecycle.includes('open') && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow</p>
+                {([
+                  { key: 'needsMgr',  label: 'Needs action' },
+                  { key: 'waiting',   label: 'Waiting'      },
+                  { key: 'scheduled', label: 'Scheduled'    },
+                ] as { key: WorkflowFilter; label: string }[]).map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedWorkflow.includes(key)}
+                      onChange={() => {
+                        const isAdding = !selectedWorkflow.includes(key)
+                        if (isAdding) {
+                          setSelectedLifecycle(prev => {
+                            const withOpen = prev.includes('open') ? prev : [...prev, 'open']
+                            return withOpen.filter(lc => lc === 'open')
+                          })
+                        }
+                        setSelectedWorkflow(prev =>
+                          prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
+                        )
+                      }}
+                      className="rounded border-border"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {/* Type */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Type</p>
+              {([
+                { key: 'auto',   label: 'Auto'   },
+                { key: 'manual', label: 'Manual' },
+              ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedType.includes(key)}
+                    onChange={() => setSelectedType(prev =>
+                      prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
+                    )}
+                    className="rounded border-border"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                Clear filters
+              </button>
+            )}
+
+          </PopoverContent>
+        </Popover>
+
+        <DateFilter value={dateRange} onChange={setDateRange} />
       </div>
-
-      {/* Active filters — visible when any filter is active */}
-      {hasActiveFilters && (
-        <div className="flex-shrink-0 flex items-center gap-2 py-2 border-b border-border/20">
-          {scopeTab === 'open' && workflowFilter && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1677FF]/[0.08] text-[#1677FF] border border-[#1677FF]/20 text-xs font-medium">
-              Workflow: {WORKFLOW_LABELS[workflowFilter]}
-              <button onClick={() => setWorkflowFilter(null)} className="ml-0.5 hover:opacity-70">×</button>
-            </span>
-          )}
-          {activeFilter !== 'all' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
-              Type: {activeFilter === 'system' ? 'Auto' : 'Manual'}
-              <button onClick={() => setActiveFilter('all')} className="ml-0.5 hover:text-foreground">×</button>
-            </span>
-          )}
-          {search.trim() && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
-              &ldquo;{search.trim()}&rdquo;
-              <button onClick={() => setSearch('')} className="ml-0.5 hover:text-foreground">×</button>
-            </span>
-          )}
-          <button onClick={clearFilters} className="ml-auto text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
-            Clear filters
-          </button>
-        </div>
-      )}
 
       {/* Scrollable data region — single table */}
       <div className="flex-1 overflow-auto min-h-0">
