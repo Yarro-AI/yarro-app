@@ -402,7 +402,7 @@ export default function TicketsPage() {
       key: 'priority',
       header: 'Priority',
       sortable: true,
-      render: (ticket) => ticket.priority ? <StatusBadge status={ticket.priority} /> : '-',
+      render: (ticket) => ticket.priority ? <StatusBadge status={ticket.priority} className="opacity-90" /> : '-',
     },
     {
       key: 'type',
@@ -422,7 +422,7 @@ export default function TicketsPage() {
       key: 'display_stage',
       header: 'Stage',
       sortable: true,
-      render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} /> : '-',
+      render: (ticket) => ticket.display_stage ? <StatusBadge status={ticket.display_stage} className="opacity-90" /> : '-',
     },
     {
       key: 'sla',
@@ -625,60 +625,66 @@ export default function TicketsPage() {
         ))}
       </div>
 
-      {/* Workflow filter chips — only visible on Open tab */}
-      {scopeTab === 'open' && (
-        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/20">
-          <span className="text-xs text-muted-foreground mr-1">Workflow</span>
-          {([
-            { key: 'needsMgr',  label: 'Needs action' },
-            { key: 'waiting',   label: 'Waiting'       },
-            { key: 'scheduled', label: 'Scheduled'     },
-            { key: 'other',     label: 'Other'         },
-          ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
-                workflowFilter === key
-                  ? 'bg-foreground text-background border-foreground'
-                  : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
-              )}
-            >
-              {label}
-              <span className="tabular-nums opacity-60">{workflowCounts[key]}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Unified control bar: [search] [workflow chips — open only] [origin pills] */}
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 border-b border-border/20">
 
-      {/* Search + origin filter — page-level, apply across all sections */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border/20">
-        <div className="relative max-w-xs flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Search — left */}
+        <div className="relative min-w-[220px] max-w-sm flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
           <Input
             placeholder="Search tickets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-8 h-8 text-sm"
           />
         </div>
-        <div className="flex items-center bg-muted rounded-lg p-0.5 ml-auto">
+
+        {/* Workflow chips — Open tab only */}
+        {scopeTab === 'open' && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] text-muted-foreground/40">Workflow</span>
+            {([
+              { key: 'needsMgr',  label: 'Needs action' },
+              { key: 'waiting',   label: 'Waiting'       },
+              { key: 'scheduled', label: 'Scheduled'     },
+              { key: 'other',     label: 'Other'         },
+            ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-colors border',
+                  workflowFilter === key
+                    ? 'bg-muted border-border/60 text-foreground'
+                    : 'bg-transparent text-muted-foreground/60 border-border/30 hover:border-border/60 hover:text-foreground'
+                )}
+              >
+                {label}
+                <span className="tabular-nums opacity-50">{workflowCounts[key]}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Origin pills — right */}
+        <div className="flex items-center bg-muted rounded-lg p-0.5 ml-auto shrink-0">
           {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize ${
+              className={cn(
+                'px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize',
                 activeFilter === filter
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
+              )}
             >
               {filter === 'system' ? 'Auto' : filter}
-              <span className="ml-1 text-[10px] opacity-60">{filterCounts[filter]}</span>
+              <span className="ml-1 text-[10px] opacity-50">{filterCounts[filter]}</span>
             </button>
           ))}
         </div>
+
       </div>
 
       {/* Active filters — visible when any filter is active */}
