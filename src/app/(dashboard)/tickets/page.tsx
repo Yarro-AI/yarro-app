@@ -23,8 +23,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, Filter, Check, X } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Ticket } from 'lucide-react'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
 import { SlaBadge } from '@/components/sla-badge'
@@ -66,16 +65,15 @@ interface TicketRow {
 type TicketFilter = 'all' | 'system' | 'manual'
 type ScopeTab = 'all' | 'open' | 'needs_action' | 'closed' | 'archived'
 
-const STAGE_OPTIONS = [
-  'Created',
-  'Awaiting Contractor',
-  'Awaiting Manager',
-  'Awaiting Landlord',
-  'Awaiting Booking',
-  'Scheduled',
-  'Not Completed',
-  'Completed',
-] as const
+type WorkflowGroup = 'allOpen' | 'waiting' | 'scheduled' | 'needsAction' | 'otherOpen'
+
+const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking'] as const
+const NEEDS_MGR_REASONS = ['needs_attention', 'no_contractors', 'landlord_declined',
+                           'landlord_no_response', 'job_not_completed', 'manager_approval'] as const
+
+const isWaitingReason   = (r?: string | null): boolean => !!r && (WAITING_REASONS   as readonly string[]).includes(r)
+const isNeedsMgrReason  = (r?: string | null): boolean => !!r && (NEEDS_MGR_REASONS as readonly string[]).includes(r)
+const isScheduledReason = (r?: string | null): boolean => r === 'scheduled'
 
 export default function TicketsPage() {
   const { propertyManager } = usePM()
@@ -91,7 +89,7 @@ export default function TicketsPage() {
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [scopeTab, setScopeTab] = useState<ScopeTab>('open')
-  const [stageFilter, setStageFilter] = useState<Set<string>>(new Set())
+  const [workflowGroup, setWorkflowGroup] = useState<WorkflowGroup>('allOpen')
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -110,6 +108,11 @@ export default function TicketsPage() {
       router.replace('/tickets')
     }
   }, [shouldCreate])
+
+  // Reset workflowGroup to 'allOpen' whenever the user leaves the Open scope tab
+  useEffect(() => {
+    if (scopeTab !== 'open') setWorkflowGroup('allOpen')
+  }, [scopeTab])
 
   useEffect(() => {
     if (selectedId && tickets.length > 0) {
@@ -466,15 +469,6 @@ export default function TicketsPage() {
   const isNeedsAction = (next_action: string | null | undefined): boolean =>
     NEEDS_ACTION_VALUES.includes(next_action as typeof NEEDS_ACTION_VALUES[number])
 
-  const toggleStageFilter = (stage: string) => {
-    setStageFilter(prev => {
-      const next = new Set(prev)
-      if (next.has(stage)) next.delete(stage)
-      else next.add(stage)
-      return next
-    })
-  }
-
   const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
 
   // Scope counts — always from the full nonHandoff set
@@ -486,7 +480,7 @@ export default function TicketsPage() {
     archived:     nonHandoff.filter(t => t.archived === true).length,
   }
 
-  // Scoped base: nonHandoff after scope tab applied, before secondary filters
+  // Scoped base: nonHandoff after scope tab applied, before workflow filter
   const scopedBase = nonHandoff.filter(t => {
     if (scopeTab === 'open')         return t.status !== 'closed' && t.archived !== true
     if (scopeTab === 'closed')       return t.status === 'closed'
@@ -495,18 +489,43 @@ export default function TicketsPage() {
     return true // 'all'
   })
 
-  // Secondary filter counts — contextual to current scope
-  const filterCounts = {
-    all:    scopedBase.length,
-    system: scopedBase.filter(t => !t.handoff && !t.is_manual).length,
-    manual: scopedBase.filter(t => t.is_manual === true).length,
+  // Workflow group counts — always from the open set (shown only on Open scope tab)
+  const openForWorkflow = nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true)
+  const workflowCounts: Record<WorkflowGroup, number> = {
+    allOpen:     openForWorkflow.length,
+    waiting:     openForWorkflow.filter(t => isWaitingReason(t.next_action_reason)).length,
+    scheduled:   openForWorkflow.filter(t => isScheduledReason(t.next_action_reason)).length,
+    needsAction: openForWorkflow.filter(t => isNeedsMgrReason(t.next_action_reason)).length,
+    otherOpen:   openForWorkflow.filter(t =>
+      !isWaitingReason(t.next_action_reason) &&
+      !isScheduledReason(t.next_action_reason) &&
+      !isNeedsMgrReason(t.next_action_reason)
+    ).length,
   }
 
-  // Final filtered set: secondary filters applied on top of scope
-  const filteredTickets = scopedBase.filter((t) => {
+  // Workflow base: scopedBase with workflow group applied (only has effect when scopeTab === 'open')
+  const workflowBase = scopedBase.filter(t => {
+    if (scopeTab !== 'open' || workflowGroup === 'allOpen') return true
+    if (workflowGroup === 'waiting')     return isWaitingReason(t.next_action_reason)
+    if (workflowGroup === 'scheduled')   return isScheduledReason(t.next_action_reason)
+    if (workflowGroup === 'needsAction') return isNeedsMgrReason(t.next_action_reason)
+    // otherOpen
+    return !isWaitingReason(t.next_action_reason) &&
+           !isScheduledReason(t.next_action_reason) &&
+           !isNeedsMgrReason(t.next_action_reason)
+  })
+
+  // Origin filter counts — contextual to workflowBase
+  const filterCounts = {
+    all:    workflowBase.length,
+    system: workflowBase.filter(t => !t.handoff && !t.is_manual).length,
+    manual: workflowBase.filter(t => t.is_manual === true).length,
+  }
+
+  // Final filtered set: origin filter applied on top of workflowBase
+  const filteredTickets = workflowBase.filter((t) => {
     if (activeFilter === 'manual' && t.is_manual !== true) return false
     if (activeFilter === 'system' && (t.handoff || t.is_manual)) return false
-    if (stageFilter.size > 0 && !stageFilter.has(t.display_stage || '')) return false
     return true
   })
 
@@ -566,7 +585,7 @@ export default function TicketsPage() {
         ] as { key: ScopeTab; label: string }[]).map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setScopeTab(key)}
+            onClick={() => { setScopeTab(key); setWorkflowGroup('allOpen') }}
             className={cn(
               'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
               scopeTab === key
@@ -584,6 +603,38 @@ export default function TicketsPage() {
           </button>
         ))}
       </div>
+
+      {/* Workflow Group tabs — Open scope only */}
+      {scopeTab === 'open' && (
+        <div className="flex-shrink-0 flex items-end gap-1 border-b border-border/40 mb-0">
+          {([
+            { key: 'allOpen',     label: 'All open' },
+            { key: 'waiting',     label: 'Waiting' },
+            { key: 'scheduled',   label: 'Scheduled' },
+            { key: 'needsAction', label: 'Needs action' },
+            { key: 'otherOpen',   label: 'Other' },
+          ] as { key: WorkflowGroup; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setWorkflowGroup(key)}
+              className={cn(
+                'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                workflowGroup === key
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {label}
+              <span className={cn(
+                'ml-1.5 text-xs tabular-nums',
+                workflowGroup === key ? 'text-muted-foreground' : 'text-muted-foreground/50'
+              )}>
+                {workflowCounts[key]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="flex-1 min-h-0">
@@ -616,53 +667,6 @@ export default function TicketsPage() {
                   </button>
                 ))}
               </div>
-
-              {/* Stage filter */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-medium">
-                    <Filter className="h-3 w-3" />
-                    Stage
-                    {stageFilter.size > 0 && (
-                      <span className="ml-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
-                        {stageFilter.size}
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-52 p-2">
-                  <div className="space-y-0.5">
-                    {STAGE_OPTIONS.map((stage) => {
-                      const active = stageFilter.has(stage)
-                      return (
-                        <button
-                          key={stage}
-                          onClick={() => toggleStageFilter(stage)}
-                          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-                            active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
-                          }`}
-                        >
-                          <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            active ? 'bg-primary border-primary' : 'border-muted-foreground/30'
-                          }`}>
-                            {active && <Check className="h-3 w-3 text-primary-foreground" />}
-                          </div>
-                          <StatusBadge status={stage} size="sm" />
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {stageFilter.size > 0 && (
-                    <button
-                      onClick={() => setStageFilter(new Set())}
-                      className="w-full mt-2 pt-2 border-t text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1.5"
-                    >
-                      <X className="h-3 w-3" />
-                      Clear filters
-                    </button>
-                  )}
-                </PopoverContent>
-              </Popover>
 
             </div>
           }
