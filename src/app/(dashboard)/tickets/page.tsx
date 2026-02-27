@@ -21,9 +21,10 @@ import {
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket } from 'lucide-react'
+import { Ticket, Search } from 'lucide-react'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
 import { SlaBadge } from '@/components/sla-badge'
@@ -63,9 +64,8 @@ interface TicketRow {
 }
 
 type TicketFilter = 'all' | 'system' | 'manual'
-type ScopeTab = 'all' | 'open' | 'needs_action' | 'closed' | 'archived'
-
-type WorkflowGroup = 'allOpen' | 'waiting' | 'scheduled' | 'needsAction' | 'otherOpen'
+type ScopeTab = 'all' | 'open' | 'closed' | 'archived'
+type OpenGroup = 'needsMgr' | 'waiting' | 'scheduled' | 'other'
 
 const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking'] as const
 const NEEDS_MGR_REASONS = ['needs_attention', 'no_contractors', 'landlord_declined',
@@ -89,7 +89,7 @@ export default function TicketsPage() {
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [scopeTab, setScopeTab] = useState<ScopeTab>('open')
-  const [workflowGroup, setWorkflowGroup] = useState<WorkflowGroup>('allOpen')
+  const [search, setSearch] = useState('')
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -108,11 +108,6 @@ export default function TicketsPage() {
       router.replace('/tickets')
     }
   }, [shouldCreate])
-
-  // Reset workflowGroup to 'allOpen' whenever the user leaves the Open scope tab
-  useEffect(() => {
-    if (scopeTab !== 'open') setWorkflowGroup('allOpen')
-  }, [scopeTab])
 
   useEffect(() => {
     if (selectedId && tickets.length > 0) {
@@ -465,69 +460,133 @@ export default function TicketsPage() {
   // Open handoffs only show in the banner, not in the table
   const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
 
-  const NEEDS_ACTION_VALUES = ['needs_attention', 'assign_contractor', 'follow_up'] as const
-  const isNeedsAction = (next_action: string | null | undefined): boolean =>
-    NEEDS_ACTION_VALUES.includes(next_action as typeof NEEDS_ACTION_VALUES[number])
-
   const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
 
-  // Scope counts — always from the full nonHandoff set
+  // Scope counts — 4 lifecycle tabs
   const scopeCounts: Record<ScopeTab, number> = {
-    all:          nonHandoff.length,
-    open:         nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true).length,
-    needs_action: nonHandoff.filter(t => isNeedsAction(t.next_action)).length,
-    closed:       nonHandoff.filter(t => t.status === 'closed').length,
-    archived:     nonHandoff.filter(t => t.archived === true).length,
+    all:      nonHandoff.length,
+    open:     nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true).length,
+    closed:   nonHandoff.filter(t => t.status === 'closed').length,
+    archived: nonHandoff.filter(t => t.archived === true).length,
   }
 
-  // Scoped base: nonHandoff after scope tab applied, before workflow filter
-  const scopedBase = nonHandoff.filter(t => {
-    if (scopeTab === 'open')         return t.status !== 'closed' && t.archived !== true
-    if (scopeTab === 'closed')       return t.status === 'closed'
-    if (scopeTab === 'archived')     return t.archived === true
-    if (scopeTab === 'needs_action') return isNeedsAction(t.next_action)
-    return true // 'all'
-  })
-
-  // Workflow group counts — always from the open set (shown only on Open scope tab)
-  const openForWorkflow = nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true)
-  const workflowCounts: Record<WorkflowGroup, number> = {
-    allOpen:     openForWorkflow.length,
-    waiting:     openForWorkflow.filter(t => isWaitingReason(t.next_action_reason)).length,
-    scheduled:   openForWorkflow.filter(t => isScheduledReason(t.next_action_reason)).length,
-    needsAction: openForWorkflow.filter(t => isNeedsMgrReason(t.next_action_reason)).length,
-    otherOpen:   openForWorkflow.filter(t =>
-      !isWaitingReason(t.next_action_reason) &&
-      !isScheduledReason(t.next_action_reason) &&
-      !isNeedsMgrReason(t.next_action_reason)
-    ).length,
+  // Page-level helpers: search + origin filter
+  const applySearch = (arr: TicketRow[]): TicketRow[] => {
+    if (!search.trim()) return arr
+    const q = search.toLowerCase()
+    return arr.filter(t =>
+      t.issue_description?.toLowerCase().includes(q) ||
+      t.address?.toLowerCase().includes(q) ||
+      t.category?.toLowerCase().includes(q)
+    )
   }
+  const applyOriginFilter = (arr: TicketRow[]): TicketRow[] => {
+    if (activeFilter === 'manual') return arr.filter(t => t.is_manual === true)
+    if (activeFilter === 'system') return arr.filter(t => !t.handoff && !t.is_manual)
+    return arr
+  }
+  const applyFilters = (arr: TicketRow[]) => applySearch(applyOriginFilter(arr))
 
-  // Workflow base: scopedBase with workflow group applied (only has effect when scopeTab === 'open')
-  const workflowBase = scopedBase.filter(t => {
-    if (scopeTab !== 'open' || workflowGroup === 'allOpen') return true
-    if (workflowGroup === 'waiting')     return isWaitingReason(t.next_action_reason)
-    if (workflowGroup === 'scheduled')   return isScheduledReason(t.next_action_reason)
-    if (workflowGroup === 'needsAction') return isNeedsMgrReason(t.next_action_reason)
-    // otherOpen
-    return !isWaitingReason(t.next_action_reason) &&
-           !isScheduledReason(t.next_action_reason) &&
-           !isNeedsMgrReason(t.next_action_reason)
-  })
+  // Lifecycle bases (before search/origin filter)
+  const openBase     = nonHandoff.filter(t => t.status !== 'closed' && t.archived !== true)
+  const closedBase   = nonHandoff.filter(t => t.status === 'closed')
+  const archivedBase = nonHandoff.filter(t => t.archived === true)
 
-  // Origin filter counts — contextual to workflowBase
+  // Origin filter counts — contextual to current lifecycle tab (no search applied to counts)
+  const scopeBaseForCounts = scopeTab === 'closed' ? closedBase
+    : scopeTab === 'archived' ? archivedBase
+    : scopeTab === 'open'     ? openBase
+    : nonHandoff
   const filterCounts = {
-    all:    workflowBase.length,
-    system: workflowBase.filter(t => !t.handoff && !t.is_manual).length,
-    manual: workflowBase.filter(t => t.is_manual === true).length,
+    all:    scopeBaseForCounts.length,
+    system: scopeBaseForCounts.filter(t => !t.handoff && !t.is_manual).length,
+    manual: scopeBaseForCounts.filter(t => t.is_manual === true).length,
   }
 
-  // Final filtered set: origin filter applied on top of workflowBase
-  const filteredTickets = workflowBase.filter((t) => {
-    if (activeFilter === 'manual' && t.is_manual !== true) return false
-    if (activeFilter === 'system' && (t.handoff || t.is_manual)) return false
-    return true
-  })
+  // Single-pass bucketing for open tickets (precedence: needsMgr → waiting → scheduled → other)
+  const bucketOpen = (t: TicketRow): OpenGroup => {
+    if (isNeedsMgrReason(t.next_action_reason)) return 'needsMgr'
+    if (isWaitingReason(t.next_action_reason))  return 'waiting'
+    if (isScheduledReason(t.next_action_reason)) return 'scheduled'
+    return 'other'
+  }
+  const openGroups: Record<OpenGroup, TicketRow[]> = { needsMgr: [], waiting: [], scheduled: [], other: [] }
+  applyFilters(openBase).forEach(t => openGroups[bucketOpen(t)].push(t))
+
+  // Flat filtered sets for closed / archived
+  const closedFiltered   = applyFilters(closedBase)
+  const archivedFiltered = applyFilters(archivedBase)
+
+  // ── Section helpers (closures — use columns/handlers from component scope) ──────
+
+  function SectionHeading({ label, count }: { label: string; count: number }) {
+    return (
+      <div className="px-4 pt-4 pb-1 flex items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-xs tabular-nums text-muted-foreground/60">{count}</span>
+      </div>
+    )
+  }
+
+  function FlatSection({ data, isFirst = true }: { data: TicketRow[]; isFirst?: boolean }) {
+    return (
+      <DataTable
+        data={data}
+        columns={columns}
+        searchKeys={[]}
+        hideToolbar
+        showHeader={isFirst}
+        disableBodyScroll
+        getRowId={t => t.id}
+        getRowClassName={getRowClassName}
+        onRowClick={handleRowClick}
+        onViewClick={handleRowClick}
+      />
+    )
+  }
+
+  const openSections: { label: string; key: OpenGroup }[] = [
+    { label: 'Needs manager action', key: 'needsMgr'  },
+    { label: 'Waiting',              key: 'waiting'   },
+    { label: 'Scheduled',            key: 'scheduled' },
+    { label: 'Other',                key: 'other'     },
+  ]
+
+  function OpenSectionsView() {
+    if (loading) {
+      return (
+        <DataTable
+          data={[]}
+          columns={columns}
+          searchKeys={[]}
+          hideToolbar
+          disableBodyScroll
+          getRowId={t => t.id}
+          loading={true}
+        />
+      )
+    }
+    const visible = openSections.filter(s => openGroups[s.key].length > 0)
+    if (visible.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="font-medium">No open tickets</p>
+          <p className="text-sm text-muted-foreground mt-1">No tickets match the current filters.</p>
+        </div>
+      )
+    }
+    return (
+      <>
+        {visible.map((s, i) => (
+          <div key={s.key}>
+            <SectionHeading label={s.label} count={openGroups[s.key].length} />
+            <FlatSection data={openGroups[s.key]} isFirst={i === 0} />
+          </div>
+        ))}
+      </>
+    )
+  }
 
   return (
     <div className="p-8 flex flex-col h-full overflow-hidden">
@@ -577,15 +636,14 @@ export default function TicketsPage() {
       {/* Scope tabs */}
       <div className="flex-shrink-0 flex items-end gap-1 border-b border-border/40 mt-3 mb-0">
         {([
-          { key: 'all',          label: 'All' },
-          { key: 'open',         label: 'Open' },
-          { key: 'needs_action', label: 'Needs action' },
-          { key: 'closed',       label: 'Closed' },
-          { key: 'archived',     label: 'Archived' },
+          { key: 'all',      label: 'All'      },
+          { key: 'open',     label: 'Open'     },
+          { key: 'closed',   label: 'Closed'   },
+          { key: 'archived', label: 'Archived' },
         ] as { key: ScopeTab; label: string }[]).map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => { setScopeTab(key); setWorkflowGroup('allOpen') }}
+            onClick={() => setScopeTab(key)}
             className={cn(
               'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
               scopeTab === key
@@ -604,84 +662,70 @@ export default function TicketsPage() {
         ))}
       </div>
 
-      {/* Workflow Group tabs — Open scope only */}
-      {scopeTab === 'open' && (
-        <div className="flex-shrink-0 flex items-end gap-1 border-b border-border/40 mb-0">
-          {([
-            { key: 'allOpen',     label: 'All open' },
-            { key: 'waiting',     label: 'Waiting' },
-            { key: 'scheduled',   label: 'Scheduled' },
-            { key: 'needsAction', label: 'Needs action' },
-            { key: 'otherOpen',   label: 'Other' },
-          ] as { key: WorkflowGroup; label: string }[]).map(({ key, label }) => (
+      {/* Search + origin filter — page-level, apply across all sections */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border/20">
+        <div className="relative max-w-xs flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tickets..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        <div className="flex items-center bg-muted rounded-lg p-0.5 ml-auto">
+          {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
             <button
-              key={key}
-              onClick={() => setWorkflowGroup(key)}
-              className={cn(
-                'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
-                workflowGroup === key
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              )}
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize ${
+                activeFilter === filter
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              {label}
-              <span className={cn(
-                'ml-1.5 text-xs tabular-nums',
-                workflowGroup === key ? 'text-muted-foreground' : 'text-muted-foreground/50'
-              )}>
-                {workflowCounts[key]}
-              </span>
+              {filter === 'system' ? 'Auto' : filter}
+              <span className="ml-1 text-[10px] opacity-60">{filterCounts[filter]}</span>
             </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Data Table */}
-      <div className="flex-1 min-h-0">
-        <DataTable
-          data={filteredTickets}
-          columns={columns}
-          searchPlaceholder="Search tickets..."
-          searchKeys={['issue_description', 'address', 'category']}
-          onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
-          getRowId={(ticket) => ticket.id}
-          getRowClassName={getRowClassName}
-          fillHeight
-          headerExtra={
-            <div className="flex items-center gap-3 flex-1 justify-end">
-              {/* Type sub-tabs */}
-              <div className="flex items-center bg-muted rounded-lg p-0.5">
-                {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize ${
-                      activeFilter === filter
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {filter === 'system' ? 'Auto' : filter}
-                    <span className="ml-1 text-[10px] opacity-60">{filterCounts[filter]}</span>
-                  </button>
-                ))}
-              </div>
+      {/* Scrollable data region — single scroll container */}
+      <div className="flex-1 overflow-auto min-h-0">
 
-            </div>
-          }
-          emptyMessage={
-            <div className="text-center py-8">
-              <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="font-medium">No tickets yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Tickets are created automatically from WhatsApp conversations,
-                or you can create one manually.
-              </p>
-            </div>
-          }
-          loading={loading}
-        />
+        {/* Open tab — 4 grouped sections */}
+        {scopeTab === 'open' && <OpenSectionsView />}
+
+        {/* Closed tab — flat list */}
+        {scopeTab === 'closed' && (
+          loading
+            ? <DataTable data={[]} columns={columns} searchKeys={[]} hideToolbar disableBodyScroll getRowId={t => t.id} loading />
+            : <FlatSection data={closedFiltered} />
+        )}
+
+        {/* Archived tab — flat list */}
+        {scopeTab === 'archived' && (
+          loading
+            ? <DataTable data={[]} columns={columns} searchKeys={[]} hideToolbar disableBodyScroll getRowId={t => t.id} loading />
+            : <FlatSection data={archivedFiltered} />
+        )}
+
+        {/* All tab — open groups + closed section + archived section */}
+        {scopeTab === 'all' && (
+          <>
+            <OpenSectionsView />
+            {!loading && (
+              <>
+                <SectionHeading label="Closed" count={closedFiltered.length} />
+                <FlatSection data={closedFiltered} isFirst={false} />
+                <SectionHeading label="Archived" count={archivedFiltered.length} />
+                <FlatSection data={archivedFiltered} isFirst={false} />
+              </>
+            )}
+          </>
+        )}
+
       </div>
 
       {/* Ticket Detail Modal (replaces old DetailDrawer) */}

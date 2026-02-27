@@ -37,6 +37,9 @@ type DataTableProps<T> = {
   maxHeight?: string
   fillHeight?: boolean
   headerExtra?: ReactNode
+  showHeader?: boolean      // default true — set false to hide column headers (e.g. 2nd+ sections)
+  hideToolbar?: boolean     // default false — set true to hide search + headerExtra bar
+  disableBodyScroll?: boolean // default false — set true for overflow-visible (inside parent scroller)
 }
 
 export function DataTable<T>({
@@ -53,6 +56,9 @@ export function DataTable<T>({
   maxHeight = 'calc(100vh - 280px)',
   fillHeight = false,
   headerExtra,
+  showHeader = true,
+  hideToolbar = false,
+  disableBodyScroll = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -131,60 +137,64 @@ export function DataTable<T>({
   return (
     <div className={cn("rounded-xl", fillHeight && "flex flex-col h-full")}>
       {/* Search + Filters */}
-      <div className={cn("px-4 pt-4 pb-3", fillHeight && "flex-shrink-0")}>
-        <div className="flex items-center gap-3">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-10"
-            />
+      {!hideToolbar && (
+        <div className={cn("px-4 pt-4 pb-3", fillHeight && "flex-shrink-0")}>
+          <div className="flex items-center gap-3">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-10"
+              />
+            </div>
+            {headerExtra}
           </div>
-          {headerExtra}
         </div>
-      </div>
+      )}
 
       {/* Table */}
       <div
-        className={cn("overflow-auto", fillHeight && "flex-1 min-h-0")}
-        style={fillHeight ? undefined : { maxHeight }}
+        className={cn(disableBodyScroll ? "overflow-visible" : "overflow-auto", fillHeight && "flex-1 min-h-0")}
+        style={!disableBodyScroll && !fillHeight ? { maxHeight } : undefined}
       >
         <Table>
-          <TableHeader className="[&_tr]:border-0">
-            <TableRow className="hover:bg-transparent">
-              {columns.map((col) => (
-                <TableHead
-                  key={col.key}
-                  style={{ width: col.width }}
-                  className={cn(
-                    'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60',
-                    col.sortable && 'cursor-pointer select-none hover:text-foreground'
-                  )}
-                  onClick={() => col.sortable && handleSort(col.key)}
-                >
-                  <div className="flex items-center gap-1">
-                    {col.header}
-                    {col.sortable && (
-                      <span className="ml-1">
-                        {sortKey === col.key ? (
-                          sortDir === 'asc' ? (
-                            <ArrowUp className="h-3 w-3" />
-                          ) : (
-                            <ArrowDown className="h-3 w-3" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-40" />
-                        )}
-                      </span>
+          {showHeader && (
+            <TableHeader className="[&_tr]:border-0">
+              <TableRow className="hover:bg-transparent">
+                {columns.map((col) => (
+                  <TableHead
+                    key={col.key}
+                    style={{ width: col.width }}
+                    className={cn(
+                      'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60',
+                      col.sortable && 'cursor-pointer select-none hover:text-foreground'
                     )}
-                  </div>
-                </TableHead>
-              ))}
-              {onViewClick && <TableHead className="w-12" />}
-            </TableRow>
-          </TableHeader>
+                    onClick={() => col.sortable && handleSort(col.key)}
+                  >
+                    <div className="flex items-center gap-1">
+                      {col.header}
+                      {col.sortable && (
+                        <span className="ml-1">
+                          {sortKey === col.key ? (
+                            sortDir === 'asc' ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-40" />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </TableHead>
+                ))}
+                {onViewClick && <TableHead className="w-12" />}
+              </TableRow>
+            </TableHeader>
+          )}
           <TableBody className="[&_tr]:border-0">
             {filteredData.length === 0 ? (
               <TableRow>
