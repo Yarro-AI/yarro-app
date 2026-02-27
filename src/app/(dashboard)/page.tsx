@@ -8,12 +8,11 @@ import { StatusBadge } from '@/components/status-badge'
 import {
   ArrowRight,
   AlertTriangle,
-  X,
   MessageSquare,
   Phone,
   User,
-  Search,
 } from 'lucide-react'
+import { CommandSearchInput } from '@/components/command-search-input'
 import Link from 'next/link'
 import {
   Sheet,
@@ -479,26 +478,14 @@ export default function DashboardPage() {
           {/* LEFT: search */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="relative w-full max-w-72 min-w-0">
-              <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
-                <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                  placeholder="Search tickets…"
-                  className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+              <CommandSearchInput
+                placeholder="Search tickets…"
+                value={searchTerm}
+                onChange={setSearchTerm}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                blurDelayMs={150}
+              />
               {searchFocused && searchResults.length > 0 && (
                 <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
                   {searchResults.map((ticket) => (

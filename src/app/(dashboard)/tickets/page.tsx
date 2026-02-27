@@ -21,10 +21,10 @@ import {
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, Search, RefreshCw, SlidersHorizontal } from 'lucide-react'
+import { Ticket, RefreshCw, SlidersHorizontal } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
@@ -538,15 +538,12 @@ export default function TicketsPage() {
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Search + actions — top command layer */}
       <div className="flex-shrink-0 flex items-center gap-3 mb-4">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-          <Input
-            placeholder="Search tickets..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-9 text-sm"
-          />
-        </div>
+        <CommandSearchInput
+          placeholder="Search tickets..."
+          value={search}
+          onChange={setSearch}
+          className="flex-1 min-w-[240px]"
+        />
         <div className="flex items-center gap-2 ml-auto shrink-0">
           <Button
             variant="ghost"
