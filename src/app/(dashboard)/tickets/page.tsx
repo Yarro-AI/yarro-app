@@ -561,7 +561,7 @@ export default function TicketsPage() {
             placeholder="Search tickets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm"
+            className="pl-8 h-9 text-sm"
           />
         </div>
 
@@ -625,57 +625,53 @@ export default function TicketsPage() {
         ))}
       </div>
 
+      {/* Workflow bucket cards — Open tab only */}
+      {scopeTab === 'open' && (
+        <div className="flex-shrink-0 flex gap-4 mt-3 mb-3">
+          {([
+            { key: 'needsMgr',  label: 'Needs action' },
+            { key: 'waiting',   label: 'Waiting'      },
+            { key: 'scheduled', label: 'Scheduled'    },
+          ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
+              className={cn(
+                'flex flex-col justify-center h-16 px-6 rounded-xl border cursor-pointer transition-colors text-left',
+                workflowFilter === key
+                  ? 'border-[#1677FF] bg-[#1677FF]/[0.06] text-[#1677FF]'
+                  : 'border-border/40 bg-transparent text-foreground hover:border-border'
+              )}
+            >
+              <span className="text-sm font-medium">{label}</span>
+              <span className="text-lg font-semibold tabular-nums">{workflowCounts[key]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Filter bar */}
-      <div className="flex-shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-border/20">
-
-        {/* Workflow chips — Open tab only */}
-        {scopeTab === 'open' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {([
-              { key: 'needsMgr',  label: 'Needs action' },
-              { key: 'waiting',   label: 'Waiting'      },
-              { key: 'scheduled', label: 'Scheduled'    },
-            ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 h-11 px-4 rounded-xl text-sm font-medium transition-colors border',
-                  workflowFilter === key
-                    ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
-                    : 'bg-transparent text-muted-foreground border-border/40 hover:border-border hover:text-foreground'
-                )}
-              >
-                {label}
-                <span className="tabular-nums text-xs opacity-60">{workflowCounts[key]}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Type + DateFilter — right */}
+      <div className="flex-shrink-0 flex items-center gap-3 py-2.5 border-b border-border/20">
         <div className="flex items-center gap-2 ml-auto shrink-0">
           <div className="relative">
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as TicketFilter)}
-              className="h-9 appearance-none text-xs pl-2.5 pr-8 rounded-md border border-border/40 bg-background text-muted-foreground cursor-pointer hover:border-border hover:text-foreground transition-colors"
+              className="h-9 appearance-none text-xs pl-3 pr-8 rounded-md border border-border/40 bg-background text-muted-foreground cursor-pointer hover:border-border hover:text-foreground transition-colors"
             >
               <option value="all">Type: All</option>
               <option value="system">Type: Auto</option>
               <option value="manual">Type: Manual</option>
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           </div>
           <DateFilter value={dateRange} onChange={setDateRange} />
         </div>
-
       </div>
 
       {/* Active filters — visible when any filter is active */}
       {hasActiveFilters && (
-        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/20">
-          <span className="text-xs text-muted-foreground">Active:</span>
+        <div className="flex-shrink-0 flex items-center gap-2 py-2 border-b border-border/20">
           {scopeTab === 'open' && workflowFilter && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1677FF]/[0.08] text-[#1677FF] border border-[#1677FF]/20 text-xs font-medium">
               Workflow: {WORKFLOW_LABELS[workflowFilter]}
