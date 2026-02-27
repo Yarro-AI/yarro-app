@@ -396,7 +396,7 @@ export default function TicketsPage() {
       header: 'Issue',
       sortable: true,
       render: (ticket) => (
-        <div className="min-w-0 max-w-[300px]">
+        <div className="min-w-0 max-w-[400px]">
           <p className="font-medium truncate">{ticket.issue_description || 'No description'}</p>
           <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
         </div>
@@ -454,36 +454,35 @@ export default function TicketsPage() {
     {
       key: 'actions',
       header: '',
-      width: '80px',
+      width: '48px',
       render: (ticket) => {
         const isOpen = ticket.status === 'open' && !ticket.archived
         const isHandoff = ticket.handoff && isOpen
+        if (isHandoff) {
+          return (
+            <InteractiveHoverButton
+              text="Review"
+              className="w-20 text-xs h-7"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedTicketBasic(ticket)
+                setHandoffTicketId(ticket.id)
+                setCreateDrawerOpen(true)
+              }}
+            />
+          )
+        }
+        if (!isOpen) return null
         return (
-          <div className="flex items-center gap-1 justify-end">
-            {isOpen && !isHandoff && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                title={ticket.on_hold ? 'Resume' : 'Hold'}
-                onClick={(e) => { e.stopPropagation(); handleToggleHold(ticket) }}
-              >
-                {ticket.on_hold ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-              </Button>
-            )}
-            {isHandoff && (
-              <InteractiveHoverButton
-                text="Review"
-                className="w-20 text-xs h-7"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedTicketBasic(ticket)
-                  setHandoffTicketId(ticket.id)
-                  setCreateDrawerOpen(true)
-                }}
-              />
-            )}
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 ml-auto"
+            title={ticket.on_hold ? 'Resume' : 'Hold'}
+            onClick={(e) => { e.stopPropagation(); handleToggleHold(ticket) }}
+          >
+            {ticket.on_hold ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+          </Button>
         )
       },
     },
@@ -735,7 +734,6 @@ export default function TicketsPage() {
           getRowId={t => t.id}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           loading={loading}
           emptyMessage={
             <div className="text-center py-12">
