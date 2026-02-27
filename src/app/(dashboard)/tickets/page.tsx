@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, Search } from 'lucide-react'
+import { Ticket, Search, ChevronDown } from 'lucide-react'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
 import { SlaBadge } from '@/components/sla-badge'
@@ -65,7 +65,7 @@ interface TicketRow {
 
 type TicketFilter = 'all' | 'system' | 'manual'
 type ScopeTab = 'all' | 'open' | 'closed' | 'archived'
-type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled' | 'other' | null
+type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled' | null
 
 const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking'] as const
 const NEEDS_MGR_REASONS = ['needs_attention', 'no_contractors', 'landlord_declined',
@@ -494,11 +494,6 @@ export default function TicketsPage() {
     if (workflowFilter === 'needsMgr')  return arr.filter(t => isNeedsMgrReason(t.next_action_reason))
     if (workflowFilter === 'waiting')   return arr.filter(t => isWaitingReason(t.next_action_reason))
     if (workflowFilter === 'scheduled') return arr.filter(t => isScheduledReason(t.next_action_reason))
-    if (workflowFilter === 'other')     return arr.filter(t =>
-      !isNeedsMgrReason(t.next_action_reason) &&
-      !isWaitingReason(t.next_action_reason) &&
-      !isScheduledReason(t.next_action_reason)
-    )
     return arr
   }
   const applyFilters = (arr: TicketRow[]) => applySearch(applyOriginFilter(applyWorkflowFilter(arr)))
@@ -526,11 +521,6 @@ export default function TicketsPage() {
     needsMgr:  openBase.filter(t => isNeedsMgrReason(t.next_action_reason)).length,
     waiting:   openBase.filter(t => isWaitingReason(t.next_action_reason)).length,
     scheduled: openBase.filter(t => isScheduledReason(t.next_action_reason)).length,
-    other:     openBase.filter(t =>
-      !isNeedsMgrReason(t.next_action_reason) &&
-      !isWaitingReason(t.next_action_reason) &&
-      !isScheduledReason(t.next_action_reason)
-    ).length,
   }
 
   // Visible rows — memoized for search performance at 500+ tickets
@@ -542,7 +532,6 @@ export default function TicketsPage() {
     needsMgr:  'Needs action',
     waiting:   'Waiting',
     scheduled: 'Scheduled',
-    other:     'Other',
   }
   const hasActiveFilters = workflowFilter !== null || activeFilter !== 'all' || search.trim() !== ''
   const clearFilters = () => {
@@ -554,8 +543,8 @@ export default function TicketsPage() {
   return (
     <div className="p-8 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-3">
-        <div>
+      <div className="flex-shrink-0 flex items-center gap-4 mb-3">
+        <div className="shrink-0">
           <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
             <Ticket className="h-5 w-5" />
             Tickets
@@ -564,7 +553,19 @@ export default function TicketsPage() {
             Manage maintenance tickets across your properties
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Search — in header */}
+        <div className="relative min-w-[220px] max-w-sm flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+          <Input
+            placeholder="Search tickets..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -574,7 +575,6 @@ export default function TicketsPage() {
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
-          <DateFilter value={dateRange} onChange={setDateRange} />
           <InteractiveHoverButton
             text="Create"
             className="w-24 text-xs h-7"
@@ -610,7 +610,7 @@ export default function TicketsPage() {
             className={cn(
               'px-3 pb-2.5 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
               scopeTab === key
-                ? 'border-foreground text-foreground'
+                ? 'border-[#1677FF] text-[#1677FF]'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
@@ -625,64 +625,49 @@ export default function TicketsPage() {
         ))}
       </div>
 
-      {/* Unified control bar: [search] [workflow chips — open only] [origin pills] */}
-      <div className="flex-shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 border-b border-border/20">
-
-        {/* Search — left */}
-        <div className="relative min-w-[220px] max-w-sm flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-          <Input
-            placeholder="Search tickets..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+      {/* Filter bar */}
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-border/20">
 
         {/* Workflow chips — Open tab only */}
         {scopeTab === 'open' && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] text-muted-foreground/40">Workflow</span>
+          <div className="flex items-center gap-2 flex-wrap">
             {([
               { key: 'needsMgr',  label: 'Needs action' },
-              { key: 'waiting',   label: 'Waiting'       },
-              { key: 'scheduled', label: 'Scheduled'     },
-              { key: 'other',     label: 'Other'         },
+              { key: 'waiting',   label: 'Waiting'      },
+              { key: 'scheduled', label: 'Scheduled'    },
             ] as { key: NonNullable<WorkflowFilter>; label: string }[]).map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
                 className={cn(
-                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-colors border',
+                  'inline-flex items-center gap-1.5 h-11 px-4 rounded-xl text-sm font-medium transition-colors border',
                   workflowFilter === key
-                    ? 'bg-muted border-border/60 text-foreground'
-                    : 'bg-transparent text-muted-foreground/60 border-border/30 hover:border-border/60 hover:text-foreground'
+                    ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
+                    : 'bg-transparent text-muted-foreground border-border/40 hover:border-border hover:text-foreground'
                 )}
               >
                 {label}
-                <span className="tabular-nums opacity-50">{workflowCounts[key]}</span>
+                <span className="tabular-nums text-xs opacity-60">{workflowCounts[key]}</span>
               </button>
             ))}
           </div>
         )}
 
-        {/* Origin pills — right */}
-        <div className="flex items-center bg-muted rounded-lg p-0.5 ml-auto shrink-0">
-          {(['all', 'system', 'manual'] as TicketFilter[]).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={cn(
-                'px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize',
-                activeFilter === filter
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
+        {/* Type + DateFilter — right */}
+        <div className="flex items-center gap-2 ml-auto shrink-0">
+          <div className="relative">
+            <select
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value as TicketFilter)}
+              className="h-9 appearance-none text-xs pl-2.5 pr-8 rounded-md border border-border/40 bg-background text-muted-foreground cursor-pointer hover:border-border hover:text-foreground transition-colors"
             >
-              {filter === 'system' ? 'Auto' : filter}
-              <span className="ml-1 text-[10px] opacity-50">{filterCounts[filter]}</span>
-            </button>
-          ))}
+              <option value="all">Type: All</option>
+              <option value="system">Type: Auto</option>
+              <option value="manual">Type: Manual</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          </div>
+          <DateFilter value={dateRange} onChange={setDateRange} />
         </div>
 
       </div>
@@ -691,10 +676,10 @@ export default function TicketsPage() {
       {hasActiveFilters && (
         <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/20">
           <span className="text-xs text-muted-foreground">Active:</span>
-          {workflowFilter && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
+          {scopeTab === 'open' && workflowFilter && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1677FF]/[0.08] text-[#1677FF] border border-[#1677FF]/20 text-xs font-medium">
               Workflow: {WORKFLOW_LABELS[workflowFilter]}
-              <button onClick={() => setWorkflowFilter(null)} className="ml-0.5 hover:text-foreground">×</button>
+              <button onClick={() => setWorkflowFilter(null)} className="ml-0.5 hover:opacity-70">×</button>
             </span>
           )}
           {activeFilter !== 'all' && (
