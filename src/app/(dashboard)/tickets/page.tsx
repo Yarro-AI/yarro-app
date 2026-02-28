@@ -193,7 +193,9 @@ export default function TicketsPage() {
         awaiting_booking: 'Awaiting Booking',
         scheduled: 'Scheduled',
         completed: 'Completed',
+        archived: 'Archived',
         dismissed: 'Dismissed',
+        on_hold: 'On Hold',
         new: 'Created',
       }
 
@@ -319,7 +321,7 @@ export default function TicketsPage() {
 
     const { error: ticketError } = await supabase
       .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt })
+      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
       .eq('id', selectedTicketBasic.id)
 
     if (ticketError) throw ticketError
@@ -349,7 +351,7 @@ export default function TicketsPage() {
 
     const { error: ticketError } = await supabase
       .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt })
+      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
       .eq('id', handoffTicketId)
 
     if (ticketError) {
