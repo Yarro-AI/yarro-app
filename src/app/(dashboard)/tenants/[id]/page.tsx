@@ -79,7 +79,7 @@ const toEditable = (t: TenantDetail): TenantEditable => ({
 const ROLE_OPTIONS = TENANT_ROLES.map((r) => ({ value: r, label: r.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }))
 
 const displayStageMap: Record<string, string> = {
-  handoff_review: 'Handoff', manager_approval: 'Awaiting Manager', no_contractors: 'No Contractors',
+  pending_review: 'Needs Review', handoff_review: 'Handoff', manager_approval: 'Awaiting Manager', no_contractors: 'No Contractors',
   landlord_declined: 'Landlord Declined', landlord_no_response: 'Landlord No Response', job_not_completed: 'Not Completed',
   awaiting_contractor: 'Awaiting Contractor', awaiting_landlord: 'Awaiting Landlord', awaiting_booking: 'Awaiting Booking',
   scheduled: 'Scheduled', completed: 'Completed', dismissed: 'Dismissed',

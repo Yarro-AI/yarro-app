@@ -523,6 +523,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     if (!basic) return null
     const reasonMap: Record<string, string> = {
       on_hold: 'On Hold',
+      pending_review: 'Needs Review',
       handoff_review: 'Handoff',
       manager_approval: 'Awaiting Manager',
       no_contractors: 'No Contractors',

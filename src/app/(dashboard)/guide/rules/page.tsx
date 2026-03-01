@@ -50,6 +50,7 @@ const TIMEOUT_OPTIONS = [
 // ─── Draft (all stored in minutes internally) ───
 
 interface DraftSettings {
+  ticket_mode: 'auto' | 'review'
   dispatch_mode: 'sequential' | 'broadcast'
   contractor_reminder_on: boolean
   contractor_reminder: string
@@ -63,6 +64,7 @@ interface DraftSettings {
 }
 
 const DEFAULTS: DraftSettings = {
+  ticket_mode: 'auto',
   dispatch_mode: 'sequential',
   contractor_reminder_on: true,
   contractor_reminder: '360',
@@ -86,6 +88,7 @@ export default function RulesPage() {
     if (!propertyManager) return
     const pm = propertyManager as any
     const fromPM: DraftSettings = {
+      ticket_mode: (pm.ticket_mode as 'auto' | 'review') || 'auto',
       dispatch_mode: (pm.dispatch_mode as 'sequential' | 'broadcast') || 'sequential',
       contractor_reminder_on: pm.contractor_reminder_minutes != null,
       contractor_reminder: (pm.contractor_reminder_minutes || 360).toString(),
@@ -153,6 +156,7 @@ export default function RulesPage() {
     setSaving(true)
 
     const payload = {
+      ticket_mode: draft.ticket_mode,
       dispatch_mode: draft.dispatch_mode,
       contractor_reminder_minutes: draft.contractor_reminder_on ? parseInt(draft.contractor_reminder) : null,
       contractor_timeout_minutes: parseInt(draft.contractor_timeout),
@@ -272,6 +276,34 @@ export default function RulesPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-4 space-y-6">
+
+        {/* ─── TICKET HANDLING ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Ticket Handling</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {(['auto', 'review'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => updateDraft({ ticket_mode: mode })}
+                className={cn(
+                  'rounded-xl border p-5 text-left transition-all',
+                  draft.ticket_mode === mode
+                    ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                    : 'border-border hover:border-muted-foreground/30'
+                )}
+              >
+                <span className="text-sm font-semibold block">
+                  {mode === 'auto' ? 'Auto-dispatch' : 'Review first'}
+                </span>
+                <span className="text-xs text-muted-foreground mt-1 block">
+                  {mode === 'auto'
+                    ? 'New tickets are automatically dispatched to contractors based on your property mappings.'
+                    : 'New tickets land in a review queue. You triage and dispatch manually from the dashboard.'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {/* ─── DISPATCH MODE ─── */}
         <section>

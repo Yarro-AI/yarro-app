@@ -4,6 +4,7 @@
 export const TEMPLATES = {
   // ─── Ticket Notifications (yarro-ticket-notify) ───
   ticket_created: "HX9440a56f69282e80e3c064d23c36fcf2",      // 2_pm_ticket_created + LL
+  ticket_review: "HX9f9bbd9301cd65d8f3ac97c11372abce",       // 1_ticket_creation_sms_review_mode
   handoff: "HX7dbca3663f1864cec8c0ad3fd8933ad7",              // 2b_pm_handoff_ticket
 
   // ─── Contractor Dispatch (yarro-dispatcher) ───

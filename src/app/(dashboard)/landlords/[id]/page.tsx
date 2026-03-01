@@ -31,7 +31,7 @@ interface TicketRow {
 const toEditable = (l: Landlord): LandlordEditable => ({ id: l.id, full_name: l.full_name || '', phone: l.phone, email: l.email })
 
 const displayStageMap: Record<string, string> = {
-  handoff_review: 'Handoff', manager_approval: 'Awaiting Manager', no_contractors: 'No Contractors',
+  pending_review: 'Needs Review', handoff_review: 'Handoff', manager_approval: 'Awaiting Manager', no_contractors: 'No Contractors',
   landlord_declined: 'Landlord Declined', landlord_no_response: 'Landlord No Response', job_not_completed: 'Not Completed',
   awaiting_contractor: 'Awaiting Contractor', awaiting_landlord: 'Awaiting Landlord', awaiting_booking: 'Awaiting Booking',
   scheduled: 'Scheduled', completed: 'Completed', dismissed: 'Dismissed',

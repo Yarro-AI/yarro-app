@@ -24,10 +24,11 @@ import { Button } from '@/components/ui/button'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { format } from 'date-fns'
-import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play } from 'lucide-react'
+import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import { ReviewDispatchModal } from '@/components/review-dispatch-modal'
 import { SlaBadge } from '@/components/sla-badge'
 
 interface TicketRow {
@@ -53,6 +54,7 @@ interface TicketRow {
   conversation_id: string | null
   archived: boolean | null
   on_hold?: boolean | null
+  pending_review?: boolean | null
   next_action?: string | null
   next_action_reason?: string | null
   sla_due_at?: string | null
@@ -88,6 +90,7 @@ export default function TicketsPage() {
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
+  const [reviewModalTicket, setReviewModalTicket] = useState<TicketRow | null>(null)
   const [search, setSearch] = useState('')
   const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleFilter[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowFilter[]>([])
@@ -163,6 +166,7 @@ export default function TicketsPage() {
         conversation_id,
         archived,
         on_hold,
+        pending_review,
         images,
         next_action,
         next_action_reason,
@@ -182,6 +186,7 @@ export default function TicketsPage() {
     if (data) {
       // Map next_action_reason → display label
       const reasonToDisplayStage: Record<string, string> = {
+        pending_review: 'Needs Review',
         handoff_review: 'Handoff',
         manager_approval: 'Awaiting Manager',
         no_contractors: 'No Contractors',
@@ -490,8 +495,9 @@ export default function TicketsPage() {
     },
   ]
 
-  // Open handoffs only show in the banner, not in the table
+  // Open handoffs and pending_review only show in banners, not in the table
   const isOpenHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
+  const isPendingReview = (t: TicketRow) => t.pending_review === true && t.status === 'open' && t.archived !== true
   const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
 
   // Active filter state
@@ -505,10 +511,11 @@ export default function TicketsPage() {
     setSearch('')
   }
 
-  // Visible rows — single memoized pipeline; nonHandoff recomputed inside to keep deps clean
+  // Visible rows — single memoized pipeline; handoffs + pending_review filtered out (they live in banners)
   const visibleRows = useMemo(() => {
     const isHandoff = (t: TicketRow) => t.handoff === true && t.status === 'open' && t.archived !== true
-    let result = tickets.filter(t => !isHandoff(t))
+    const isReview = (t: TicketRow) => t.pending_review === true && t.status === 'open' && t.archived !== true
+    let result = tickets.filter(t => !isHandoff(t) && !isReview(t))
 
     // 1. Lifecycle (OR across selections; empty = show all)
     if (selectedLifecycle.length > 0) {
@@ -603,6 +610,46 @@ export default function TicketsPage() {
           }
         }}
       />
+
+      {/* Review Mode Banner — pending_review tickets */}
+      {(() => {
+        const reviewTickets = tickets.filter((t) => isPendingReview(t))
+        if (reviewTickets.length === 0) return null
+        return (
+          <div className="mb-6 rounded-xl border border-violet-200 dark:border-violet-500/30 bg-violet-50/50 dark:bg-violet-500/5 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ClipboardList className="h-5 w-5 text-violet-500" />
+              <p className="text-sm font-medium">
+                {reviewTickets.length} ticket{reviewTickets.length > 1 ? 's' : ''} awaiting triage
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 max-h-[180px] overflow-y-auto">
+              {reviewTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="flex items-center gap-3 rounded-lg border px-4 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate max-w-[200px]">
+                      {ticket.issue_description || 'No description'}
+                    </p>
+                    {ticket.address && (
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {ticket.address}
+                      </p>
+                    )}
+                  </div>
+                  <InteractiveHoverButton
+                    text="Triage"
+                    className="w-24 text-xs h-8"
+                    onClick={() => setReviewModalTicket(ticket)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Filters + Date + Search */}
       <div className="flex-shrink-0 flex items-center gap-3 mb-3">
@@ -807,6 +854,17 @@ export default function TicketsPage() {
         onConfirm={handleArchive}
         confirmLabel="Archive"
         confirmingLabel="Archiving..."
+      />
+
+      {/* Review Dispatch Modal */}
+      <ReviewDispatchModal
+        ticket={reviewModalTicket}
+        open={!!reviewModalTicket}
+        onClose={() => setReviewModalTicket(null)}
+        onDispatched={() => {
+          setReviewModalTicket(null)
+          fetchTickets()
+        }}
       />
     </div>
   )

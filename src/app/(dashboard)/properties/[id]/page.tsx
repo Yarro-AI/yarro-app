@@ -11,6 +11,7 @@ import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type 
 import { PriorityDot } from '@/components/priority-dot'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -49,6 +50,7 @@ interface PropertyDetail {
   landlord_phone: string | null
   landlord_email: string | null
   auto_approve_limit: number | null
+  require_landlord_approval: boolean
   access_instructions: string | null
   emergency_access_contact: string | null
 }
@@ -65,6 +67,7 @@ interface PropertyEditable {
   address: string
   landlord_id: string | null
   auto_approve_limit: number | null
+  require_landlord_approval: boolean
   access_instructions: string | null
   emergency_access_contact: string | null
 }
@@ -106,6 +109,7 @@ const toEditable = (p: PropertyDetail): PropertyEditable => ({
   address: p.address || '',
   landlord_id: p.landlord_id,
   auto_approve_limit: p.auto_approve_limit,
+  require_landlord_approval: p.require_landlord_approval ?? true,
   access_instructions: p.access_instructions,
   emergency_access_contact: p.emergency_access_contact,
 })
@@ -116,6 +120,7 @@ const formatCurrency = (amount: number | null) => {
 }
 
 const displayStageMap: Record<string, string> = {
+  pending_review: 'Needs Review',
   handoff_review: 'Handoff',
   manager_approval: 'Awaiting Manager',
   no_contractors: 'No Contractors',
@@ -162,7 +167,7 @@ export default function PropertyDetailPage() {
     if (!propertyId) return
     const { data, error } = await supabase
       .from('c1_properties')
-      .select('id, address, landlord_id, landlord_name, landlord_phone, landlord_email, auto_approve_limit, access_instructions, emergency_access_contact')
+      .select('id, address, landlord_id, landlord_name, landlord_phone, landlord_email, auto_approve_limit, require_landlord_approval, access_instructions, emergency_access_contact')
       .eq('id', propertyId)
       .single()
     if (error || !data) {
@@ -207,7 +212,7 @@ export default function PropertyDetailPage() {
     const existingLog = (current?._audit_log as unknown[] || [])
     const newLog = [...existingLog, auditEntry]
     const selectedLl = landlordOptions.find((l) => l.id === data.landlord_id)
-    const normalized = normalizeRecord('properties', { address: data.address, auto_approve_limit: data.auto_approve_limit, access_instructions: data.access_instructions, emergency_access_contact: data.emergency_access_contact })
+    const normalized = normalizeRecord('properties', { address: data.address, auto_approve_limit: data.auto_approve_limit, require_landlord_approval: data.require_landlord_approval, access_instructions: data.access_instructions, emergency_access_contact: data.emergency_access_contact })
     const { error } = await supabase.from('c1_properties').update({ ...normalized, landlord_id: data.landlord_id, landlord_name: selectedLl?.full_name || null, landlord_phone: selectedLl?.phone || null, landlord_email: selectedLl?.email || null, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
     toast.success('Property updated')
@@ -312,9 +317,15 @@ export default function PropertyDetailPage() {
                     <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Auto-Approve</p>
-                    <Input type="number" value={editedData.auto_approve_limit ?? ''} onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" className={`h-8 ${validationErrors.auto_approve_limit ? 'border-destructive' : ''}`} />
-                    {validationErrors.auto_approve_limit && <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>}
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm text-muted-foreground">Require Landlord Approval</p>
+                      <Switch checked={editedData.require_landlord_approval} onCheckedChange={(v) => updateField('require_landlord_approval', v)} />
+                    </div>
+                    <div className={cn(!editedData.require_landlord_approval && 'opacity-40 pointer-events-none')}>
+                      <p className="text-xs text-muted-foreground mb-1">Auto-Approve Limit</p>
+                      <Input type="number" value={editedData.auto_approve_limit ?? ''} onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" className={`h-8 ${validationErrors.auto_approve_limit ? 'border-destructive' : ''}`} />
+                      {validationErrors.auto_approve_limit && <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -458,8 +469,12 @@ export default function PropertyDetailPage() {
                     <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Auto-Approve</p>
-                    <p className="text-[15px] font-medium mt-0.5">{formatCurrency(property.auto_approve_limit)}</p>
+                    <p className="text-sm text-muted-foreground">Landlord Approval</p>
+                    <p className="text-[15px] font-medium mt-0.5">
+                      {property.require_landlord_approval
+                        ? `Required (auto under ${formatCurrency(property.auto_approve_limit)})`
+                        : 'Not required'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
