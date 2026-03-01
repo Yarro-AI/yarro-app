@@ -117,8 +117,9 @@ interface OOHContact {
 
 interface Contractor {
   id: string
-  name: string
-  phone: string
+  contractor_name: string
+  contractor_phone: string
+  category: string | null
 }
 
 export default function RulesPage() {
@@ -179,9 +180,10 @@ export default function RulesPage() {
     const loadContractors = async () => {
       const { data } = await supabase
         .from('c1_contractors')
-        .select('id, name, phone')
+        .select('id, contractor_name, contractor_phone, category')
         .eq('property_manager_id', propertyManager.id)
-        .order('name')
+        .eq('active', true)
+        .order('contractor_name')
       setContractors((data as Contractor[]) || [])
     }
     loadContacts()
@@ -293,8 +295,8 @@ export default function RulesPage() {
     if (addMode === 'contractor' && selectedContractorId) {
       const c = contractors.find(c => c.id === selectedContractorId)
       if (!c) { setAddingContact(false); return }
-      name = c.name
-      phone = c.phone
+      name = c.contractor_name
+      phone = c.contractor_phone
       contractorId = c.id
     } else if (addMode === 'manual') {
       name = newContactName.trim()
@@ -664,32 +666,74 @@ export default function RulesPage() {
                   </div>
                 )}
 
-                {addMode === 'contractor' && (
-                  <>
-                    <Select value={selectedContractorId} onValueChange={setSelectedContractorId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select contractor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contractors
-                          .filter(c => c.phone && !oohContacts.some(oc => oc.contractor_id === c.id))
-                          .map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name} ({c.phone})
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={addOOHContact} disabled={!selectedContractorId || addingContact}>
-                        {addingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Add'}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setShowAddContact(false); setAddMode(null); setSelectedContractorId('') }}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </>
-                )}
+                {addMode === 'contractor' && (() => {
+                  // Deduplicate contractors by phone — group categories
+                  const grouped = new Map<string, { id: string; name: string; phone: string; categories: string[] }>()
+                  for (const c of contractors) {
+                    if (!c.contractor_phone) continue
+                    // Skip if any row of this contractor is already an OOH contact
+                    if (oohContacts.some(oc => oc.contractor_id === c.id)) continue
+                    const key = c.contractor_phone
+                    const existing = grouped.get(key)
+                    if (existing) {
+                      if (c.category && !existing.categories.includes(c.category)) {
+                        existing.categories.push(c.category)
+                      }
+                    } else {
+                      grouped.set(key, {
+                        id: c.id,
+                        name: c.contractor_name,
+                        phone: c.contractor_phone,
+                        categories: c.category ? [c.category] : [],
+                      })
+                    }
+                  }
+                  const uniqueContractors = Array.from(grouped.values())
+
+                  return (
+                    <>
+                      <div className="max-h-[240px] overflow-y-auto space-y-1.5">
+                        {uniqueContractors.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-3 text-center">No contractors available</p>
+                        ) : uniqueContractors.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setSelectedContractorId(c.id)}
+                            className={cn(
+                              'w-full rounded-lg border px-3 py-2.5 text-left transition-all',
+                              selectedContractorId === c.id
+                                ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                                : 'border-border hover:bg-muted'
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{c.name}</span>
+                              <span className="text-xs text-muted-foreground">+{c.phone}</span>
+                            </div>
+                            {c.categories.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {c.categories.map((cat) => (
+                                  <span key={cat} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                    {cat}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={addOOHContact} disabled={!selectedContractorId || addingContact}>
+                          {addingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Add'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setShowAddContact(false); setAddMode(null); setSelectedContractorId('') }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  )
+                })()}
 
                 {addMode === 'manual' && (
                   <>
