@@ -309,6 +309,11 @@ export default function RulesPage() {
       return
     }
 
+    // Normalise phone: strip spaces/dashes, convert UK 0 prefix to 44
+    phone = phone.replace(/[\s\-()]+/g, '')
+    if (phone.startsWith('+')) phone = phone.slice(1)
+    if (phone.startsWith('0')) phone = '44' + phone.slice(1)
+
     const { data, error } = await supabase
       .from('c1_profiles')
       .insert({
