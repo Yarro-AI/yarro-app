@@ -59,21 +59,135 @@ async function handleIntake(
   const ctx = ctxRows[0];
   const results: Array<{ type: string; sent: boolean; error?: string }> = [];
 
-  // Check PM's ticket_mode for review vs auto dispatch
+  // Get PM settings (ticket_mode + OOH config)
   let isReviewMode = false;
+  let pmId: string | null = null;
+  let pmSettings: { ticket_mode?: string; ooh_enabled?: boolean; ooh_routine_action?: string } = {};
   {
     const { data: ticketData } = await supabase
       .from("c1_tickets")
       .select("property_manager_id")
       .eq("id", ticketId)
       .single();
-    if (ticketData?.property_manager_id) {
+    pmId = ticketData?.property_manager_id || null;
+    if (pmId) {
       const { data: pmData } = await supabase
         .from("c1_property_managers")
-        .select("ticket_mode")
-        .eq("id", ticketData.property_manager_id)
+        .select("ticket_mode, ooh_enabled, ooh_routine_action")
+        .eq("id", pmId)
         .single();
+      pmSettings = pmData || {};
       isReviewMode = pmData?.ticket_mode === "review";
+    }
+  }
+
+  // ── OOH CHECK: route emergencies to OOH contacts outside business hours ──
+  if (pmId && pmSettings.ooh_enabled && !ctx.handoff) {
+    const { data: withinHours } = await supabase.rpc("c1_is_within_business_hours", {
+      p_pm_id: pmId,
+    });
+
+    if (!withinHours) {
+      const priority = (ctx.priority || "").toLowerCase();
+      const isEmergencyOrUrgent = priority === "emergency" || priority === "urgent";
+
+      if (isEmergencyOrUrgent) {
+        const { data: contacts } = await supabase.rpc("c1_get_ooh_contacts", {
+          p_pm_id: pmId,
+        });
+
+        if (contacts && contacts.length > 0) {
+          // Generate token and mark ticket as OOH-dispatched
+          const token = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+          const { error: updateErr } = await supabase.from("c1_tickets").update({
+            ooh_dispatched: true,
+            ooh_dispatched_at: new Date().toISOString(),
+            ooh_contact_id: contacts[0].id,
+            ooh_token: token,
+          }).eq("id", ticketId);
+
+          if (updateErr) {
+            await alertTelegram(FN, "intake \u2192 OOH mark dispatched", updateErr.message, { Ticket: ticketId });
+          }
+
+          // Send OOH template to each contact
+          for (const contact of contacts) {
+            const r = await sendAndLog(supabase, FN, "intake \u2192 OOH contact dispatch", {
+              ticketId,
+              recipientPhone: contact.phone,
+              recipientRole: "ooh_contact",
+              messageType: "ooh_emergency_dispatch",
+              templateSid: TEMPLATES.ooh_emergency_dispatch,
+              variables: {
+                "1": shortRef(ticketId),
+                "2": ctx.property_address || "Address not available",
+                "3": ctx.issue_description || "Emergency maintenance issue",
+                "4": ctx.tenant_name || "Tenant not matched",
+                "5": ctx.tenant_phone ? `+${ctx.tenant_phone}` : "N/A",
+                "6": ctx.business_name || "Your property manager",
+                "7": token,
+              },
+            });
+            results.push({ type: `ooh_contact_${contact.name}`, sent: r.ok, error: r.error });
+          }
+
+          // Notify PM too (standard ticket_created template so they know)
+          if (ctx.manager_phone) {
+            const r = await sendAndLog(supabase, FN, "intake \u2192 PM OOH notification", {
+              ticketId,
+              recipientPhone: ctx.manager_phone,
+              recipientRole: "manager",
+              messageType: "pm_ticket_created",
+              templateSid: TEMPLATES.ticket_created,
+              variables: {
+                "1": shortRef(ticketId),
+                "2": ctx.property_address || "Address not available",
+                "3": formatCallerInfo(ctx),
+                "4": formatTenantInfo(ctx),
+                "5": ctx.issue_description || "Maintenance issue reported",
+                "6": ctx.priority || "Standard",
+              },
+            });
+            results.push({ type: "pm_ooh_notify", sent: r.ok, error: r.error });
+          }
+
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              source: "intake",
+              ticket_id: ticketId,
+              ooh_dispatched: true,
+              contacts_notified: contacts.length,
+              notifications: results,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // No OOH contacts set — fall through to existing handoff/dispatch flow
+      } else {
+        // Routine ticket outside hours
+        if (pmSettings.ooh_routine_action === "queue_review") {
+          const { error: queueErr } = await supabase
+            .from("c1_tickets")
+            .update({ pending_review: true })
+            .eq("id", ticketId);
+
+          if (queueErr) {
+            await alertTelegram(FN, "intake \u2192 OOH queue routine", queueErr.message, { Ticket: ticketId });
+          }
+
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              source: "intake",
+              ticket_id: ticketId,
+              ooh_queued_for_review: true,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        // ooh_routine_action = 'dispatch' — fall through to normal dispatch
+      }
     }
   }
 

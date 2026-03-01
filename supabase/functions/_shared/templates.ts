@@ -7,6 +7,9 @@ export const TEMPLATES = {
   ticket_review: "HX9f9bbd9301cd65d8f3ac97c11372abce",       // 1_ticket_creation_sms_review_mode
   handoff: "HX7dbca3663f1864cec8c0ad3fd8933ad7",              // 2b_pm_handoff_ticket
 
+  // ─── OOH Emergency (yarro-ticket-notify) ───
+  ooh_emergency_dispatch: "HX0c8ef46673849e93859e8ff0bc97fb3a",  // 20_ooh_emergency_dispatch
+
   // ─── Contractor Dispatch (yarro-dispatcher) ───
   contractor_quote: "HXa0110e2b69a0abe9352d47cd38e7b9ca",     // 3_5_contractor_quote
   pm_quote: "HXb2f9170ecf59525e230c1cb688455f42",             // 4_5_pm_quote_sms

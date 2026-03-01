@@ -13,10 +13,15 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
 import {
   SlidersHorizontal,
   Save,
   Check,
+  Clock,
+  UserPlus,
+  X,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -61,6 +66,11 @@ interface DraftSettings {
   completion_reminder_on: boolean
   completion_reminder: string
   completion_timeout: string
+  ooh_enabled: boolean
+  business_hours_start: string
+  business_hours_end: string
+  business_days: string[]
+  ooh_routine_action: 'queue_review' | 'dispatch'
 }
 
 const DEFAULTS: DraftSettings = {
@@ -75,6 +85,40 @@ const DEFAULTS: DraftSettings = {
   completion_reminder_on: true,
   completion_reminder: '360',
   completion_timeout: '720',
+  ooh_enabled: false,
+  business_hours_start: '09:00',
+  business_hours_end: '17:00',
+  business_days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  ooh_routine_action: 'queue_review',
+}
+
+const ALL_DAYS = [
+  { value: 'mon', label: 'Mon' },
+  { value: 'tue', label: 'Tue' },
+  { value: 'wed', label: 'Wed' },
+  { value: 'thu', label: 'Thu' },
+  { value: 'fri', label: 'Fri' },
+  { value: 'sat', label: 'Sat' },
+  { value: 'sun', label: 'Sun' },
+]
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const h = i.toString().padStart(2, '0')
+  return { value: `${h}:00`, label: `${h}:00` }
+})
+
+interface OOHContact {
+  id: string
+  name: string
+  phone: string
+  contractor_id: string | null
+  active: boolean
+}
+
+interface Contractor {
+  id: string
+  name: string
+  phone: string
 }
 
 export default function RulesPage() {
@@ -83,6 +127,16 @@ export default function RulesPage() {
   const [draft, setDraft] = useState<DraftSettings>(DEFAULTS)
   const [saved, setSaved] = useState<DraftSettings>(DEFAULTS)
   const supabase = createClient()
+
+  // OOH contacts state (separate from draft — immediate CRUD)
+  const [oohContacts, setOohContacts] = useState<OOHContact[]>([])
+  const [contractors, setContractors] = useState<Contractor[]>([])
+  const [showAddContact, setShowAddContact] = useState(false)
+  const [addMode, setAddMode] = useState<'contractor' | 'manual' | null>(null)
+  const [newContactName, setNewContactName] = useState('')
+  const [newContactPhone, setNewContactPhone] = useState('')
+  const [selectedContractorId, setSelectedContractorId] = useState('')
+  const [addingContact, setAddingContact] = useState(false)
 
   useEffect(() => {
     if (!propertyManager) return
@@ -99,10 +153,40 @@ export default function RulesPage() {
       completion_reminder_on: pm.completion_reminder_hours != null,
       completion_reminder: ((pm.completion_reminder_hours || 6) * 60).toString(),
       completion_timeout: ((pm.completion_timeout_hours || 12) * 60).toString(),
+      ooh_enabled: pm.ooh_enabled || false,
+      business_hours_start: (pm.business_hours_start || '09:00:00').slice(0, 5),
+      business_hours_end: (pm.business_hours_end || '17:00:00').slice(0, 5),
+      business_days: pm.business_days || ['mon', 'tue', 'wed', 'thu', 'fri'],
+      ooh_routine_action: pm.ooh_routine_action || 'queue_review',
     }
     setDraft(fromPM)
     setSaved(fromPM)
   }, [propertyManager])
+
+  // Load OOH contacts + contractors
+  useEffect(() => {
+    if (!propertyManager) return
+    const loadContacts = async () => {
+      const { data } = await supabase
+        .from('c1_profiles')
+        .select('id, name, phone, contractor_id, active')
+        .eq('pm_id', propertyManager.id)
+        .eq('is_ooh_contact', true)
+        .eq('active', true)
+        .order('created_at')
+      setOohContacts((data as OOHContact[]) || [])
+    }
+    const loadContractors = async () => {
+      const { data } = await supabase
+        .from('c1_contractors')
+        .select('id, name, phone')
+        .eq('property_manager_id', propertyManager.id)
+        .order('name')
+      setContractors((data as Contractor[]) || [])
+    }
+    loadContacts()
+    loadContractors()
+  }, [propertyManager, supabase])
 
   const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])
 
@@ -164,6 +248,11 @@ export default function RulesPage() {
       landlord_timeout_hours: parseInt(draft.landlord_timeout) / 60,
       completion_reminder_hours: draft.completion_reminder_on ? parseInt(draft.completion_reminder) / 60 : null,
       completion_timeout_hours: parseInt(draft.completion_timeout) / 60,
+      ooh_enabled: draft.ooh_enabled,
+      business_hours_start: draft.business_hours_start,
+      business_hours_end: draft.business_hours_end,
+      business_days: draft.business_days,
+      ooh_routine_action: draft.ooh_routine_action,
     }
 
     const { error } = await supabase
@@ -190,6 +279,82 @@ export default function RulesPage() {
   const timeoutOpts = (reminderVal: string, on: boolean) => {
     if (!on) return TIMEOUT_OPTIONS
     return TIMEOUT_OPTIONS.filter(o => parseInt(o.value) > parseInt(reminderVal))
+  }
+
+  // OOH contact CRUD handlers
+  const addOOHContact = async () => {
+    if (!propertyManager) return
+    setAddingContact(true)
+
+    let name = ''
+    let phone = ''
+    let contractorId: string | null = null
+
+    if (addMode === 'contractor' && selectedContractorId) {
+      const c = contractors.find(c => c.id === selectedContractorId)
+      if (!c) { setAddingContact(false); return }
+      name = c.name
+      phone = c.phone
+      contractorId = c.id
+    } else if (addMode === 'manual') {
+      name = newContactName.trim()
+      phone = newContactPhone.trim()
+    }
+
+    if (!name || !phone) {
+      toast.error('Name and phone are required')
+      setAddingContact(false)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('c1_profiles')
+      .insert({
+        pm_id: propertyManager.id,
+        name,
+        phone,
+        is_ooh_contact: true,
+        contractor_id: contractorId,
+      })
+      .select('id, name, phone, contractor_id, active')
+      .single()
+
+    if (error) {
+      toast.error(error.message || 'Failed to add contact')
+    } else if (data) {
+      setOohContacts(prev => [...prev, data as OOHContact])
+      toast.success(`${name} added as OOH contact`)
+    }
+
+    setShowAddContact(false)
+    setAddMode(null)
+    setNewContactName('')
+    setNewContactPhone('')
+    setSelectedContractorId('')
+    setAddingContact(false)
+  }
+
+  const removeOOHContact = async (contactId: string) => {
+    const { error } = await supabase
+      .from('c1_profiles')
+      .update({ is_ooh_contact: false, active: false })
+      .eq('id', contactId)
+
+    if (error) {
+      toast.error('Failed to remove contact')
+    } else {
+      setOohContacts(prev => prev.filter(c => c.id !== contactId))
+      toast.success('Contact removed')
+    }
+  }
+
+  const toggleDay = (day: string) => {
+    const current = draft.business_days
+    const next = current.includes(day)
+      ? current.filter(d => d !== day)
+      : [...current, day]
+    if (next.length === 0) return // must have at least one day
+    updateDraft({ business_days: next })
   }
 
   // Reusable timing card
@@ -330,6 +495,218 @@ export default function RulesPage() {
                 </span>
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* ─── BUSINESS HOURS ─── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Business Hours</h2>
+          <div className="bg-card rounded-xl border p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-semibold">Out-of-hours handling</span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Route emergencies to trusted contacts outside your working hours.
+                </p>
+              </div>
+              <Switch
+                checked={draft.ooh_enabled}
+                onCheckedChange={(on) => updateDraft({ ooh_enabled: on })}
+              />
+            </div>
+
+            {draft.ooh_enabled && (
+              <div className="mt-5 space-y-4 border-t pt-4">
+                {/* Time range */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium block mb-1.5">Start</label>
+                    <Select value={draft.business_hours_start} onValueChange={(v) => updateDraft({ business_hours_start: v })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HOUR_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium block mb-1.5">End</label>
+                    <Select value={draft.business_hours_end} onValueChange={(v) => updateDraft({ business_hours_end: v })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HOUR_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Working days */}
+                <div>
+                  <label className="text-xs font-medium block mb-1.5">Working days</label>
+                  <div className="flex gap-1.5">
+                    {ALL_DAYS.map((d) => (
+                      <button
+                        key={d.value}
+                        type="button"
+                        onClick={() => toggleDay(d.value)}
+                        className={cn(
+                          'flex-1 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors',
+                          draft.business_days.includes(d.value)
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:bg-muted'
+                        )}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Routine ticket handling */}
+                <div>
+                  <label className="text-xs font-medium block mb-1.5">Non-urgent tickets outside hours</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: 'queue_review', label: 'Hold for morning review', desc: 'Queue for your review when you\'re back.' },
+                      { value: 'dispatch', label: 'Dispatch normally', desc: 'Auto-dispatch regardless of time.' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateDraft({ ooh_routine_action: opt.value })}
+                        className={cn(
+                          'rounded-lg border p-3 text-left transition-all',
+                          draft.ooh_routine_action === opt.value
+                            ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                            : 'border-border hover:border-muted-foreground/30'
+                        )}
+                      >
+                        <span className="text-xs font-semibold block">{opt.label}</span>
+                        <span className="text-[11px] text-muted-foreground mt-0.5 block">{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ─── OOH CONTACTS ─── */}
+        <section className={cn(!draft.ooh_enabled && 'opacity-50 pointer-events-none')}>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            <Clock className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+            OOH Contacts
+          </h2>
+          <div className="bg-card rounded-xl border p-5">
+            <p className="text-xs text-muted-foreground mb-4">
+              These people receive emergency tickets outside your business hours.
+            </p>
+
+            {oohContacts.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {oohContacts.map((contact) => (
+                  <div key={contact.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{contact.name}</span>
+                      <span className="text-xs text-muted-foreground">{contact.phone}</span>
+                      {contact.contractor_id && (
+                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+                          Contractor
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeOOHContact(contact.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!showAddContact ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddContact(true)}
+                disabled={!draft.ooh_enabled}
+              >
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                Add contact
+              </Button>
+            ) : (
+              <div className="rounded-lg border p-4 space-y-3">
+                {!addMode && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setAddMode('contractor')}
+                      className="rounded-lg border p-3 text-left hover:bg-muted transition-colors"
+                    >
+                      <span className="text-xs font-semibold block">From contractors</span>
+                      <span className="text-[11px] text-muted-foreground">Pick an existing contractor</span>
+                    </button>
+                    <button
+                      onClick={() => setAddMode('manual')}
+                      className="rounded-lg border p-3 text-left hover:bg-muted transition-colors"
+                    >
+                      <span className="text-xs font-semibold block">New contact</span>
+                      <span className="text-[11px] text-muted-foreground">Add name and phone</span>
+                    </button>
+                  </div>
+                )}
+
+                {addMode === 'contractor' && (
+                  <>
+                    <Select value={selectedContractorId} onValueChange={setSelectedContractorId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select contractor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractors
+                          .filter(c => c.phone && !oohContacts.some(oc => oc.contractor_id === c.id))
+                          .map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name} ({c.phone})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={addOOHContact} disabled={!selectedContractorId || addingContact}>
+                        {addingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Add'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setShowAddContact(false); setAddMode(null); setSelectedContractorId('') }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {addMode === 'manual' && (
+                  <>
+                    <Input placeholder="Name" value={newContactName} onChange={(e) => setNewContactName(e.target.value)} />
+                    <Input placeholder="Phone (e.g. 447700900123)" value={newContactPhone} onChange={(e) => setNewContactPhone(e.target.value)} />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={addOOHContact} disabled={!newContactName || !newContactPhone || addingContact}>
+                        {addingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Add'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setShowAddContact(false); setAddMode(null); setNewContactName(''); setNewContactPhone('') }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </section>
 

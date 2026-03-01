@@ -57,6 +57,7 @@ interface TicketRow {
   pending_review?: boolean | null
   next_action?: string | null
   next_action_reason?: string | null
+  ooh_dispatched?: boolean | null
   sla_due_at?: string | null
   resolved_at?: string | null
   message_stage?: string | null
@@ -170,6 +171,7 @@ export default function TicketsPage() {
         images,
         next_action,
         next_action_reason,
+        ooh_dispatched,
         sla_due_at,
         resolved_at,
         c1_properties(address),
@@ -188,6 +190,7 @@ export default function TicketsPage() {
       const reasonToDisplayStage: Record<string, string> = {
         pending_review: 'Needs Review',
         handoff_review: 'Handoff',
+        ooh_dispatched: 'OOH Dispatched',
         manager_approval: 'Awaiting Manager',
         no_contractors: 'No Contractors',
         landlord_declined: 'Landlord Declined',

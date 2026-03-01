@@ -143,6 +143,7 @@ const ACTION_CTA: Record<string, string> = {
   'Review quote': 'Approve',
   'Awaiting landlord': 'Follow up',
   'Contractor unresponsive': 'Redispatch',
+  'OOH dispatched': 'Review',
 }
 
 // Dot + text badges per next_action_reason (distinct from StatusBadge pills)
@@ -150,6 +151,7 @@ const REASON_BADGE: Record<string, { label: string; dot: string; text: string }>
   on_hold:              { label: 'On Hold',           dot: 'bg-gray-400',   text: 'text-gray-500 dark:text-gray-400' },
   pending_review:       { label: 'Needs review',      dot: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
   handoff_review:       { label: 'Handoff',           dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
+  ooh_dispatched:       { label: 'OOH Dispatched',    dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
   no_contractors:       { label: 'No contractors',    dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
   job_not_completed:    { label: 'Not completed',     dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
   landlord_declined:    { label: 'Landlord declined', dot: 'bg-orange-500', text: 'text-orange-600 dark:text-orange-400' },
@@ -373,6 +375,7 @@ export default function DashboardPage() {
       const reasonToDisplayStage: Record<string, string> = {
         pending_review: 'Needs Review',
         handoff_review: 'Handoff',
+        ooh_dispatched: 'OOH Dispatched',
         manager_approval: 'Awaiting Manager',
         no_contractors: 'No Contractors',
         landlord_declined: 'Landlord Declined',
