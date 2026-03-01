@@ -109,6 +109,7 @@ interface RecentEvent {
   metadata: unknown
   occurred_at: string
   event_count?: number
+  issue_snippet?: string | null
 }
 
 const EVENT_DOT_COLOR: Record<string, string> = {
@@ -672,18 +673,17 @@ export default function DashboardPage() {
                   recentEvents.map((event, idx) => {
                     const dotColor = EVENT_DOT_COLOR[event.event_type] || 'bg-zinc-400'
                     const isGrouped = (event.event_count ?? 1) > 1
+                    const detail = event.issue_snippet || event.property_label
                     const inner = (
                       <div className="flex items-start gap-2.5 flex-1 min-w-0">
                         <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${dotColor}`} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-card-foreground truncate leading-snug">{event.event_label}</p>
-                          {event.property_label ? (
+                          {detail && (
                             <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                              {event.property_label}{event.actor_name ? ` · ${event.actor_name}` : ''}
+                              {detail}{event.actor_name ? ` · ${event.actor_name}` : ''}
                             </p>
-                          ) : event.actor_name ? (
-                            <p className="text-[11px] text-muted-foreground truncate mt-0.5">{event.actor_name}</p>
-                          ) : null}
+                          )}
                         </div>
                         <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap flex-shrink-0 mt-0.5">
                           {formatDistanceToNow(new Date(event.occurred_at), { addSuffix: true })}
