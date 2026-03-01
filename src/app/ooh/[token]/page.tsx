@@ -60,6 +60,17 @@ function formatTime(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
+function formatPhone(raw: string): string {
+  // Strip leading + if present
+  const digits = raw.replace(/^\+/, '')
+  // UK numbers: 44 7XXX XXXXXX → +44 7XXX XXX XXX
+  if (digits.startsWith('44') && digits.length === 12) {
+    return `+44 ${digits.slice(2, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`
+  }
+  // Fallback: just add + and space every 4 digits
+  return '+' + digits.replace(/(\d{2})(\d{4})(\d+)/, '$1 $2 $3')
+}
+
 export default function OOHResponsePage() {
   const { token } = useParams<{ token: string }>()
 
@@ -209,7 +220,7 @@ export default function OOHResponsePage() {
                         href={`tel:${ticket.tenant_phone}`}
                         className="ml-2 text-blue-600 hover:underline"
                       >
-                        {ticket.tenant_phone}
+                        {formatPhone(ticket.tenant_phone)}
                       </a>
                     )}
                   </span>
