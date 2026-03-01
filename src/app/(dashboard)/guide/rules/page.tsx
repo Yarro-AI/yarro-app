@@ -667,64 +667,34 @@ export default function RulesPage() {
                 )}
 
                 {addMode === 'contractor' && (() => {
-                  // Deduplicate contractors by phone — group categories
-                  const grouped = new Map<string, { id: string; name: string; phone: string; categories: string[] }>()
-                  for (const c of contractors) {
-                    if (!c.contractor_phone) continue
-                    // Skip if any row of this contractor is already an OOH contact
-                    if (oohContacts.some(oc => oc.contractor_id === c.id)) continue
-                    const key = c.contractor_phone
-                    const existing = grouped.get(key)
-                    if (existing) {
-                      if (c.category && !existing.categories.includes(c.category)) {
-                        existing.categories.push(c.category)
-                      }
-                    } else {
-                      grouped.set(key, {
-                        id: c.id,
-                        name: c.contractor_name,
-                        phone: c.contractor_phone,
-                        categories: c.category ? [c.category] : [],
-                      })
-                    }
-                  }
-                  const uniqueContractors = Array.from(grouped.values())
+                  const available = contractors.filter(c =>
+                    c.contractor_phone && !oohContacts.some(oc => oc.contractor_id === c.id)
+                  )
 
                   return (
                     <>
-                      <div className="max-h-[240px] overflow-y-auto space-y-1.5">
-                        {uniqueContractors.length === 0 ? (
+                      <div className="max-h-[200px] overflow-y-auto space-y-1">
+                        {available.length === 0 ? (
                           <p className="text-xs text-muted-foreground py-3 text-center">No contractors available</p>
-                        ) : uniqueContractors.map((c) => (
+                        ) : available.map((c) => (
                           <button
                             key={c.id}
                             type="button"
                             onClick={() => setSelectedContractorId(c.id)}
                             className={cn(
-                              'w-full rounded-lg border px-3 py-2.5 text-left transition-all',
+                              'w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-all',
                               selectedContractorId === c.id
                                 ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
                                 : 'border-border hover:bg-muted'
                             )}
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{c.name}</span>
-                              <span className="text-xs text-muted-foreground">+{c.phone}</span>
-                            </div>
-                            {c.categories.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {c.categories.slice(0, 4).map((cat) => (
-                                  <span key={cat} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                    {cat}
-                                  </span>
-                                ))}
-                                {c.categories.length > 4 && (
-                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                    +{c.categories.length - 4} more
-                                  </span>
-                                )}
-                              </div>
+                            <span className="text-sm font-medium truncate">{c.contractor_name}</span>
+                            {c.category && (
+                              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
+                                {c.category}
+                              </span>
                             )}
+                            <span className="text-xs text-muted-foreground ml-auto shrink-0">+{c.contractor_phone}</span>
                           </button>
                         ))}
                       </div>
