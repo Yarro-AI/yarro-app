@@ -108,6 +108,28 @@ interface RecentEvent {
   property_label: string | null
   metadata: unknown
   occurred_at: string
+  event_count?: number
+}
+
+const EVENT_DOT_COLOR: Record<string, string> = {
+  ISSUE_CREATED:        'bg-blue-500',
+  PENDING_REVIEW:       'bg-violet-500',
+  HANDOFF_CREATED:      'bg-violet-500',
+  CONTRACTOR_ASSIGNED:  'bg-blue-400',
+  QUOTE_RECEIVED:       'bg-amber-500',
+  QUOTE_APPROVED:       'bg-emerald-500',
+  QUOTE_DECLINED:       'bg-red-400',
+  LANDLORD_APPROVED:    'bg-emerald-500',
+  LANDLORD_DECLINED:    'bg-red-400',
+  BOOKING_CONFIRMED:    'bg-emerald-500',
+  NO_CONTRACTORS:       'bg-red-400',
+  JOB_SCHEDULED:        'bg-emerald-400',
+  JOB_COMPLETED:        'bg-emerald-600',
+  TICKET_CLOSED:        'bg-zinc-400',
+  TICKET_ON_HOLD:       'bg-amber-400',
+  TICKET_RESUMED:       'bg-blue-400',
+  TICKET_ARCHIVED:      'bg-zinc-400',
+  FOLLOW_UP_REQUESTED:  'bg-amber-500',
 }
 
 // CTA button text per action type
@@ -648,34 +670,38 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   recentEvents.map((event, idx) => {
+                    const dotColor = EVENT_DOT_COLOR[event.event_type] || 'bg-zinc-400'
+                    const isGrouped = (event.event_count ?? 1) > 1
                     const inner = (
-                      <>
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${dotColor}`} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-card-foreground truncate">{event.event_label}</p>
-                          {event.property_label && (
-                            <p className="text-xs text-muted-foreground truncate">{event.property_label}</p>
-                          )}
-                          {event.actor_name && (
-                            <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{event.actor_name}</p>
-                          )}
+                          <p className="text-sm font-medium text-card-foreground truncate leading-snug">{event.event_label}</p>
+                          {event.property_label ? (
+                            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                              {event.property_label}{event.actor_name ? ` · ${event.actor_name}` : ''}
+                            </p>
+                          ) : event.actor_name ? (
+                            <p className="text-[11px] text-muted-foreground truncate mt-0.5">{event.actor_name}</p>
+                          ) : null}
                         </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
-                        {formatDistanceToNow(new Date(event.occurred_at), { addSuffix: true })}
-                      </span>
-                      </>
+                        <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap flex-shrink-0 mt-0.5">
+                          {formatDistanceToNow(new Date(event.occurred_at), { addSuffix: true })}
+                        </span>
+                      </div>
                     )
-                    return event.ticket_id ? (
+                    return event.ticket_id && !isGrouped ? (
                       <Link
                         key={`${event.event_type}-${event.occurred_at}-${idx}`}
                         href={`/tickets?id=${event.ticket_id}`}
-                        className="flex items-start justify-between px-4 py-2.5 gap-3 min-w-0 hover:bg-muted/30 transition-colors"
+                        className="flex px-4 py-2 min-w-0 hover:bg-muted/30 transition-colors cursor-pointer"
                       >
                         {inner}
                       </Link>
                     ) : (
                       <div
                         key={`${event.event_type}-${event.occurred_at}-${idx}`}
-                        className="flex items-start justify-between px-4 py-2.5 gap-3 min-w-0"
+                        className="flex px-4 py-2 min-w-0"
                       >
                         {inner}
                       </div>
