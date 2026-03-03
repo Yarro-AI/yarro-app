@@ -264,26 +264,7 @@ async function handleIntake(
       results.push({ type: "pm_ticket_review", sent: r.ok, error: r.error });
     }
 
-    // Landlord still gets informed of the new ticket
-    if (ctx.landlord_phone) {
-      const r = await sendAndLog(supabase, FN, "intake → LL ticket created SMS (review mode)", {
-        ticketId,
-        recipientPhone: ctx.landlord_phone,
-        recipientRole: "landlord",
-        messageType: "ll_ticket_created",
-        templateSid: TEMPLATES.ticket_created,
-        variables: {
-          "1": shortRef(ticketId),
-          "2": ctx.property_address || "Address not available",
-          "3": formatCallerInfo(ctx),
-          "4": formatTenantInfo(ctx),
-          "5": ctx.issue_description || "Maintenance issue reported",
-          "6": ctx.priority || "Standard",
-        },
-      });
-      results.push({ type: "ll_ticket_created", sent: r.ok, error: r.error });
-    }
-
+    // NO landlord notification in review mode — PM triages first, decides what happens
     // NO c1_contractor_context call — ticket stays in pending_review until PM dispatches
   } else {
     // ── AUTO MODE: existing flow — notify + dispatch ──
