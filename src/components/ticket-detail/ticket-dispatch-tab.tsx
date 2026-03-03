@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
 import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle, Phone } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
-import type { MessageData, OutboundLogEntry, OOHSubmission } from '@/hooks/use-ticket-detail'
+import type { MessageData, OutboundLogEntry, OOHSubmission, LandlordSubmission } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -33,6 +33,7 @@ const TYPE_LABELS: Record<string, string> = {
   pm_job_completed: 'Job Completed — Manager Notified',
   pm_job_not_completed: 'Job Not Completed — Manager Alerted',
   ll_job_completed: 'Job Completed — Landlord Notified',
+  landlord_allocate: 'Allocated to Landlord',
 }
 
 const TICKET_CREATED_LOG_TYPES = new Set(['pm_ticket_created', 'll_ticket_created'])
@@ -99,7 +100,21 @@ const OOH_OUTCOME_STATUS: Record<string, string> = {
   in_progress: 'sent',
 }
 
-function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[], oohSubmissions?: OOHSubmission[] | null): PurposeEntry[] {
+const LANDLORD_OUTCOME_LABELS: Record<string, string> = {
+  resolved: 'Resolved by Landlord',
+  in_progress: 'In Progress',
+  need_help: 'Needs Help',
+}
+
+const LANDLORD_OUTCOME_STATUS: Record<string, string> = {
+  resolved: 'completed',
+  in_progress: 'sent',
+  need_help: 'escalation',
+}
+
+const LANDLORD_ALLOCATE_LOG_TYPES = new Set(['landlord_allocate'])
+
+function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntry[], oohSubmissions?: OOHSubmission[] | null, landlordSubmissions?: LandlordSubmission[] | null): PurposeEntry[] {
   const entries: PurposeEntry[] = []
 
   const oohLogs = outboundLog.filter(e => OOH_LOG_TYPES.has(e.message_type))
@@ -149,6 +164,51 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         amount: sub.cost != null ? `£${Number(sub.cost).toFixed(2)}` : undefined,
         timestamp: sub.submitted_at,
         isEscalation: sub.outcome === 'unresolved',
+        isCompleted: sub.outcome === 'resolved',
+        chatMessages: chatMsgs,
+        subEntries: [],
+      })
+    }
+  }
+
+  // ─── Landlord Allocation: allocated to landlord (outbound log) ───
+  const landlordAllocateLogs = outboundLog.filter(e => LANDLORD_ALLOCATE_LOG_TYPES.has(e.message_type))
+  for (const entry of landlordAllocateLogs) {
+    entries.push({
+      id: entry.id,
+      phase: 'Landlord Allocation',
+      label: 'Allocated to Landlord',
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: 'sent',
+      timestamp: entry.sent_at,
+      isEscalation: false,
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
+    })
+  }
+
+  // ─── Landlord Allocation: status updates (from portal submissions) ───
+  if (landlordSubmissions && landlordSubmissions.length > 0) {
+    for (let i = 0; i < landlordSubmissions.length; i++) {
+      const sub = landlordSubmissions[i]
+      const label = LANDLORD_OUTCOME_LABELS[sub.outcome] || sub.outcome
+      const status = LANDLORD_OUTCOME_STATUS[sub.outcome] || 'sent'
+      const chatMsgs: ChatMsg[] = []
+      if (sub.notes) {
+        chatMsgs.push({ role: 'landlord', text: sub.notes, timestamp: sub.submitted_at })
+      }
+      if (sub.cost != null) {
+        chatMsgs.push({ role: 'landlord', text: `Cost: £${Number(sub.cost).toFixed(2)}`, timestamp: sub.submitted_at })
+      }
+      entries.push({
+        id: `landlord-submission-${i}`,
+        phase: 'Landlord Response',
+        label,
+        sublabel: format(new Date(sub.submitted_at), 'dd MMM, HH:mm'),
+        status,
+        amount: sub.cost != null ? `£${Number(sub.cost).toFixed(2)}` : undefined,
+        timestamp: sub.submitted_at,
+        isEscalation: sub.outcome === 'need_help',
         isCompleted: sub.outcome === 'resolved',
         chatMessages: chatMsgs,
         subEntries: [],
@@ -590,6 +650,8 @@ function subEntryLabel(subs: SubEntry[]): string {
 const PHASE_ICONS: Record<string, typeof Cog> = {
   'OOH Dispatch': Phone,
   'OOH Response': Phone,
+  'Landlord Allocation': Building2,
+  'Landlord Response': Building2,
   Handoff: AlertTriangle,
   'Ticket Created': Send,
   'Contractor Quotes': Wrench,
@@ -821,6 +883,60 @@ function DispatchActionBar({ nextActionReason, messages, ticketId, onActionTaken
   )
 }
 
+// ─── Landlord Allocate Bar ───
+
+interface LandlordAllocateBarProps {
+  ticketId: string
+  nextActionReason: string | null | undefined
+  landlordAllocated: boolean | null | undefined
+  landlordName: string | null | undefined
+  landlordPhone: string | null | undefined
+  onActionTaken?: () => void
+}
+
+function LandlordAllocateBar({ ticketId, nextActionReason, landlordAllocated, landlordName, landlordPhone, onActionTaken }: LandlordAllocateBarProps) {
+  const [loading, setLoading] = useState(false)
+  const supabase = createClient()
+
+  // Only show when in handoff_review or no_contractors state, and NOT already allocated
+  const isEligible = (nextActionReason === 'handoff_review' || nextActionReason === 'no_contractors') && !landlordAllocated
+  if (!isEligible) return null
+  if (!landlordName && !landlordPhone) return null
+
+  const handleAllocate = async () => {
+    setLoading(true)
+    const { data, error } = await supabase.rpc('c1_allocate_to_landlord' as never, {
+      p_ticket_id: ticketId,
+    } as never)
+    setLoading(false)
+
+    const result = data as unknown as { ok: boolean; landlord_name?: string; error?: string } | null
+    if (error || !result?.ok) {
+      toast.error('Allocation failed', { description: (result as Record<string, unknown>)?.error as string || error?.message || 'Unknown error' })
+      return
+    }
+
+    toast.success(`Allocated to ${result.landlord_name || 'landlord'}`, { description: 'Landlord will be notified via WhatsApp' })
+    onActionTaken?.()
+  }
+
+  return (
+    <div className="mb-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Allocate to Landlord</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          <span className="font-medium text-foreground">{landlordName || 'Landlord'}</span>
+          {landlordPhone && <span className="ml-1.5 text-muted-foreground">{landlordPhone}</span>}
+        </p>
+      </div>
+      <Button size="sm" disabled={loading} onClick={handleAllocate}>
+        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Building2 className="h-3.5 w-3.5 mr-1" />}
+        Allocate to Landlord
+      </Button>
+    </div>
+  )
+}
+
 // ─── Component ───
 
 interface TicketDispatchTabProps {
@@ -831,12 +947,16 @@ interface TicketDispatchTabProps {
   nextActionReason?: string | null
   onActionTaken?: () => void
   oohSubmissions?: OOHSubmission[] | null
+  landlordSubmissions?: LandlordSubmission[] | null
+  landlordAllocated?: boolean | null
+  landlordName?: string | null
+  landlordPhone?: string | null
 }
 
-export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched, nextActionReason, onActionTaken, oohSubmissions }: TicketDispatchTabProps) {
+export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatched, nextActionReason, onActionTaken, oohSubmissions, landlordSubmissions, landlordAllocated, landlordName, landlordPhone }: TicketDispatchTabProps) {
   const [overlay, setOverlay] = useState<{ title: string; messages: ChatMsg[] } | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const entries = useMemo(() => buildEntries(messages, outboundLog, oohSubmissions), [messages, outboundLog, oohSubmissions])
+  const entries = useMemo(() => buildEntries(messages, outboundLog, oohSubmissions, landlordSubmissions), [messages, outboundLog, oohSubmissions, landlordSubmissions])
 
   const hasNoContractors = entries.some(e => e.label === 'No Contractors Available')
 
@@ -863,12 +983,22 @@ export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatc
   return (
     <div className="space-y-0">
       {ticketId && (
-        <DispatchActionBar
-          nextActionReason={nextActionReason}
-          messages={messages}
-          ticketId={ticketId}
-          onActionTaken={onActionTaken}
-        />
+        <>
+          <DispatchActionBar
+            nextActionReason={nextActionReason}
+            messages={messages}
+            ticketId={ticketId}
+            onActionTaken={onActionTaken}
+          />
+          <LandlordAllocateBar
+            ticketId={ticketId}
+            nextActionReason={nextActionReason}
+            landlordAllocated={landlordAllocated}
+            landlordName={landlordName}
+            landlordPhone={landlordPhone}
+            onActionTaken={onActionTaken}
+          />
+        </>
       )}
       {entries.map((entry, index) => {
         const isLast = index === entries.length - 1

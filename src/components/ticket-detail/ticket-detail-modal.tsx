@@ -284,7 +284,7 @@ export function TicketDetailModal({
 
                 {(hasDispatch || hasOutboundLog || ledger.length > 0) && (
                   <TabsContent value="dispatch" className="mt-4 flex-1 min-h-0 overflow-y-auto">
-                    <TicketDispatchTab messages={messages} outboundLog={outboundLog} ticketId={ticketId || undefined} onRedispatched={onClose} nextActionReason={basic?.next_action_reason} onActionTaken={() => { refetch(); onTicketUpdated?.() }} oohSubmissions={basic?.ooh_submissions} />
+                    <TicketDispatchTab messages={messages} outboundLog={outboundLog} ticketId={ticketId || undefined} onRedispatched={onClose} nextActionReason={basic?.next_action_reason} onActionTaken={() => { refetch(); onTicketUpdated?.() }} oohSubmissions={basic?.ooh_submissions} landlordSubmissions={basic?.landlord_submissions} landlordAllocated={basic?.landlord_allocated} landlordName={context?.landlord_name} landlordPhone={context?.landlord_phone} />
                   </TabsContent>
                 )}
 

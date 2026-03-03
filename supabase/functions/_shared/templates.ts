@@ -10,6 +10,9 @@ export const TEMPLATES = {
   // ─── OOH Emergency (yarro-ticket-notify) ───
   ooh_emergency_dispatch: "HXf417fee316a93526eedd11634208910a",  // 20_2_ooh_emergency_dispatch
 
+  // ─── Landlord Allocation (yarro-dispatcher) ───
+  allocate_landlord: "HX7bd3023fd3694bb77ee2b3e05562e06e",        // 21_allocate_landlord
+
   // ─── Contractor Dispatch (yarro-dispatcher) ───
   contractor_quote: "HXa0110e2b69a0abe9352d47cd38e7b9ca",     // 3_5_contractor_quote
   pm_quote: "HXb2f9170ecf59525e230c1cb688455f42",             // 4_5_pm_quote_sms

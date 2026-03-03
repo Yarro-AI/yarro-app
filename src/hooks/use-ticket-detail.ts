@@ -91,6 +91,13 @@ export interface TicketBasic {
   ooh_dispatched_at: string | null
   ooh_outcome_at: string | null
   ooh_submissions: OOHSubmission[] | null
+  landlord_allocated: boolean | null
+  landlord_allocated_at: string | null
+  landlord_outcome: string | null
+  landlord_notes: string | null
+  landlord_cost: number | null
+  landlord_outcome_at: string | null
+  landlord_submissions: LandlordSubmission[] | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -165,6 +172,13 @@ export interface CompletionData {
 }
 
 export interface OOHSubmission {
+  outcome: string
+  notes: string | null
+  cost: number | null
+  submitted_at: string
+}
+
+export interface LandlordSubmission {
   outcome: string
   notes: string | null
   cost: number | null
@@ -398,6 +412,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             property_id, tenant_id, contractor_id, conversation_id,
             archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
             ooh_dispatched, ooh_outcome, ooh_notes, ooh_cost, ooh_dispatched_at, ooh_outcome_at, ooh_submissions,
+            landlord_allocated, landlord_allocated_at, landlord_outcome, landlord_notes, landlord_cost, landlord_outcome_at, landlord_submissions,
             c1_properties(address),
             c1_tenants(full_name),
             c1_contractors(contractor_name)

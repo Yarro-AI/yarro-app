@@ -218,6 +218,49 @@ async function handleLandlordSms(
   );
 }
 
+// ─── Instruction: landlord-allocate ──────────────────────────────────────
+async function handleLandlordAllocate(
+  supabase: SupabaseClient,
+  payload: Record<string, any>,
+): Promise<Response> {
+  const ticket = payload.ticket || {};
+  const property = payload.property || {};
+  const tenant = payload.tenant || {};
+  const landlord = payload.landlord || {};
+  const manager = payload.manager || {};
+  const token = payload.token || "";
+
+  const portalUrl = `https://app.yarro.ai/landlord/${token}`;
+
+  const result = await sendAndLog(supabase, FN, "landlord-allocate \u2192 Twilio send", {
+    ticketId: ticket.id,
+    recipientPhone: landlord.phone,
+    recipientRole: "landlord",
+    messageType: "landlord_allocate",
+    templateSid: TEMPLATES.allocate_landlord,
+    variables: {
+      "1": shortRef(String(ticket.id || "unknown")),
+      "2": property.address || "Address not available",
+      "3": ticket.issue_description || "Maintenance issue reported",
+      "4": tenant.name || "Unknown",
+      "5": tenant.phone || "N/A",
+      "6": manager.business_name || "Your property manager",
+      "7": portalUrl,
+    },
+  });
+
+  return new Response(
+    JSON.stringify({
+      instruction: "landlord-allocate",
+      ticket_id: ticket.id,
+      sent: result.ok,
+      messageSid: result.messageSid,
+      error: result.error,
+    }),
+    { status: result.ok ? 200 : 500, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 // ─── Instruction: pm-nomorecontractors-sms ───────────────────────────────
 async function handleNoMoreContractors(
   supabase: SupabaseClient,
@@ -272,6 +315,9 @@ Deno.serve(async (req: Request) => {
 
       case "landlord-sms":
         return await handleLandlordSms(supabase, payload);
+
+      case "landlord-allocate":
+        return await handleLandlordAllocate(supabase, payload);
 
       case "pm-nomorecontractors-sms":
         return await handleNoMoreContractors(supabase, payload);

@@ -71,9 +71,9 @@ type LifecycleFilter = 'open' | 'closed' | 'archived'
 type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled'
 type TypeFilter = 'auto' | 'manual'
 
-const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking'] as const
+const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking', 'allocated_to_landlord'] as const
 const NEEDS_MGR_REASONS = ['needs_attention', 'no_contractors', 'landlord_declined',
-                           'landlord_no_response', 'job_not_completed', 'manager_approval'] as const
+                           'landlord_no_response', 'landlord_needs_help', 'job_not_completed', 'manager_approval'] as const
 
 const isWaitingReason   = (r?: string | null): boolean => !!r && (WAITING_REASONS   as readonly string[]).includes(r)
 const isNeedsMgrReason  = (r?: string | null): boolean => !!r && (NEEDS_MGR_REASONS as readonly string[]).includes(r)
@@ -198,6 +198,8 @@ export default function TicketsPage() {
         no_contractors: 'No Contractors',
         landlord_declined: 'Landlord Declined',
         landlord_no_response: 'Landlord No Response',
+        allocated_to_landlord: 'Landlord Managing',
+        landlord_needs_help: 'Landlord Needs Help',
         job_not_completed: 'Not Completed',
         awaiting_contractor: 'Awaiting Contractor',
         awaiting_landlord: 'Awaiting Landlord',

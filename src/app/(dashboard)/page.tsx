@@ -163,6 +163,8 @@ const REASON_BADGE: Record<string, { label: string; dot: string; text: string }>
   landlord_declined:    { label: 'Landlord declined', dot: 'bg-orange-500', text: 'text-orange-600 dark:text-orange-400' },
   landlord_no_response: { label: 'Landlord silent',   dot: 'bg-orange-400', text: 'text-orange-500 dark:text-orange-400' },
   manager_approval:     { label: 'Needs approval',    dot: 'bg-blue-500',   text: 'text-blue-600 dark:text-blue-400' },
+  allocated_to_landlord:{ label: 'Landlord Managing', dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
+  landlord_needs_help:  { label: 'Landlord Needs Help', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
   awaiting_contractor:  { label: 'Awaiting reply',    dot: 'bg-sky-500',    text: 'text-sky-600 dark:text-sky-400' },
   awaiting_booking:     { label: 'Awaiting booking',  dot: 'bg-teal-500',   text: 'text-teal-600 dark:text-teal-400' },
 }
