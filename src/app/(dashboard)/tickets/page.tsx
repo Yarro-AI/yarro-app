@@ -185,7 +185,7 @@ export default function TicketsPage() {
       `)
       .eq('property_manager_id', propertyManager!.id)
       .gte('date_logged', dateRange.from.toISOString())
-      .lte('date_logged', dateRange.to.toISOString())
+      .lte('date_logged', dateRange.label === 'Custom' ? dateRange.to.toISOString() : new Date().toISOString())
       .order('date_logged', { ascending: false })
 
     const { data } = await query
