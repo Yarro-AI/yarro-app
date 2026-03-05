@@ -940,18 +940,13 @@ export function TicketForm({
         </div>
       </div>
 
-      {/* Landlord allocate option */}
-      {(isReview || isHandoff) && landlordName && landlordPhone && ticketId && (
-        <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-300 dark:border-purple-800 rounded-lg">
-          <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-          <div className="flex-1 text-sm">
-            <span className="font-medium text-purple-800 dark:text-purple-300">{landlordName}</span>
-            <span className="text-purple-600 dark:text-purple-400 ml-2 text-xs">{landlordPhone}</span>
-          </div>
+      {/* Footer */}
+      <div className="flex items-center gap-3 pt-4 border-t">
+        {(isReview || isHandoff) && landlordName && landlordPhone && ticketId && (
           <Button
             size="sm"
             variant="outline"
-            className="border-purple-400 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+            className="border-purple-400 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 gap-1.5"
             disabled={allocatingLandlord || submitting}
             onClick={async () => {
               setAllocatingLandlord(true)
@@ -966,13 +961,10 @@ export function TicketForm({
               onAllocateLandlord?.()
             }}
           >
-            {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Allocate to Landlord'}
+            {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Building2 className="h-3.5 w-3.5" /> Landlord</>}
           </Button>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
+        )}
+        <div className="flex-1" />
         {(isHandoff || isReview) && onDismiss && (
           <InteractiveHoverButton
             text="Dismiss"
