@@ -868,9 +868,11 @@ export default function TicketsPage() {
               } : undefined}
               isHandoff={!!handoffTicketId}
               isReview={!!reviewTicketId}
+              ticketId={reviewTicketId || handoffTicketId || null}
               onSubmit={handleCreateTicket}
               onCancel={handleCloseCreateDrawer}
               onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
+              onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
               submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
             />
           </DialogBody>

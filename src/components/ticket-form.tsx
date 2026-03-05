@@ -27,7 +27,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { CONTRACTOR_CATEGORIES, TICKET_PRIORITIES, PRIORITY_DESCRIPTIONS } from '@/lib/constants'
 import { normalizeRecord, validateTenant, validateContractor, hasErrors } from '@/lib/normalize'
-import { Loader2, CheckCircle2, AlertTriangle, ClipboardList, Plus, ImagePlus, X, Phone, Mail, MessageSquare } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertTriangle, ClipboardList, Plus, ImagePlus, X, Phone, Mail, MessageSquare, Building2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ChatHistory } from '@/components/chat-message'
 
@@ -83,6 +83,8 @@ interface TicketFormProps {
   onSuccess?: () => void         // Simple callback when form handles creation
   onCancel: () => void
   onDismiss?: () => void         // Archive/dismiss handoff without completing
+  onAllocateLandlord?: () => void // Allocate ticket to landlord instead of dispatching
+  ticketId?: string | null       // Existing ticket ID (review/handoff mode)
   submitLabel?: string
   isHandoff?: boolean            // Visual styling for handoff tickets
   isReview?: boolean             // Visual styling for review mode tickets
@@ -105,6 +107,8 @@ export function TicketForm({
   onSuccess,
   onCancel,
   onDismiss,
+  onAllocateLandlord,
+  ticketId,
   submitLabel = 'Create Ticket',
   isHandoff = false,
   isReview = false,
@@ -154,6 +158,9 @@ export function TicketForm({
   const [conversationLog, setConversationLog] = useState<ConversationMessage[]>([])
   const [loadingConversation, setLoadingConversation] = useState(false)
   const [showConversation, setShowConversation] = useState(false)
+  const [landlordName, setLandlordName] = useState<string | null>(null)
+  const [landlordPhone, setLandlordPhone] = useState<string | null>(null)
+  const [allocatingLandlord, setAllocatingLandlord] = useState(false)
 
   // Fetch properties, tenants, and contractors
   useEffect(() => {
@@ -209,6 +216,31 @@ export function TicketForm({
       }
     }
   }, [formData.property_id, tenants, formData.tenant_id])
+
+  // Fetch landlord for selected property (review/handoff mode)
+  useEffect(() => {
+    if (!formData.property_id || (!isReview && !isHandoff)) {
+      setLandlordName(null)
+      setLandlordPhone(null)
+      return
+    }
+    const fetchLandlord = async () => {
+      const { data } = await supabase
+        .from('c1_properties')
+        .select('landlord_id, c1_landlords(full_name, phone)')
+        .eq('id', formData.property_id)
+        .single()
+      if (data?.c1_landlords) {
+        const ll = data.c1_landlords as unknown as { full_name: string | null; phone: string | null }
+        setLandlordName(ll.full_name)
+        setLandlordPhone(ll.phone)
+      } else {
+        setLandlordName(null)
+        setLandlordPhone(null)
+      }
+    }
+    fetchLandlord()
+  }, [formData.property_id, isReview, isHandoff, supabase])
 
   // Show ALL contractors (no property constraint) — manual tickets need flexibility
   // Sort order: property-assigned + category match first, then property-assigned, then others
@@ -908,6 +940,37 @@ export function TicketForm({
         </div>
       </div>
 
+      {/* Landlord allocate option */}
+      {(isReview || isHandoff) && landlordName && landlordPhone && ticketId && (
+        <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-300 dark:border-purple-800 rounded-lg">
+          <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+          <div className="flex-1 text-sm">
+            <span className="font-medium text-purple-800 dark:text-purple-300">{landlordName}</span>
+            <span className="text-purple-600 dark:text-purple-400 ml-2 text-xs">{landlordPhone}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-purple-400 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+            disabled={allocatingLandlord || submitting}
+            onClick={async () => {
+              setAllocatingLandlord(true)
+              const { data, error } = await supabase.rpc('c1_allocate_to_landlord', { p_ticket_id: ticketId })
+              if (error) {
+                toast.error(error.message || 'Failed to allocate to landlord')
+                setAllocatingLandlord(false)
+                return
+              }
+              toast.success(`Allocated to ${landlordName}`)
+              setAllocatingLandlord(false)
+              onAllocateLandlord?.()
+            }}
+          >
+            {allocatingLandlord ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Allocate to Landlord'}
+          </Button>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex justify-end gap-3 pt-4 border-t">
         {(isHandoff || isReview) && onDismiss && (
@@ -915,14 +978,14 @@ export function TicketForm({
             text="Dismiss"
             variant="secondary"
             onClick={onDismiss}
-            disabled={submitting}
+            disabled={submitting || allocatingLandlord}
             className="w-32 text-sm h-10"
           />
         )}
         <InteractiveHoverButton
           text={submitting ? 'Creating...' : finalSubmitLabel}
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || allocatingLandlord}
           className="w-40 text-sm h-10"
         />
       </div>
