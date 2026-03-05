@@ -1,7 +1,7 @@
 'use client'
 
 import { format, formatDistanceToNow } from 'date-fns'
-import { Users, Wrench, MapPin, Crown, Phone } from 'lucide-react'
+import { Users, Wrench, MapPin, Crown, Phone, Building2 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
@@ -134,6 +134,41 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
             )}
             {basic.ooh_cost != null && basic.ooh_cost > 0 && (
               <p className="text-sm px-1 font-medium">&pound;{basic.ooh_cost.toFixed(2)}</p>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Landlord Allocated Outcome */}
+      {basic.landlord_allocated && (
+        <>
+          <DashedLine />
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Landlord Allocated</p>
+            <div className="flex items-center gap-2 px-1">
+              <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+              <span className="text-sm font-medium">
+                {basic.landlord_outcome === 'resolved' ? 'Resolved by landlord'
+                : basic.landlord_outcome === 'need_help' ? 'Landlord needs help'
+                : basic.landlord_outcome === 'in_progress' ? 'In progress'
+                : 'Allocated — awaiting response'}
+              </span>
+            </div>
+            {basic.landlord_allocated_at && (
+              <p className="text-xs text-muted-foreground px-1">
+                Allocated {formatDistanceToNow(new Date(basic.landlord_allocated_at), { addSuffix: true })}
+              </p>
+            )}
+            {basic.landlord_outcome_at && (
+              <p className="text-xs text-muted-foreground px-1">
+                Responded {formatDistanceToNow(new Date(basic.landlord_outcome_at), { addSuffix: true })}
+              </p>
+            )}
+            {basic.landlord_notes && (
+              <p className="text-sm px-1">{basic.landlord_notes}</p>
+            )}
+            {basic.landlord_cost != null && basic.landlord_cost > 0 && (
+              <p className="text-sm px-1 font-medium">&pound;{basic.landlord_cost.toFixed(2)}</p>
             )}
           </div>
         </>

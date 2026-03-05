@@ -62,6 +62,8 @@ export function TicketDetailModal({
   const isOpen = basic?.status === 'open' && !basic?.archived
   const isOOH = basic?.ooh_dispatched === true && isOpen
   const oohOutcome = basic?.ooh_outcome || null
+  const isLandlordAllocated = basic?.landlord_allocated === true && isOpen
+  const landlordOutcome = basic?.landlord_outcome || null
   // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
   const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
 
@@ -132,6 +134,28 @@ export function TicketDetailModal({
                       ) : (
                         <>
                           {displayStage || 'OOH Dispatched'}
+                          <span className="opacity-40">·</span>
+                          <span className="text-xs">Mark Complete</span>
+                          <CheckCircle2 className="h-3 w-3" />
+                        </>
+                      )}
+                    </button>
+                  ) : isLandlordAllocated ? (
+                    <button
+                      onClick={handleMarkComplete}
+                      disabled={closingTicket}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-colors hover:bg-muted/50 disabled:opacity-50 ${
+                        landlordOutcome === 'resolved' ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
+                        : landlordOutcome === 'need_help' ? 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400'
+                        : landlordOutcome === 'in_progress' ? 'border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400'
+                        : 'border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400'
+                      }`}
+                    >
+                      {closingTicket ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <>
+                          {displayStage || 'Landlord Managing'}
                           <span className="opacity-40">·</span>
                           <span className="text-xs">Mark Complete</span>
                           <CheckCircle2 className="h-3 w-3" />
