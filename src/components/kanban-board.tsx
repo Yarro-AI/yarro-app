@@ -76,7 +76,7 @@ export function KanbanBoard({ tickets, onTicketClick, onHandoffReview }: KanbanB
         return
       }
 
-      if (reason === 'awaiting_landlord' || reason === 'landlord_declined' || reason === 'landlord_no_response') {
+      if (reason === 'awaiting_landlord' || reason === 'landlord_declined' || reason === 'landlord_no_response' || reason === 'allocated_to_landlord' || reason === 'landlord_in_progress' || reason === 'landlord_needs_help') {
         const waitDays = differenceInDays(new Date(), new Date(ticket.date_logged))
         result.awaiting.push({ ...ticket, column: 'awaiting', subgroup: 'landlord', waitDays })
         return
