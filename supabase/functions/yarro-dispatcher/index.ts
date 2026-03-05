@@ -230,8 +230,6 @@ async function handleLandlordAllocate(
   const manager = payload.manager || {};
   const token = payload.token || "";
 
-  const portalUrl = `https://app.yarro.ai/landlord/${token}`;
-
   const result = await sendAndLog(supabase, FN, "landlord-allocate \u2192 Twilio send", {
     ticketId: ticket.id,
     recipientPhone: landlord.phone,
@@ -245,7 +243,7 @@ async function handleLandlordAllocate(
       "4": tenant.name || "Unknown",
       "5": tenant.phone || "N/A",
       "6": manager.business_name || "Your property manager",
-      "7": portalUrl,
+      "7": token,
     },
   });
 
