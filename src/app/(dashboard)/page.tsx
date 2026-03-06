@@ -131,6 +131,16 @@ const EVENT_DOT_COLOR: Record<string, string> = {
   TICKET_RESUMED:       'bg-blue-400',
   TICKET_ARCHIVED:      'bg-zinc-400',
   FOLLOW_UP_REQUESTED:  'bg-amber-500',
+  // OOH events
+  OOH_DISPATCHED:       'bg-purple-500',
+  OOH_RESOLVED:         'bg-emerald-500',
+  OOH_UNRESOLVED:       'bg-red-400',
+  OOH_IN_PROGRESS:      'bg-amber-500',
+  // Landlord allocation events
+  LANDLORD_ALLOCATED:   'bg-purple-500',
+  LANDLORD_IN_PROGRESS: 'bg-amber-500',
+  LANDLORD_RESOLVED_ALLOC: 'bg-emerald-500',
+  LANDLORD_NEEDS_HELP:  'bg-red-500',
 }
 
 // CTA button text per action type
