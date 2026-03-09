@@ -157,7 +157,7 @@ async function handleIntake(
                 "1": (ctx.issue_description || "Maintenance issue reported") + " (Sent to OOH contact)",
                 "2": ctx.property_address || "Address not available",
                 "3": reporterName(ctx),
-                "4": formatReportTime(ctx.date_logged),
+                "4": formatReportTime(ctx.date_logged)
               },
             });
             results.push({ type: "pm_ooh_notify", sent: r.ok, error: r.error });
@@ -212,13 +212,10 @@ async function handleIntake(
         messageType: "pm_handoff",
         templateSid: TEMPLATES.handoff,
         variables: {
-          "1": shortRef(ticketId),
-          "2": ctx.label || "Handoff",
-          "3": ctx.property_address || "Address not available",
-          "4": formatCallerInfoHandoff(ctx),
-          "5": ctx.tenant_name || "Tenant not matched",
-          "6": ctx.issue_description || "Issue details unavailable",
-          "7": ctx.priority || "Standard",
+          "1": ctx.issue_description || "Issue details unavailable",
+          "2": ctx.property_address || "Address not available",
+          "3": reporterName(ctx),
+          "4": formatReportTime(ctx.date_logged)
         },
       });
       results.push({ type: "pm_handoff", sent: r.ok, error: r.error });
@@ -263,12 +260,10 @@ async function handleIntake(
         messageType: "pm_ticket_review",
         templateSid: TEMPLATES.ticket_review,
         variables: {
-          "1": shortRef(ticketId),
+          "1": ctx.issue_description || "Maintenance issue reported",
           "2": ctx.property_address || "Address not available",
-          "3": formatCallerInfo(ctx),
-          "4": formatTenantInfo(ctx),
-          "5": ctx.issue_description || "Maintenance issue reported",
-          "6": ctx.priority || "Standard",
+          "3": reporterName(ctx),
+          "4": formatReportTime(ctx.date_logged)
         },
       });
       results.push({ type: "pm_ticket_review", sent: r.ok, error: r.error });
@@ -292,7 +287,7 @@ async function handleIntake(
             "1": ctx.issue_description || "Maintenance issue reported",
             "2": ctx.property_address || "Address not available",
             "3": reporterName(ctx),
-            "4": formatReportTime(ctx.date_logged),
+            "4": formatReportTime(ctx.date_logged)
           },
         });
         results.push({ type: "pm_ticket_created", sent: r.ok, error: r.error });
@@ -306,14 +301,12 @@ async function handleIntake(
           recipientPhone: ctx.landlord_phone,
           recipientRole: "landlord",
           messageType: "ll_ticket_created",
-          templateSid: TEMPLATES.ticket_created,
+          templateSid: TEMPLATES.pm_ticket,
           variables: {
-            "1": shortRef(ticketId),
+            "1": ctx.issue_description || "Maintenance issue reported",
             "2": ctx.property_address || "Address not available",
-            "3": formatCallerInfo(ctx),
-            "4": formatTenantInfo(ctx),
-            "5": ctx.issue_description || "Maintenance issue reported",
-            "6": ctx.priority || "Standard",
+            "3": reporterName(ctx),
+            "4": formatReportTime(ctx.date_logged)
           },
         });
         results.push({ type: "ll_ticket_created", sent: r.ok, error: r.error });
@@ -394,14 +387,12 @@ async function handleManualLandlord(
     recipientPhone: ctx.landlord_phone,
     recipientRole: "landlord",
     messageType: "ll_ticket_created",
-    templateSid: TEMPLATES.ticket_created,
+    templateSid: TEMPLATES.pm_ticket,
     variables: {
-      "1": shortRef(ticketId),
+      "1": ctx.issue_description || "Maintenance issue reported",
       "2": ctx.property_address || "Address not available",
-      "3": ctx.business_name || "Your property manager",
-      "4": ctx.tenant_name || "N/A",
-      "5": ctx.issue_description || "Maintenance issue reported",
-      "6": ctx.priority || "Standard",
+      "3": reporterName(ctx),
+      "4": formatReportTime(ctx.date_logged)
     },
   });
 

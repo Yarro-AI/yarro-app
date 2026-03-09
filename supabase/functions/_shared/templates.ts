@@ -4,9 +4,8 @@
 export const TEMPLATES = {
   // ─── Ticket Notifications (yarro-ticket-notify) ───
   pm_ticket: "HXae68475514259fc241bb14e303280420",            // 1_pm_ticket (new copy)
-  ticket_created: "HX9440a56f69282e80e3c064d23c36fcf2",      // OLD — still used for LL until 1_ll_ticket approved
-  ticket_review: "HX9f9bbd9301cd65d8f3ac97c11372abce",       // 1_ticket_creation_sms_review_mode
-  handoff: "HX7dbca3663f1864cec8c0ad3fd8933ad7",              // 2b_pm_handoff_ticket
+  ticket_review: "HX574419d5b8a0ca86734caecf59f1107f",       // 1_pm_ticket_review
+  handoff: "HXee9d75b96aa9a0d094ea51d402b3ed92",              // 1_pm_ticket_handoff
 
   // ─── OOH Emergency (yarro-ticket-notify) ───
   ooh_emergency_dispatch: "HXf417fee316a93526eedd11634208910a",  // 20_2_ooh_emergency_dispatch
