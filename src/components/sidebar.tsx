@@ -39,6 +39,7 @@ import {
   PanelLeftOpen,
   MessageCircle,
   Contact,
+  Plug,
 } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 
@@ -62,6 +63,7 @@ const activityNavItems = [
 ]
 
 const dataManagementItems = [
+  { href: '/integrations', label: 'Integrations', icon: Plug },
   { href: '/guide/rules', label: 'Rules & Preferences', icon: SlidersHorizontal },
   { href: '/guide', label: 'Product Guide', icon: BookOpen, exact: true },
   { href: '/guide/import', label: 'Import Data', icon: Upload },
