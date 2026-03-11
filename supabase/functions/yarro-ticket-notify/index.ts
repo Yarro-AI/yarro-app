@@ -49,6 +49,159 @@ function reporterName(ctx: Record<string, any>): string {
   return ctx.caller_name || ctx.tenant_name || "the tenant";
 }
 
+// ─── Helper: Calculate next 9am UK (Mon-Fri) ─────────────────────────────
+function getNext9amUk(): Date {
+  // Get current UK time
+  const now = new Date();
+  const ukStr = now.toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
+  // Parse UK time components
+  const [datePart, timePart] = ukStr.split(", ");
+  const [day, month, year] = datePart.split("/").map(Number);
+  const [hour] = timePart.split(":").map(Number);
+
+  // Start from tomorrow if after 9am UK, otherwise today
+  const ukNow = new Date(Date.UTC(year, month - 1, day, hour));
+  const target = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
+
+  // If it's before 9am UK on a weekday, dispatch today at 9am
+  // Otherwise, find the next weekday
+  let candidate = new Date(target);
+  if (hour >= 9) {
+    candidate.setUTCDate(candidate.getUTCDate() + 1);
+  }
+
+  // Skip weekends (0=Sun, 6=Sat)
+  while (candidate.getUTCDay() === 0 || candidate.getUTCDay() === 6) {
+    candidate.setUTCDate(candidate.getUTCDate() + 1);
+  }
+
+  // Convert from UK 9am to UTC — check if UK is in BST
+  // Use Intl to get the actual UTC offset for the target date
+  const testDate = new Date(candidate);
+  const utcHour = parseInt(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London",
+      hour: "2-digit",
+      hour12: false,
+    }).format(new Date(Date.UTC(testDate.getUTCFullYear(), testDate.getUTCMonth(), testDate.getUTCDate(), 9)))
+  );
+
+  // If formatting UTC 9:00 as UK time gives 10, UK is UTC+1 (BST), so 9am UK = 8am UTC
+  // If it gives 9, UK is UTC+0 (GMT), so 9am UK = 9am UTC
+  if (utcHour === 10) {
+    // BST: 9am UK = 8am UTC
+    candidate.setUTCHours(8, 0, 0, 0);
+  } else {
+    // GMT: 9am UK = 9am UTC
+    candidate.setUTCHours(9, 0, 0, 0);
+  }
+
+  return candidate;
+}
+
+// ─── Source: morning-dispatch (pg_cron delayed OOH tickets) ───────────────
+async function handleMorningDispatch(
+  supabase: SupabaseClient,
+  ticketId: string,
+): Promise<Response> {
+  // Fetch ticket context using the same RPC as intake
+  const { data: ctxRows, error: ctxError } = await supabase.rpc(
+    "c1_ticket_context",
+    { ticket_uuid: ticketId },
+  );
+
+  if (ctxError || !ctxRows || ctxRows.length === 0) {
+    const errMsg = ctxError?.message || "c1_ticket_context returned empty";
+    await alertTelegram(FN, "morning-dispatch → c1_ticket_context", errMsg, { Ticket: ticketId });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ctx = ctxRows[0];
+  const results: Array<{ type: string; sent: boolean; error?: string }> = [];
+
+  // ── Send notifications to all parties (PM, landlord, tenant portal) ──
+  const sends: Promise<void>[] = [];
+
+  if (ctx.manager_phone) {
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "morning-dispatch → PM ticket created SMS", {
+        ticketId,
+        recipientPhone: ctx.manager_phone,
+        recipientRole: "manager",
+        messageType: "pm_ticket_created",
+        templateSid: TEMPLATES.pm_ticket,
+        variables: {
+          "1": ctx.issue_description || "Maintenance issue reported",
+          "2": ctx.property_address || "Address not available",
+          "3": reporterName(ctx),
+          "4": formatReportTime(ctx.date_logged),
+        },
+      });
+      results.push({ type: "pm_ticket_created", sent: r.ok, error: r.error });
+    })());
+  }
+
+  if (ctx.landlord_phone) {
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "morning-dispatch → LL ticket created SMS", {
+        ticketId,
+        recipientPhone: ctx.landlord_phone,
+        recipientRole: "landlord",
+        messageType: "ll_ticket_created",
+        templateSid: TEMPLATES.ll_ticket,
+        variables: {
+          "1": ctx.issue_description || "Maintenance issue reported",
+          "2": ctx.property_address || "Address not available",
+          "3": reporterName(ctx),
+          "4": formatReportTime(ctx.date_logged),
+        },
+      });
+      results.push({ type: "ll_ticket_created", sent: r.ok, error: r.error });
+    })());
+  }
+
+  await Promise.all(sends);
+
+  // ── Trigger contractor dispatch ──
+  const { error: dispatchError } = await supabase.rpc(
+    "c1_contractor_context",
+    { ticket_uuid: ticketId },
+  );
+
+  if (dispatchError) {
+    await alertTelegram(FN, "morning-dispatch → c1_contractor_context", dispatchError.message, {
+      Ticket: ticketId,
+      Note: "Dispatch chain NOT triggered — contractors NOT contacted",
+    });
+  }
+
+  // ── Clear the delayed dispatch flags ──
+  const { error: clearErr } = await supabase
+    .from("c1_tickets")
+    .update({ pending_review: false, dispatch_after: null })
+    .eq("id", ticketId);
+
+  if (clearErr) {
+    await alertTelegram(FN, "morning-dispatch → clear flags", clearErr.message, { Ticket: ticketId });
+  }
+
+  console.log(`[${FN}] Morning dispatch complete for ticket ${ticketId}: ${results.length} notifications sent`);
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      source: "morning-dispatch",
+      ticket_id: ticketId,
+      notifications: results,
+      dispatch_triggered: !dispatchError,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 // ─── Source: intake (post-ticket-creation from M(1) or c1_create_ticket) ─
 async function handleIntake(
   supabase: SupabaseClient,
@@ -206,14 +359,18 @@ async function handleIntake(
       } else {
         // Routine ticket outside hours
         if (pmSettings.ooh_routine_action === "queue_review") {
+          // Calculate next 9am UK business day
+          const nextDispatch = getNext9amUk();
           const { error: queueErr } = await supabase
             .from("c1_tickets")
-            .update({ pending_review: true })
+            .update({ pending_review: true, dispatch_after: nextDispatch.toISOString() })
             .eq("id", ticketId);
 
           if (queueErr) {
             await alertTelegram(FN, "intake \u2192 OOH queue routine", queueErr.message, { Ticket: ticketId });
           }
+
+          console.log(`[${FN}] OOH queued ticket ${ticketId} for morning dispatch at ${nextDispatch.toISOString()}`);
 
           return new Response(
             JSON.stringify({
@@ -221,6 +378,7 @@ async function handleIntake(
               source: "intake",
               ticket_id: ticketId,
               ooh_queued_for_review: true,
+              dispatch_after: nextDispatch.toISOString(),
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
@@ -478,7 +636,9 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createSupabaseClient();
 
-    if (source === "manual-ll") {
+    if (source === "morning-dispatch") {
+      return await handleMorningDispatch(supabase, ticketId);
+    } else if (source === "manual-ll") {
       return await handleManualLandlord(supabase, ticketId);
     } else {
       return await handleIntake(supabase, ticketId);

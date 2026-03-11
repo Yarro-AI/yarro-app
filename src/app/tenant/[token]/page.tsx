@@ -224,9 +224,9 @@ export default function TenantPortalPage() {
               const isCurrent = i === activeIdx
               const isLast = i === STAGE_ORDER.length - 1
               return (
-                <div key={stage} className="flex flex-1 items-start">
+                <div key={stage} className="contents">
                   {/* Node */}
-                  <div className="flex flex-col items-center w-full">
+                  <div className="flex flex-col items-center shrink-0" style={{ width: 56 }}>
                     <div className={`flex items-center justify-center size-10 rounded-full transition-colors ${
                       isCurrent ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
                       isActive ? 'bg-green-500 text-white' :
@@ -242,7 +242,7 @@ export default function TenantPortalPage() {
                   </div>
                   {/* Connector */}
                   {!isLast && (
-                    <div className={`h-0.5 w-full mt-5 -mx-2 ${
+                    <div className={`h-0.5 flex-1 mt-5 ${
                       i < activeIdx ? 'bg-green-400' : 'bg-gray-200'
                     }`} />
                   )}

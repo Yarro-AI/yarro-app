@@ -397,6 +397,25 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createSupabaseClient();
 
+    // Guard: reject dispatches for closed tickets
+    const ticketId = payload?.ticket?.id;
+    if (ticketId) {
+      const { data: tkt } = await supabase
+        .from("c1_tickets")
+        .select("status")
+        .eq("id", ticketId)
+        .single();
+      if (tkt?.status === "closed") {
+        const msg = `Blocked dispatch on closed ticket T-${ticketId}`;
+        console.warn(`[${FN}] ${msg}`);
+        await alertInfo(FN, msg, { Ticket: ticketId, Instruction: instruction });
+        return new Response(
+          JSON.stringify({ error: msg, ticket_id: ticketId }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     switch (instruction) {
       case "contractor-sms":
         return await handleContractorSms(supabase, payload);
