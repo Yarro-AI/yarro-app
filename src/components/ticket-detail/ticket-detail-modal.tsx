@@ -64,18 +64,19 @@ export function TicketDetailModal({
   const oohOutcome = basic?.ooh_outcome || null
   const isLandlordAllocated = basic?.landlord_allocated === true && isOpen
   const landlordOutcome = basic?.landlord_outcome || null
+  const isCompleted = isOpen && !isOOH && !isLandlordAllocated && (basic?.next_action_reason === 'completed' || basic?.next_action_reason === 'job_not_completed')
   // Show conversation tab if we have data OR if there's a conversation_id (data might be loading)
   const showConversationTab = hasConversation || !!(context?.conversation_id || basic?.conversation_id)
 
   const [closingTicket, setClosingTicket] = useState(false)
 
-  const handleMarkComplete = async () => {
+  const handleCloseTicket = async () => {
     if (!ticketId) return
     setClosingTicket(true)
     const supabase = createClient()
     await supabase
       .from('c1_tickets')
-      .update({ status: 'closed', resolved_at: new Date().toISOString() })
+      .update({ status: 'closed', resolved_at: new Date().toISOString(), next_action_reason: 'archived' })
       .eq('id', ticketId)
     setClosingTicket(false)
     refetch()
@@ -117,10 +118,10 @@ export function TicketDetailModal({
                   {context.property_address || 'Unknown Property'}
                 </DialogTitle>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* OOH: combined status + mark complete pill */}
+                  {/* Closeable tickets: OOH, Landlord-allocated, or Completed — PM closes from here */}
                   {isOOH ? (
                     <button
-                      onClick={handleMarkComplete}
+                      onClick={handleCloseTicket}
                       disabled={closingTicket}
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-colors hover:bg-muted/50 disabled:opacity-50 ${
                         oohOutcome === 'resolved' ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
@@ -135,14 +136,14 @@ export function TicketDetailModal({
                         <>
                           {displayStage || 'OOH Dispatched'}
                           <span className="opacity-40">·</span>
-                          <span className="text-xs">Mark Complete</span>
-                          <CheckCircle2 className="h-3 w-3" />
+                          <span className="text-xs">Close</span>
+                          <XCircle className="h-3 w-3" />
                         </>
                       )}
                     </button>
                   ) : isLandlordAllocated ? (
                     <button
-                      onClick={handleMarkComplete}
+                      onClick={handleCloseTicket}
                       disabled={closingTicket}
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-colors hover:bg-muted/50 disabled:opacity-50 ${
                         landlordOutcome === 'resolved' ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
@@ -157,8 +158,28 @@ export function TicketDetailModal({
                         <>
                           {displayStage || 'Landlord Managing'}
                           <span className="opacity-40">·</span>
-                          <span className="text-xs">Mark Complete</span>
-                          <CheckCircle2 className="h-3 w-3" />
+                          <span className="text-xs">Close</span>
+                          <XCircle className="h-3 w-3" />
+                        </>
+                      )}
+                    </button>
+                  ) : isCompleted ? (
+                    <button
+                      onClick={handleCloseTicket}
+                      disabled={closingTicket}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-colors hover:bg-muted/50 disabled:opacity-50 ${
+                        basic?.next_action_reason === 'completed' ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
+                        : 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      {closingTicket ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <>
+                          {displayStage || 'Completed'}
+                          <span className="opacity-40">·</span>
+                          <span className="text-xs">Close</span>
+                          <XCircle className="h-3 w-3" />
                         </>
                       )}
                     </button>
