@@ -9,38 +9,49 @@ export const TEMPLATES = {
   ll_ticket: "HX6cdfda7a2201f058f33c2a4be3ea8efb",            // 1_ll_ticket
 
   // ─── OOH Emergency (yarro-ticket-notify) ───
-  ooh_emergency_dispatch: "HXf417fee316a93526eedd11634208910a",  // 20_2_ooh_emergency_dispatch
+  ooh_emergency_dispatch: "HX56ff1b4df78eba8cbdcbbdd8672d82a9",  // 2b_ooh_emergency
 
   // ─── Landlord Allocation (yarro-dispatcher) ───
-  allocate_landlord: "HX7bd3023fd3694bb77ee2b3e05562e06e",        // 21_allocate_landlord
+  allocate_landlord: "HXeabe4ebe93c1f8d2401c0516bfd376ec",        // 2c_landlord_allocate
 
   // ─── Contractor Dispatch (yarro-dispatcher) ───
-  contractor_quote: "HXa0110e2b69a0abe9352d47cd38e7b9ca",     // 3_5_contractor_quote
-  pm_quote: "HXb2f9170ecf59525e230c1cb688455f42",             // 4_5_pm_quote_sms
-  landlord_quote: "HXb57fad098013e5b3f5d1a13f7df93c1c",       // 5_4_landlord_quote
-  no_more_contractors: "HX75fb4cc68b9f1fea2f243cbe41ef3a57",   // 6_no_more_contractors
+  contractor_quote: "HX0a758deb4c7bc64d041f339135726fb3",     // 2_contractor_quote
+  pm_quote: "HXfc449642c7c47ae1f85f3d903ee336e1",             // 3_pm_quote
+  landlord_quote: "HXc667c8008203a80708c1a1596e4805ea",       // 3b_landlord_quote
+  no_more_contractors: "HX158401383297f8b6f9d4848e507ea1b0",   // 2d_no_contractors
 
   // ─── Scheduling (yarro-scheduling) ───
-  contractor_job_schedule: "HX3115ee07982bbbeeba4fcbb4997bff78", // 7_contractor_job_schedule
-  pm_landlord_approved: "HXc6e017eef871b6874d33812822f95b19",   // 7b_pm_landlord_approved
-  landlord_declined: "HXc00be101015bb4abbfce401d5643b7b1",      // 7c_landlord_declined
-  tenant_job_booked: "HX49fc2526186b36632036aa8769273c11",       // 8_tenant_job_booked
-  pm_ll_job_booked: "HXdcfd3555975ba92d35a1e1c1e74cae16",       // 8b_pm_ll_job_booked
+  contractor_job_schedule: "HXe1297b1dbd016012026d21cfbddd3308", // 4_contractor_schedule
+  pm_landlord_approved: "HX5248963ca973dfaa1880b216f336e863",   // 4b_pm_landlord_approved
+  landlord_declined: "HX5cc6505f993cfccd9f8e1e5089bef940",      // 3c_landlord_declined
+  pm_job_booked: "HX564f0801aae8a3e9ded1af83efa251d9",          // 5_pm_job_booked
+  ll_job_booked: "HXcdb92e07b25d8b27ff8637502aac0784",           // 5b_ll_job_booked
+  tenant_job_booked: "HXd7b01922707c8b93d18abec3c3b37be2",       // 5c_tenant_job_booked
 
   // ─── Job Reminder (yarro-job-reminder) ───
-  contractor_job_reminder: "HXf1caa05744ebf3204a8d92b83d38b915", // 10_contractor_job_reminder
+  contractor_job_reminder: "HXda58fda394cba7fc4e91d2b42bd9ee36", // 6_contractor_job
 
   // ─── Completion (yarro-completion) ───
-  pm_job_completed: "HXb9f0020d18249c54127269eca94bf039",        // 11_pm_job_completed
-  ll_job_completed: "HXe71c39364f6a2d1c7185629bbb2308ed",        // 11b_ll_job_completed
-  pm_job_not_completed: "HXe727b41671d3fe7564f5480de1c98934",    // 11c_pm_job_not_completed
+  pm_job_completed: "HX3a0180411b1dca11e958c23b6945f4d4",        // 7_pm_job_completed
+  ll_job_completed: "HX27c049df0d097f3be7579c201b6453e3",        // 7b_ll_job_completed
+  pm_job_not_completed: "HXc8356f238f3d6974b639c3a1e236ef1b",    // 7c_pm_job_not_completed
+  tenant_job_completed: "HXb8f048607a9084cc6101ae629da4b8af",    // 7d_tenant_job_completed
+
+  // ─── Portal Links ───
+  tenant_portal_link: "HXa9fe8d047800fb7cc5089fe52d8e1c0a",       // 1b_tenant_portal_link
+
+  // ─── Reschedule (portal-driven) ───
+  contractor_reschedule_request: "PENDING_APPROVAL",               // contractor gets: tenant wants to reschedule
+  tenant_reschedule_approved: "PENDING_APPROVAL",                  // tenant gets: reschedule confirmed
+  tenant_reschedule_declined: "PENDING_APPROVAL",                  // tenant gets: reschedule declined
+  pm_reschedule_approved: "PENDING_APPROVAL",                      // PM gets: reschedule was approved (info only)
 
   // ─── Followups (yarro-followups) ───
-  contractor_reminder: "HXfca88665335df9e9ffd37b19cd582563",     // 3b_contractor_reminder
-  pm_contractor_timeout: "HXd746635799ab8ae73c7506abf6ddade1",   // 6b_pm_contractor_timeout
-  landlord_reminder: "HX88fb8839c2c64835c171ea8d915d0a17",       // 5b_landlord_reminder
-  completion_followup: "HX0889c61928c4b71a155956ec5ca35287",     // 12_completion_followup
-  pm_completion_overdue: "HX3efeb8176e339042febe28ba44e9c4c2",   // 12b_pm_completion_overdue
+  contractor_reminder: "HXf09513c99a0af31ae036e7e4c1c69676",     // 9a_contractor_reminder
+  pm_contractor_timeout: "HXc377553166d7cb61c84cbcb859502d9e",   // 9b_landlord_reminder
+  landlord_reminder: "HX18c20167f4d0dc5dd9b0fdd06bad182c",       // 9c_pm_landlord_timeout
+  completion_followup: "HXa29e706f038e74acba7a6cf551daf5a7",     // 9d_completion_reminder
+  pm_completion_overdue: "HXfd494c6c71c07de29005ffdfa2958baf",   // 9e_pm_completion_overdue
 } as const;
 
 export type TemplateName = keyof typeof TEMPLATES;
@@ -49,4 +60,50 @@ export type TemplateName = keyof typeof TEMPLATES;
  *  The T- prefix lives in the Twilio template text, NOT in this variable. */
 export function shortRef(ticketId: string): string {
   return ticketId.split("-")[0];
+}
+
+/** Format UK phone: "447123456789" → "+44 7123 456789" */
+export function formatUkPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("44") && digits.length === 12) {
+    return `+${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`;
+  }
+  return `+${digits}`;
+}
+
+/** Friendly date for tenant-facing messages: "Saturday 12th Mar" */
+export function formatFriendlyDate(isoOrDate: string | Date): string {
+  const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+  const tz = "Europe/London";
+  const weekday = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "long" }).format(d);
+  const day = parseInt(new Intl.DateTimeFormat("en-GB", { timeZone: tz, day: "numeric" }).format(d));
+  const month = new Intl.DateTimeFormat("en-GB", { timeZone: tz, month: "short" }).format(d);
+  const s = ["th", "st", "nd", "rd"];
+  const v = day % 100;
+  const ordinal = day + (s[(v - 20) % 10] || s[v] || s[0]);
+  return `${weekday} ${ordinal} ${month}`;
+}
+
+/** "A plumber" / "An electrician" — article + lowercase category */
+export function withArticle(category: string): string {
+  const lower = category.toLowerCase();
+  const vowels = "aeiou";
+  const article = vowels.includes(lower[0]) ? "An" : "A";
+  return `${article} ${lower}`;
+}
+
+/** Derive "morning" / "afternoon" from a time slot string or ISO start time.
+ *  Portal sends "Morning"/"Afternoon"; Fillout sends ISO datetime. */
+export function timeOfDay(slotOrIso: string): string {
+  const lower = slotOrIso.toLowerCase();
+  if (lower === "morning" || lower === "afternoon") return lower;
+  // Try parsing as ISO — before 12:00 UK = morning
+  const d = new Date(slotOrIso);
+  if (!isNaN(d.getTime())) {
+    const hour = parseInt(new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London", hour: "2-digit", hour12: false,
+    }).format(d));
+    return hour < 12 ? "morning" : "afternoon";
+  }
+  return lower;
 }

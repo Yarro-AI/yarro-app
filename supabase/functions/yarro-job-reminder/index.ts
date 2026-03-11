@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES, shortRef } from "../_shared/templates.ts";
+import { TEMPLATES } from "../_shared/templates.ts";
 
 const FN = "yarro-job-reminder";
 
@@ -14,6 +14,9 @@ interface JobReminder {
   access_text: string;
   formatted_time: string;
   formatted_window: string;
+  issue_title: string;
+  contractor_token: string;
+  arrival_slot: string;
 }
 
 // ─── Send a single reminder (reused by both cron and direct modes) ────────
@@ -28,11 +31,11 @@ async function sendReminder(
     messageType: "contractor_job_reminder",
     templateSid: TEMPLATES.contractor_job_reminder,
     variables: {
-      "1": reminder.formatted_window || "Time not available",
-      "2": reminder.property_address || "Address not available",
-      "3": reminder.access_text || "No access instructions",
-      "4": shortRef(reminder.ticket_id),
-      "5": reminder.ticket_id,
+      "1": reminder.property_address || "Address not available",
+      "2": reminder.issue_title || "Maintenance issue",
+      "3": reminder.arrival_slot || "Time not confirmed",
+      "4": reminder.access_text || "No access instructions",
+      "5": reminder.contractor_token || "",
     },
   });
 

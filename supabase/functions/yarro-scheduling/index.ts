@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog, logOutbound } from "../_shared/twilio.ts";
-import { TEMPLATES, shortRef } from "../_shared/templates.ts";
+import { TEMPLATES, formatFriendlyDate, formatUkPhone, withArticle, timeOfDay } from "../_shared/templates.ts";
 
 // ─── Function: yarro-scheduling ──────────────────────────────────────────
 
@@ -90,9 +90,33 @@ async function handleFinalizeJob(
 
   // ── Approved path (auto_approve or landlord_approved) ──
   if (flags.auto_approve === true || flags.landlord_approved === true) {
-    // 1. Send contractor schedule SMS
-    const filloutUrl = `https://yarroforms.fillout.com/maintenance-task?ticket_id=${jobFormParams.ticket_id || ticketId}&contractor_id=${jobFormParams.contractor_id || contractor.id}`;
+    // 1. Generate contractor_token and build portal URL (replaces Fillout)
+    const contractorToken = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+    {
+      const { error: tokenErr } = await supabase.from("c1_tickets").update({
+        contractor_token: contractorToken,
+        contractor_token_at: new Date().toISOString(),
+      }).eq("id", ticketId);
+      if (tokenErr) {
+        await alertTelegram(FN, "finalize-job \u2192 set contractor_token", tokenErr.message, { Ticket: ticketId });
+      }
+    }
+    const portalUrl = `https://app.yarro.ai/contractor/${contractorToken}`;
     const availText = formatAvailability(ticket.date_logged, ticket.availability);
+
+    // Build access info for {{4}} — same dynamic pattern as contractor_quote
+    let accessInfo = "Contact property manager for access details";
+    if (ticket.access_granted) {
+      const { data: propData } = await supabase
+        .from("c1_properties")
+        .select("access_instructions")
+        .eq("id", property.id)
+        .single();
+      accessInfo = propData?.access_instructions || "Anytime access";
+    } else {
+      const slots = ticket.availability || "To be arranged with tenant";
+      accessInfo = `Must be arranged with tenant. Available: ${slots}`;
+    }
 
     const contrResult = await sendAndLog(supabase, FN, "finalize-job → contractor schedule SMS", {
       ticketId,
@@ -101,11 +125,11 @@ async function handleFinalizeJob(
       messageType: "contractor_job_schedule",
       templateSid: TEMPLATES.contractor_job_schedule,
       variables: {
-        "1": contractor.quote || "N/A",
-        "2": property.address || "Address not available",
-        "3": ticket.issue_description || "Maintenance issue",
-        "4": availText,
-        "5": filloutUrl,
+        "1": property.address || "Address not available",
+        "2": ticket.issue_description || "Maintenance issue",
+        "3": contractor.quote || "N/A",
+        "4": accessInfo,
+        "5": contractorToken,
       },
     });
 
@@ -140,10 +164,10 @@ async function handleFinalizeJob(
         messageType: "pm_landlord_approved",
         templateSid: TEMPLATES.pm_landlord_approved,
         variables: {
-          "1": property.address || "Address not available",
-          "2": ticket.issue_description || "Maintenance issue",
-          "3": landlord.name || "Landlord",
-          "4": contractor.name || "Contractor",
+          "1": contractor.name || "Contractor",
+          "2": property.address || "Address not available",
+          "3": ticket.issue_description || "Maintenance issue",
+          "4": landlord.name || "Landlord",
           "5": contractor.total || "£0",
           "6": contractor.quote || "£0",
           "7": contractor.markup || "£0",
@@ -173,10 +197,9 @@ async function handleFinalizeJob(
         messageType: "landlord_declined",
         templateSid: TEMPLATES.landlord_declined,
         variables: {
-          "1": shortRef(ticketId),
-          "2": property.address || "Address not available",
-          "3": ticket.issue_description || "Maintenance issue",
-          "4": contractor.total || "N/A",
+          "1": property.address || "Address not available",
+          "2": ticket.issue_description || "Maintenance issue",
+          "3": contractor.total || "N/A",
         },
       });
     }
@@ -360,6 +383,12 @@ async function handleFilloutScheduling(
 
   // Tenant / update contact
   if (updatePhone) {
+    const tenantFirstName = (ctx.tenant?.name || "").split(" ")[0] || "there";
+    const friendlyDate = formatFriendlyDate(startIso);
+    const category = withArticle(ctx.ticket?.category || "contractor");
+    const slot = timeOfDay(startIso);
+    const contrPhone = ctx.contractor?.contractor_phone || "";
+    const tenantToken = ctx.ticket?.tenant_token || "";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → tenant_job_booked", {
         ticketId,
@@ -368,11 +397,13 @@ async function handleFilloutScheduling(
         messageType: "tenant_job_booked",
         templateSid: TEMPLATES.tenant_job_booked,
         variables: {
-          "1": formattedWindow,
-          "2": addr,
-          "3": shortRef(ticketId),
+          "1": tenantFirstName,
+          "2": friendlyDate,
+          "3": category,
           "4": contrName,
-          "5": issueTitle,
+          "5": slot,
+          "6": formatUkPhone(contrPhone),
+          "7": tenantToken,
         },
       });
       results.push({ type: "tenant_job_booked", sent: r.ok, error: r.error });
@@ -381,19 +412,20 @@ async function handleFilloutScheduling(
 
   // PM
   if (mgrPhone) {
+    const contrPhone = ctx.contractor?.contractor_phone || "";
+    const contrDisplay = contrPhone ? `${contrName} — ${formatUkPhone(contrPhone)}` : contrName;
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → pm_job_booked", {
         ticketId,
         recipientPhone: mgrPhone,
         recipientRole: "manager",
         messageType: "pm_job_booked",
-        templateSid: TEMPLATES.pm_ll_job_booked,
+        templateSid: TEMPLATES.pm_job_booked,
         variables: {
           "1": formattedWindow,
           "2": addr,
-          "3": contrName,
-          "4": shortRef(ticketId),
-          "5": issueTitle,
+          "3": issueTitle,
+          "4": contrDisplay,
         },
       });
       results.push({ type: "pm_job_booked", sent: r.ok, error: r.error });
@@ -402,19 +434,23 @@ async function handleFilloutScheduling(
 
   // Landlord
   if (llPhone) {
+    const llName = ctx.property?.landlord_name || "there";
+    const category = ctx.ticket?.category || "contractor";
+    const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → ll_job_booked", {
         ticketId,
         recipientPhone: llPhone,
         recipientRole: "landlord",
         messageType: "ll_job_booked",
-        templateSid: TEMPLATES.pm_ll_job_booked,
+        templateSid: TEMPLATES.ll_job_booked,
         variables: {
-          "1": formattedWindow,
-          "2": addr,
-          "3": contrName,
-          "4": shortRef(ticketId),
-          "5": issueTitle,
+          "1": llName,
+          "2": category,
+          "3": formattedWindow,
+          "4": issueTitle,
+          "5": addr,
+          "6": mgrContact,
         },
       });
       results.push({ type: "ll_job_booked", sent: r.ok, error: r.error });
@@ -436,6 +472,473 @@ async function handleFilloutScheduling(
   );
 }
 
+// ─── Path C: Portal Scheduling (contractor books via portal) ─────────────
+async function handlePortalSchedule(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, date, time_slot, notes } = body;
+
+  if (!token || !date) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing token or date" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Call the RPC — it validates token, updates ticket, returns context
+  const { data, error } = await supabase.rpc("c1_submit_contractor_schedule", {
+    p_token: token,
+    p_date: date,
+    p_time_slot: time_slot || null,
+    p_notes: notes || null,
+  });
+
+  if (error || !data?.ok) {
+    const errMsg = error?.message || data?.error || "Schedule submission failed";
+    await alertTelegram(FN, "portal-schedule \u2192 RPC", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ticketId = data.ticket_id;
+  const scheduledDate = new Date(date);
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(scheduledDate);
+  const formattedWindow = time_slot ? `${time_slot} ${formattedDate}` : formattedDate;
+
+  // Get full ticket context for notifications
+  const { data: ctx, error: rpcError } = await supabase.rpc(
+    "c1_job_reminder_payload",
+    { p_ticket_id: ticketId },
+  );
+
+  if (rpcError || !ctx?.ok) {
+    const errMsg = rpcError?.message || ctx?.reason || "c1_job_reminder_payload failed";
+    await alertTelegram(FN, "portal-schedule \u2192 c1_job_reminder_payload", errMsg, { Ticket: ticketId });
+    // Still return success — the schedule was saved, just notifications failed
+    return new Response(
+      JSON.stringify({ ok: true, ticket_id: ticketId, notifications_failed: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const addr = ctx.property?.address || "Address not available";
+  const contrName = ctx.contractor?.contractor_name || "Contractor";
+  const issueTitle = ctx.ticket?.issue_title || ctx.ticket?.issue_description || "Maintenance issue";
+  const mgrPhone = ctx.manager?.phone;
+  const llPhone = ctx.property?.landlord_phone;
+  const updatePhone = ctx.update_contact_phone;
+
+  // Send notifications in parallel (same as Fillout path)
+  const sends: Promise<any>[] = [];
+  const results: Array<{ type: string; sent: boolean; error?: string }> = [];
+
+  if (updatePhone) {
+    const tenantFirstName = (ctx.tenant?.name || "").split(" ")[0] || "there";
+    const friendlyDate = formatFriendlyDate(date);
+    const category = withArticle(ctx.ticket?.category || "contractor");
+    const slot = timeOfDay(time_slot || date);
+    const contrPhoneTenant = ctx.contractor?.contractor_phone || "";
+    const tenantToken = ctx.ticket?.tenant_token || "";
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "portal-schedule \u2192 tenant_job_booked", {
+        ticketId,
+        recipientPhone: updatePhone,
+        recipientRole: "tenant",
+        messageType: "tenant_job_booked",
+        templateSid: TEMPLATES.tenant_job_booked,
+        variables: {
+          "1": tenantFirstName,
+          "2": friendlyDate,
+          "3": category,
+          "4": contrName,
+          "5": slot,
+          "6": formatUkPhone(contrPhoneTenant),
+          "7": tenantToken,
+        },
+      });
+      results.push({ type: "tenant_job_booked", sent: r.ok, error: r.error });
+    })());
+  }
+
+  if (mgrPhone) {
+    const contrPhone = ctx.contractor?.contractor_phone || "";
+    const contrDisplay = contrPhone ? `${contrName} — ${formatUkPhone(contrPhone)}` : contrName;
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "portal-schedule → pm_job_booked", {
+        ticketId,
+        recipientPhone: mgrPhone,
+        recipientRole: "manager",
+        messageType: "pm_job_booked",
+        templateSid: TEMPLATES.pm_job_booked,
+        variables: {
+          "1": formattedWindow,
+          "2": addr,
+          "3": issueTitle,
+          "4": contrDisplay,
+        },
+      });
+      results.push({ type: "pm_job_booked", sent: r.ok, error: r.error });
+    })());
+  }
+
+  if (llPhone) {
+    const llName = ctx.property?.landlord_name || "there";
+    const category = ctx.ticket?.category || "contractor";
+    const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "portal-schedule → ll_job_booked", {
+        ticketId,
+        recipientPhone: llPhone,
+        recipientRole: "landlord",
+        messageType: "ll_job_booked",
+        templateSid: TEMPLATES.ll_job_booked,
+        variables: {
+          "1": llName,
+          "2": category,
+          "3": formattedWindow,
+          "4": issueTitle,
+          "5": addr,
+          "6": mgrContact,
+        },
+      });
+      results.push({ type: "ll_job_booked", sent: r.ok, error: r.error });
+    })());
+  }
+
+  await Promise.all(sends);
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      path: "portal-schedule",
+      ticket_id: ticketId,
+      scheduled_date: date,
+      notifications: results,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+// ─── Path D: Portal Completion (contractor marks job complete via portal) ──
+async function handlePortalCompletion(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, notes, photos } = body;
+
+  if (!token) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing token" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Call the RPC — it validates token, updates job_stage to Completed, returns context
+  const { data, error } = await supabase.rpc("c1_submit_contractor_completion", {
+    p_token: token,
+    p_notes: notes || null,
+    p_photos: photos || null,
+  });
+
+  if (error || !data?.ok) {
+    const errMsg = error?.message || data?.error || "Completion submission failed";
+    await alertTelegram(FN, "portal-completion \u2192 RPC", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ticketId = data.ticket_id;
+
+  // Trigger existing completion notification flow
+  // Get ticket context for notifications
+  const { data: ctx, error: ctxError } = await supabase.rpc(
+    "c1_job_reminder_payload",
+    { p_ticket_id: ticketId },
+  );
+
+  if (ctxError || !ctx?.ok) {
+    return new Response(
+      JSON.stringify({ ok: true, ticket_id: ticketId, notifications_failed: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const addr = ctx.property?.address || "Address not available";
+  const contrName = ctx.contractor?.contractor_name || "Contractor";
+  const contrPhone = ctx.contractor?.phone || ctx.contractor?.contractor_phone || "";
+  const contrDisplay = contrPhone ? `${contrName} — ${formatUkPhone(contrPhone)}` : contrName;
+  const issueTitle = ctx.ticket?.issue_title || ctx.ticket?.issue_description || "Maintenance issue";
+  const mgrPhone = ctx.manager?.phone;
+  const llPhone = ctx.property?.landlord_phone;
+
+  const sends: Promise<any>[] = [];
+  const results: Array<{ type: string; sent: boolean; error?: string }> = [];
+
+  // PM notification
+  if (mgrPhone) {
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "portal-completion \u2192 pm_job_completed", {
+        ticketId,
+        recipientPhone: mgrPhone,
+        recipientRole: "manager",
+        messageType: "pm_job_completed",
+        templateSid: TEMPLATES.pm_job_completed,
+        variables: {
+          "1": addr,
+          "2": issueTitle,
+          "3": contrDisplay,
+        },
+      });
+      results.push({ type: "pm_job_completed", sent: r.ok, error: r.error });
+    })());
+  }
+
+  // Landlord notification
+  if (llPhone) {
+    sends.push((async () => {
+      const r = await sendAndLog(supabase, FN, "portal-completion \u2192 ll_job_completed", {
+        ticketId,
+        recipientPhone: llPhone,
+        recipientRole: "landlord",
+        messageType: "ll_job_completed",
+        templateSid: TEMPLATES.ll_job_completed,
+        variables: {
+          "1": addr,
+          "2": issueTitle,
+          "3": contrName,
+        },
+      });
+      results.push({ type: "ll_job_completed", sent: r.ok, error: r.error });
+    })());
+  }
+
+  await Promise.all(sends);
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      path: "portal-completion",
+      ticket_id: ticketId,
+      notifications: results,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+// ─── Path E: Reschedule Request (tenant requests via portal) ─────────────
+async function handleRescheduleRequest(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, proposed_date, reason } = body;
+
+  if (!token || !proposed_date) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing token or proposed_date" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // RPC validates token, sets reschedule fields on ticket
+  const { data, error } = await supabase.rpc("c1_submit_reschedule_request", {
+    p_token: token,
+    p_proposed_date: proposed_date,
+    p_reason: reason || null,
+  });
+
+  if (error || !data?.ok) {
+    const errMsg = error?.message || data?.error || "Reschedule request failed";
+    await alertTelegram(FN, "reschedule-request \u2192 RPC", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ticketId = data.ticket_id;
+
+  // Notify contractor via WhatsApp — "tenant wants to reschedule, check your portal"
+  if (data.contractor_phone && TEMPLATES.contractor_reschedule_request !== "PENDING_APPROVAL") {
+    const contractorPortalUrl = `https://app.yarro.ai/contractor/${data.contractor_token}`;
+    await sendAndLog(supabase, FN, "reschedule-request \u2192 contractor WhatsApp", {
+      ticketId,
+      recipientPhone: data.contractor_phone,
+      recipientRole: "contractor",
+      messageType: "contractor_reschedule_request",
+      templateSid: TEMPLATES.contractor_reschedule_request,
+      variables: {
+        "1": contractorPortalUrl,
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({ ok: true, path: "reschedule-request", ticket_id: ticketId }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+// ─── Path F: Reschedule Decision (contractor approves/declines via portal) ──
+async function handleRescheduleDecision(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, approved } = body;
+
+  if (!token || typeof approved !== "boolean") {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing token or approved boolean" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // RPC validates token, updates reschedule_status + scheduled_date if approved
+  const { data, error } = await supabase.rpc("c1_submit_reschedule_decision", {
+    p_token: token,
+    p_approved: approved,
+  });
+
+  if (error || !data?.ok) {
+    const errMsg = error?.message || data?.error || "Reschedule decision failed";
+    await alertTelegram(FN, "reschedule-decision \u2192 RPC", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ticketId = data.ticket_id;
+
+  if (approved) {
+    // Tenant gets "reschedule confirmed"
+    if (data.tenant_phone && TEMPLATES.tenant_reschedule_approved !== "PENDING_APPROVAL") {
+      const tenantPortalUrl = `https://app.yarro.ai/tenant/${data.tenant_token}`;
+      await sendAndLog(supabase, FN, "reschedule-decision \u2192 tenant approved", {
+        ticketId,
+        recipientPhone: data.tenant_phone,
+        recipientRole: "tenant",
+        messageType: "tenant_reschedule_approved",
+        templateSid: TEMPLATES.tenant_reschedule_approved,
+        variables: {
+          "1": tenantPortalUrl,
+        },
+      });
+    }
+
+    // PM gets info-only notification (approved only, per design)
+    if (data.manager_phone && TEMPLATES.pm_reschedule_approved !== "PENDING_APPROVAL") {
+      await sendAndLog(supabase, FN, "reschedule-decision \u2192 PM approved", {
+        ticketId,
+        recipientPhone: data.manager_phone,
+        recipientRole: "manager",
+        messageType: "pm_reschedule_approved",
+        templateSid: TEMPLATES.pm_reschedule_approved,
+        variables: {
+          "1": data.property_address || "Address not available",
+        },
+      });
+    }
+  } else {
+    // Tenant gets "reschedule declined"
+    if (data.tenant_phone && TEMPLATES.tenant_reschedule_declined !== "PENDING_APPROVAL") {
+      const tenantPortalUrl = `https://app.yarro.ai/tenant/${data.tenant_token}`;
+      await sendAndLog(supabase, FN, "reschedule-decision \u2192 tenant declined", {
+        ticketId,
+        recipientPhone: data.tenant_phone,
+        recipientRole: "tenant",
+        messageType: "tenant_reschedule_declined",
+        templateSid: TEMPLATES.tenant_reschedule_declined,
+        variables: {
+          "1": tenantPortalUrl,
+        },
+      });
+    }
+    // PM does NOT get notified on decline (per design — they see it in app)
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      path: "reschedule-decision",
+      ticket_id: ticketId,
+      approved,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+// ─── Path G: Tenant Confirmation (tenant confirms resolution via portal) ──
+async function handleTenantConfirmation(
+  supabase: SupabaseClient,
+  body: Record<string, any>,
+): Promise<Response> {
+  const { token, resolved, notes } = body;
+
+  if (!token || typeof resolved !== "boolean") {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Missing token or resolved boolean" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // RPC validates token, updates ticket
+  const { data, error } = await supabase.rpc("c1_submit_tenant_confirmation", {
+    p_token: token,
+    p_resolved: resolved,
+    p_notes: notes || null,
+  });
+
+  if (error || !data?.ok) {
+    const errMsg = error?.message || data?.error || "Tenant confirmation failed";
+    await alertTelegram(FN, "tenant-confirmation \u2192 RPC", errMsg, { Token: token });
+    return new Response(
+      JSON.stringify({ ok: false, error: errMsg }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const ticketId = data.ticket_id;
+
+  // If NOT resolved, notify PM
+  if (!resolved) {
+    const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+    if (ctx?.ok && ctx.manager?.phone) {
+      const addr = ctx.property?.address || "Address not available";
+      const issueTitle = ctx.ticket?.issue_title || ctx.ticket?.issue_description || "Maintenance issue";
+      const contrName = ctx.contractor?.contractor_name || "Contractor";
+
+      await sendAndLog(supabase, FN, "tenant-confirmation \u2192 pm_job_not_completed", {
+        ticketId,
+        recipientPhone: ctx.manager.phone,
+        recipientRole: "manager",
+        messageType: "pm_job_not_completed",
+        templateSid: TEMPLATES.pm_job_not_completed,
+        variables: {
+          "1": addr,
+          "2": issueTitle,
+          "3": contrName,
+          "4": notes || "Tenant reported issue not resolved",
+        },
+      });
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ ok: true, path: "tenant-confirmation", ticket_id: ticketId, resolved }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 // ─── Main Handler ────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -451,7 +954,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const source = url.searchParams.get("source") || "finalize-job";
 
     // Safely parse JSON body
     let body: Record<string, any>;
@@ -464,14 +966,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Source from URL param (external callers) or body (supabase.functions.invoke)
+    const source = url.searchParams.get("source") || body.source || "finalize-job";
+
     console.log(`[${FN}] source=${source}, body keys: ${Object.keys(body).join(",")}`);
 
     const supabase = createSupabaseClient();
 
-    if (source === "fillout") {
-      return await handleFilloutScheduling(supabase, body);
-    } else {
-      return await handleFinalizeJob(supabase, body);
+    switch (source) {
+      case "fillout":
+        return await handleFilloutScheduling(supabase, body);
+      case "portal-schedule":
+        return await handlePortalSchedule(supabase, body);
+      case "portal-completion":
+        return await handlePortalCompletion(supabase, body);
+      case "reschedule-request":
+        return await handleRescheduleRequest(supabase, body);
+      case "reschedule-decision":
+        return await handleRescheduleDecision(supabase, body);
+      case "tenant-confirmation":
+        return await handleTenantConfirmation(supabase, body);
+      default:
+        return await handleFinalizeJob(supabase, body);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

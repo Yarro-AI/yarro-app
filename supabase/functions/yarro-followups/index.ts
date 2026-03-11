@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
 
 // ─── Function: yarro-followups ───────────────────────────────────────────
 
@@ -17,19 +17,19 @@ interface RouteConfig {
 }
 
 const ROUTES: Record<string, RouteConfig> = {
-  // Chain 13: Contractor hasn't responded to quote request
+  // 9a: Contractor hasn't responded to quote request
   "contractor-reminder-sms": {
     templateSid: TEMPLATES.contractor_reminder,
     messageType: "contractor_reminder",
     recipientRole: "contractor",
     getTo: (p) => p.contractor_phone,
     getVariables: (p) => ({
-      "1": p.business_name || "Your property manager",
-      "2": p.property_address || "Address not available",
-      "3": p.issue_description || "Maintenance issue",
+      "1": p.property_address || "Address not available",
+      "2": p.issue_description || "Maintenance issue",
+      "3": p.business_name || "Your property manager",
     }),
   },
-  // Chain 14: Landlord hasn't responded to approval request
+  // 9b: Landlord hasn't responded to approval request
   "landlord-followup-sms": {
     templateSid: TEMPLATES.pm_contractor_timeout,
     messageType: "landlord_followup",
@@ -43,7 +43,7 @@ const ROUTES: Record<string, RouteConfig> = {
       "5": String(p.hours_elapsed ?? "N/A"),
     }),
   },
-  // Chain 15: Landlord timed out, escalate to PM
+  // 9c: Landlord timed out, escalate to PM
   "pm-landlord-timeout-sms": {
     templateSid: TEMPLATES.landlord_reminder,
     messageType: "pm_landlord_timeout",
@@ -53,13 +53,13 @@ const ROUTES: Record<string, RouteConfig> = {
       "1": p.property_address || "Address not available",
       "2": p.issue_description || "Maintenance issue",
       "3": p.landlord_name || "Landlord",
-      "4": p.landlord_phone || "N/A",
+      "4": p.landlord_phone ? formatUkPhone(p.landlord_phone) : "N/A",
       "5": p.contractor_name || "Contractor",
-      "6": p.contractor_phone || "N/A",
+      "6": p.contractor_phone ? formatUkPhone(p.contractor_phone) : "N/A",
       "7": String(p.hours_elapsed ?? "N/A"),
     }),
   },
-  // Chain 16: Contractor hasn't submitted completion form
+  // 9d: Contractor hasn't submitted completion form
   "contractor-completion-reminder-sms": {
     templateSid: TEMPLATES.completion_followup,
     messageType: "contractor_completion_reminder",
@@ -71,7 +71,7 @@ const ROUTES: Record<string, RouteConfig> = {
       "3": p.scheduled_date || "N/A",
     }),
   },
-  // Chain 17: Job overdue, escalate to PM
+  // 9e: Job overdue, escalate to PM
   "pm-completion-overdue-sms": {
     templateSid: TEMPLATES.pm_completion_overdue,
     messageType: "pm_completion_overdue",
@@ -80,7 +80,7 @@ const ROUTES: Record<string, RouteConfig> = {
     getVariables: (p) => ({
       "1": p.property_address || "Address not available",
       "2": p.issue_description || "Maintenance issue",
-      "3": p.contractor_name ? `${p.contractor_name} / ${p.contractor_phone || "N/A"}` : "Contractor",
+      "3": p.contractor_name ? `${p.contractor_name} — ${p.contractor_phone ? formatUkPhone(p.contractor_phone) : "N/A"}` : "Contractor",
       "4": p.scheduled_date || "N/A",
       "5": String(p.hours_overdue ?? "N/A"),
     }),

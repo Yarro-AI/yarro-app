@@ -71,6 +71,18 @@ async function handleIntake(
   const ctx = ctxRows[0];
   const results: Array<{ type: string; sent: boolean; error?: string }> = [];
 
+  // ── Generate tenant_token on every ticket creation ──
+  const tenantToken = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+  {
+    const { error: tokenErr } = await supabase.from("c1_tickets").update({
+      tenant_token: tenantToken,
+      tenant_token_at: new Date().toISOString(),
+    }).eq("id", ticketId);
+    if (tokenErr) {
+      await alertTelegram(FN, "intake → set tenant_token", tokenErr.message, { Ticket: ticketId });
+    }
+  }
+
   // Get PM settings (ticket_mode + OOH config)
   let isReviewMode = false;
   let pmId: string | null = null;
@@ -133,12 +145,12 @@ async function handleIntake(
               messageType: "ooh_emergency_dispatch",
               templateSid: TEMPLATES.ooh_emergency_dispatch,
               variables: {
-                "1": shortRef(ticketId),
+                "1": ctx.business_name || "Your property manager",
                 "2": ctx.property_address || "Address not available",
                 "3": ctx.issue_description || "Emergency maintenance issue",
-                "4": ctx.tenant_name || "Tenant not matched",
-                "5": ctx.tenant_phone ? `+${ctx.tenant_phone}` : "N/A",
-                "6": ctx.business_name || "Your property manager",
+                "4": ctx.has_images ? `https://app.yarro.ai/i/${ticketId}` : "No photos or videos provided",
+                "5": `${ctx.tenant_name || "Tenant not matched"} — ${ctx.tenant_phone ? `+${ctx.tenant_phone}` : "N/A"}`,
+                "6": ctx.access_instructions || "Contact property manager for access details",
                 "7": token,
               },
             });
@@ -161,6 +173,21 @@ async function handleIntake(
               },
             });
             results.push({ type: "pm_ooh_notify", sent: r.ok, error: r.error });
+          }
+
+          // Send tenant portal link alongside OOH dispatch
+          const tenantPhone = ctx.tenant_phone || ctx.caller_phone;
+          if (tenantPhone) {
+            const tenantFirstName = (ctx.tenant_name || "").split(" ")[0] || "there";
+            const tResult = await sendAndLog(supabase, FN, "intake → OOH tenant portal link", {
+              ticketId,
+              recipientPhone: tenantPhone,
+              recipientRole: "tenant",
+              messageType: "tenant_portal_link",
+              templateSid: TEMPLATES.tenant_portal_link,
+              variables: { "1": tenantFirstName, "2": tenantToken },
+            });
+            results.push({ type: "tenant_portal_link", sent: tResult.ok, error: tResult.error });
           }
 
           return new Response(

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES, shortRef } from "../_shared/templates.ts";
+import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
 
 // ─── Function: yarro-dispatcher ──────────────────────────────────────────
 
@@ -26,11 +26,28 @@ async function handleContractorSms(
     ? `https://app.yarro.ai/i/${ticket.id}`
     : "No photos or videos provided";
 
+  // Build access info string for {{6}}
+  let accessInfo = "Contact property manager for access details";
+  if (contractor.access_granted) {
+    // Fetch property access instructions (lockbox code, etc.)
+    const { data: propData } = await supabase
+      .from("c1_properties")
+      .select("access_instructions")
+      .eq("id", contractor.property_id)
+      .single();
+    accessInfo = propData?.access_instructions || "Anytime access";
+  } else {
+    const slots = contractor.availability || "To be arranged with tenant";
+    accessInfo = `Must be arranged with tenant. Available: ${slots}`;
+  }
+
   const variables: Record<string, string> = {
     "1": manager.business_name || "Your property manager",
     "2": contractor.property_address || "Address not available",
     "3": contractor.issue_description || "Maintenance issue reported",
     "4": mediaSummary,
+    "5": contractor.priority || "Standard",
+    "6": accessInfo,
   };
 
   // Send + log + alert via sendAndLog
@@ -61,6 +78,35 @@ async function handleContractorSms(
     });
   }
 
+  // ── Send tenant portal link alongside contractor quote dispatch ──
+  {
+    const { data: tData } = await supabase
+      .from("c1_tickets")
+      .select("tenant_token, tenant_id")
+      .eq("id", ticket.id)
+      .single();
+
+    if (tData?.tenant_token && tData.tenant_id) {
+      const { data: tenantRow } = await supabase
+        .from("c1_tenants")
+        .select("phone, full_name")
+        .eq("id", tData.tenant_id)
+        .single();
+
+      if (tenantRow?.phone) {
+        const firstName = (tenantRow.full_name || "").split(" ")[0] || "there";
+        await sendAndLog(supabase, FN, "contractor-sms → tenant portal link", {
+          ticketId: ticket.id,
+          recipientPhone: tenantRow.phone,
+          recipientRole: "tenant",
+          messageType: "tenant_portal_link",
+          templateSid: TEMPLATES.tenant_portal_link,
+          variables: { "1": firstName, "2": tData.tenant_token },
+        });
+      }
+    }
+  }
+
   return new Response(
     JSON.stringify({
       instruction: "contractor-sms",
@@ -82,6 +128,13 @@ async function handlePmSms(
   const contractor = payload.contractor || {};
   const manager = payload.manager || {};
 
+  // Media summary for PM quote
+  const images: string[] = ticket.images || [];
+  const hasImages = images.length > 0 && images[0] !== "unprovided";
+  const mediaSummary = hasImages
+    ? `https://app.yarro.ai/i/${ticket.id}`
+    : "No photos or videos provided";
+
   const result = await sendAndLog(supabase, FN, "pm-sms → Twilio send", {
     ticketId: ticket.id,
     recipientPhone: manager.phone,
@@ -89,11 +142,12 @@ async function handlePmSms(
     messageType: "pm_quote",
     templateSid: TEMPLATES.pm_quote,
     variables: {
-      "1": contractor.property_address || "Address not available",
-      "2": contractor.issue_description || "Maintenance issue reported",
-      "3": `${contractor.name || "Contractor"} - ${contractor.category || "General"}`,
+      "1": `${contractor.name || "Contractor"} — ${contractor.category || "General"}`,
+      "2": contractor.property_address || "Address not available",
+      "3": contractor.issue_description || "Maintenance issue reported",
       "4": contractor.quote_amount || "N/A",
       "5": contractor.quote_notes || "N/A",
+      "6": mediaSummary,
     },
   });
 
@@ -175,6 +229,18 @@ async function handleLandlordSms(
   }
 
   // Step 3: Not auto-approve → send landlord quote SMS
+  // Fetch media info from ticket
+  const { data: ticketData } = await supabase
+    .from("c1_tickets")
+    .select("images")
+    .eq("id", ticket.id)
+    .single();
+  const llImages: string[] = ticketData?.images || [];
+  const llHasImages = llImages.length > 0 && llImages[0] !== "unprovided";
+  const llMediaSummary = llHasImages
+    ? `https://app.yarro.ai/i/${ticket.id}`
+    : "No photos or videos provided";
+
   const result = await sendAndLog(supabase, FN, "landlord-sms → Twilio send", {
     ticketId: ticket.id,
     recipientPhone: prepData.landlord_phone,
@@ -182,11 +248,11 @@ async function handleLandlordSms(
     messageType: "landlord_quote",
     templateSid: TEMPLATES.landlord_quote,
     variables: {
-      "1": prepData.property_address || "Address not available",
-      "2": prepData.contractor_name || "Contractor",
-      "3": prepData.total_cost || "N/A",
-      "4": prepData.issue || "Maintenance issue",
-      "5": prepData.quote_notes || "N/A",
+      "1": prepData.contractor_name || "Contractor",
+      "2": prepData.property_address || "Address not available",
+      "3": prepData.issue || "Maintenance issue",
+      "4": llMediaSummary,
+      "5": prepData.total_cost || "N/A",
     },
   });
 
@@ -230,22 +296,50 @@ async function handleLandlordAllocate(
   const manager = payload.manager || {};
   const token = payload.token || "";
 
-  const result = await sendAndLog(supabase, FN, "landlord-allocate \u2192 Twilio send", {
+  const result = await sendAndLog(supabase, FN, "landlord-allocate → Twilio send", {
     ticketId: ticket.id,
     recipientPhone: landlord.phone,
     recipientRole: "landlord",
     messageType: "landlord_allocate",
     templateSid: TEMPLATES.allocate_landlord,
     variables: {
-      "1": shortRef(String(ticket.id || "unknown")),
-      "2": property.address || "Address not available",
-      "3": ticket.issue_description || "Maintenance issue reported",
-      "4": tenant.name || "Unknown",
-      "5": tenant.phone || "N/A",
-      "6": manager.business_name || "Your property manager",
-      "7": token,
+      "1": property.address || "Address not available",
+      "2": ticket.issue_description || "Maintenance issue reported",
+      "3": tenant.name || "Unknown",
+      "4": tenant.phone ? formatUkPhone(tenant.phone) : "N/A",
+      "5": manager.business_name || "Your property manager",
+      "6": token,
     },
   });
+
+  // ── Send tenant portal link alongside landlord allocation ──
+  {
+    const { data: tData } = await supabase
+      .from("c1_tickets")
+      .select("tenant_token, tenant_id")
+      .eq("id", ticket.id)
+      .single();
+
+    if (tData?.tenant_token && tData.tenant_id) {
+      const { data: tenantRow } = await supabase
+        .from("c1_tenants")
+        .select("phone, full_name")
+        .eq("id", tData.tenant_id)
+        .single();
+
+      if (tenantRow?.phone) {
+        const firstName = (tenantRow.full_name || "").split(" ")[0] || "there";
+        await sendAndLog(supabase, FN, "landlord-allocate → tenant portal link", {
+          ticketId: ticket.id,
+          recipientPhone: tenantRow.phone,
+          recipientRole: "tenant",
+          messageType: "tenant_portal_link",
+          templateSid: TEMPLATES.tenant_portal_link,
+          variables: { "1": firstName, "2": tData.tenant_token },
+        });
+      }
+    }
+  }
 
   return new Response(
     JSON.stringify({
@@ -275,9 +369,8 @@ async function handleNoMoreContractors(
     messageType: "no_more_contractors",
     templateSid: TEMPLATES.no_more_contractors,
     variables: {
-      "1": shortRef(String(ticket.id || "unknown")),
+      "1": property.address || "Address not available",
       "2": ticket.issue_description || "Maintenance issue reported",
-      "3": property.address || "Address not available",
     },
   });
 

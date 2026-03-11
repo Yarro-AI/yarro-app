@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES, shortRef } from "../_shared/templates.ts";
+import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
 
 // ─── Function: yarro-completion ──────────────────────────────────────────
 
@@ -270,7 +270,8 @@ Deno.serve(async (req: Request) => {
       const ticketId = rpcResult.ticket_id || parsed.ticket_id;
       const addr = rpcResult.property_address || "Address not available";
       const contrName = rpcResult.contractor_name || "Contractor";
-      const contrPhone = rpcResult.contractor_phone || "N/A";
+      const contrPhone = rpcResult.contractor_phone || "";
+      const contrDisplay = contrPhone ? `${contrName} — ${formatUkPhone(contrPhone)}` : contrName;
       const issue = rpcResult.issue_description || "Maintenance issue";
       const mgrPhone = rpcResult.manager_phone;
       const llPhone = rpcResult.landlord_phone;
@@ -289,10 +290,9 @@ Deno.serve(async (req: Request) => {
               messageType: "pm_job_completed",
               templateSid: TEMPLATES.pm_job_completed,
               variables: {
-                "1": shortRef(ticketId),
-                "2": addr,
-                "3": contrPhone !== "N/A" ? `${contrName} / ${contrPhone}` : contrName,
-                "4": issue,
+                "1": addr,
+                "2": issue,
+                "3": contrDisplay,
               },
             });
             results.push({ type: "pm_job_completed", sent: r.ok, error: r.error });
@@ -308,13 +308,33 @@ Deno.serve(async (req: Request) => {
               messageType: "ll_job_completed",
               templateSid: TEMPLATES.ll_job_completed,
               variables: {
-                "1": shortRef(ticketId),
-                "2": addr,
-                "3": contrPhone !== "N/A" ? `${contrName} / ${contrPhone}` : contrName,
-                "4": issue,
+                "1": addr,
+                "2": issue,
+                "3": contrName,
               },
             });
             results.push({ type: "ll_job_completed", sent: r.ok, error: r.error });
+          })());
+        }
+
+        const tenantPhone = rpcResult.tenant_phone;
+        const tenantToken = rpcResult.tenant_token;
+        if (tenantPhone && tenantToken) {
+          const tenantFirstName = (rpcResult.tenant_name || "").split(" ")[0] || "there";
+          sends.push((async () => {
+            const r = await sendAndLog(supabase, FN, "tenant_job_completed", {
+              ticketId,
+              recipientPhone: tenantPhone,
+              recipientRole: "tenant",
+              messageType: "tenant_job_completed",
+              templateSid: TEMPLATES.tenant_job_completed,
+              variables: {
+                "1": tenantFirstName,
+                "2": issue,
+                "3": tenantToken,
+              },
+            });
+            results.push({ type: "tenant_job_completed", sent: r.ok, error: r.error });
           })());
         }
 
@@ -329,8 +349,8 @@ Deno.serve(async (req: Request) => {
             messageType: "pm_job_not_completed",
             templateSid: TEMPLATES.pm_job_not_completed,
             variables: {
-              "1": shortRef(ticketId),
-              "2": addr,
+              "1": addr,
+              "2": issue,
               "3": contrName,
               "4": reason,
             },
