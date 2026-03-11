@@ -23,6 +23,7 @@ export const TEMPLATES = {
   // ─── Scheduling (yarro-scheduling) ───
   contractor_job_schedule: "HXe1297b1dbd016012026d21cfbddd3308", // 4_contractor_schedule
   pm_landlord_approved: "HX5248963ca973dfaa1880b216f336e863",   // 4b_pm_landlord_approved
+  pm_auto_approved: "HXe2f046212f2c4a9b7809e85cf0eb0816",      // 4c_pm_auto_approved
   landlord_declined: "HX5cc6505f993cfccd9f8e1e5089bef940",      // 3c_landlord_declined
   pm_job_booked: "HX564f0801aae8a3e9ded1af83efa251d9",          // 5_pm_job_booked
   ll_job_booked: "HXcdb92e07b25d8b27ff8637502aac0784",           // 5b_ll_job_booked
