@@ -435,7 +435,7 @@ async function handleFilloutScheduling(
   // Landlord
   if (llPhone) {
     const llName = ctx.property?.landlord_name || "there";
-    const category = ctx.ticket?.category || "contractor";
+    const category = (ctx.ticket?.category || "contractor").toLowerCase();
     const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → ll_job_booked", {
@@ -591,7 +591,7 @@ async function handlePortalSchedule(
 
   if (llPhone) {
     const llName = ctx.property?.landlord_name || "there";
-    const category = ctx.ticket?.category || "contractor";
+    const category = (ctx.ticket?.category || "contractor").toLowerCase();
     const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "portal-schedule → ll_job_booked", {

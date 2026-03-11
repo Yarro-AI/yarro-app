@@ -212,11 +212,13 @@ export default function ContractorPortalPage() {
     const slotHour = TIME_SLOTS.find(s => s.value === scheduleSlot)?.hour ?? 9
     const dateStr = `${scheduleDate}T${String(slotHour).padStart(2, '0')}:00:00`
 
-    const { data, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { data: raw, error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: scheduleSlot || 'morning', notes: scheduleNotes || null },
     })
 
-    if (err || !data?.ok) {
+    const data = typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return raw } })() : raw
+
+    if (err || (!data?.ok && !data?.success)) {
       const msg = data?.error || err?.message || ''
       setError(msg.includes('already scheduled') ? 'This job has already been scheduled.' : 'Something went wrong. Please try again.')
       setSubmittingSchedule(false)
@@ -233,11 +235,13 @@ export default function ContractorPortalPage() {
   async function handleCompletion() {
     setSubmittingCompletion(true)
 
-    const { data, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { data: raw2, error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'portal-completion', token, notes: completionNotes || null, photos: [] },
     })
 
-    if (err || !data?.ok) {
+    const data = typeof raw2 === 'string' ? (() => { try { return JSON.parse(raw2) } catch { return raw2 } })() : raw2
+
+    if (err || (!data?.ok && !data?.success)) {
       setError('Something went wrong. Please try again.')
       setSubmittingCompletion(false)
       return
@@ -253,11 +257,13 @@ export default function ContractorPortalPage() {
   async function handleRescheduleDecision(approved: boolean) {
     setSubmittingReschedule(true)
 
-    const { data, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+    const { data: raw3, error: err } = await supabase.functions.invoke('yarro-scheduling', {
       body: { source: 'reschedule-decision', token, approved },
     })
 
-    if (err || !data?.ok) {
+    const data = typeof raw3 === 'string' ? (() => { try { return JSON.parse(raw3) } catch { return raw3 } })() : raw3
+
+    if (err || (!data?.ok && !data?.success)) {
       setError('Something went wrong. Please try again.')
       setSubmittingReschedule(false)
       return
