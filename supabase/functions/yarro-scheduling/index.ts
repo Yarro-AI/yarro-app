@@ -632,7 +632,7 @@ async function handlePortalCompletion(
   supabase: SupabaseClient,
   body: Record<string, any>,
 ): Promise<Response> {
-  const { token, notes, photos } = body;
+  const { token, notes, photos, resolved } = body;
 
   if (!token) {
     return new Response(
@@ -641,7 +641,52 @@ async function handlePortalCompletion(
     );
   }
 
-  // Call the RPC — it validates token, updates job_stage to Completed, returns context
+  // ── Not Complete path: record reason, notify PM, don't change job_stage ──
+  if (resolved === false) {
+    const { data, error } = await supabase.rpc("c1_submit_contractor_not_completed", {
+      p_token: token,
+      p_reason: notes || "Contractor reported job not completed",
+    });
+
+    if (error || (!data?.ok && !data?.success)) {
+      const errMsg = error?.message || data?.error || "Not-completed submission failed";
+      await alertTelegram(FN, "portal-not-completed → RPC", errMsg, { Token: token });
+      return new Response(
+        JSON.stringify({ ok: false, error: errMsg }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const ticketId = data.ticket_id;
+    const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+
+    if (ctx?.ok && ctx.manager?.phone) {
+      const addr = ctx.property?.address || "Address not available";
+      const issueTitle = ctx.ticket?.issue_title || ctx.ticket?.issue_description || "Maintenance issue";
+      const contrName = ctx.contractor?.contractor_name || "Contractor";
+
+      await sendAndLog(supabase, FN, "portal-not-completed → pm_job_not_completed", {
+        ticketId,
+        recipientPhone: ctx.manager.phone,
+        recipientRole: "manager",
+        messageType: "pm_job_not_completed",
+        templateSid: TEMPLATES.pm_job_not_completed,
+        variables: {
+          "1": addr,
+          "2": issueTitle,
+          "3": contrName,
+          "4": notes || "Contractor reported job not completed",
+        },
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, path: "portal-not-completed", ticket_id: ticketId }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Complete path: mark completed, notify PM + landlord ──
   const { data, error } = await supabase.rpc("c1_submit_contractor_completion", {
     p_token: token,
     p_notes: notes || null,
@@ -650,7 +695,7 @@ async function handlePortalCompletion(
 
   if (error || (!data?.ok && !data?.success)) {
     const errMsg = error?.message || data?.error || "Completion submission failed";
-    await alertTelegram(FN, "portal-completion \u2192 RPC", errMsg, { Token: token });
+    await alertTelegram(FN, "portal-completion → RPC", errMsg, { Token: token });
     return new Response(
       JSON.stringify({ ok: false, error: errMsg }),
       { status: 500, headers: { "Content-Type": "application/json" } },
@@ -659,7 +704,6 @@ async function handlePortalCompletion(
 
   const ticketId = data.ticket_id;
 
-  // Trigger existing completion notification flow
   // Get ticket context for notifications
   const { data: ctx, error: ctxError } = await supabase.rpc(
     "c1_job_reminder_payload",
@@ -687,7 +731,7 @@ async function handlePortalCompletion(
   // PM notification
   if (mgrPhone) {
     sends.push((async () => {
-      const r = await sendAndLog(supabase, FN, "portal-completion \u2192 pm_job_completed", {
+      const r = await sendAndLog(supabase, FN, "portal-completion → pm_job_completed", {
         ticketId,
         recipientPhone: mgrPhone,
         recipientRole: "manager",
@@ -706,7 +750,7 @@ async function handlePortalCompletion(
   // Landlord notification
   if (llPhone) {
     sends.push((async () => {
-      const r = await sendAndLog(supabase, FN, "portal-completion \u2192 ll_job_completed", {
+      const r = await sendAndLog(supabase, FN, "portal-completion → ll_job_completed", {
         ticketId,
         recipientPhone: llPhone,
         recipientRole: "landlord",

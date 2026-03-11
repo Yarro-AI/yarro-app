@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
-import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, ChevronLeft, ChevronRight, Upload, X, ImageIcon } from 'lucide-react'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -179,7 +179,11 @@ export default function ContractorPortalPage() {
   const [submittingSchedule, setSubmittingSchedule] = useState(false)
 
   // Completion form
+  const [completionStatus, setCompletionStatus] = useState<'complete' | 'not-complete' | null>(null)
   const [completionNotes, setCompletionNotes] = useState('')
+  const [completionReason, setCompletionReason] = useState('')
+  const [completionPhotos, setCompletionPhotos] = useState<File[]>([])
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [submittingCompletion, setSubmittingCompletion] = useState(false)
 
   // Reschedule decision
@@ -232,11 +236,70 @@ export default function ContractorPortalPage() {
     setTimeout(() => setJustSubmitted(false), 5000)
   }
 
+  function handlePhotoDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+    addPhotos(files)
+  }
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files) return
+    addPhotos(Array.from(e.target.files))
+  }
+
+  function addPhotos(files: File[]) {
+    const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+    const valid = files.filter(f => f.size <= MAX_SIZE)
+    setCompletionPhotos(prev => [...prev, ...valid].slice(0, 5))
+  }
+
+  function removePhoto(idx: number) {
+    setCompletionPhotos(prev => prev.filter((_, i) => i !== idx))
+  }
+
   async function handleCompletion() {
+    if (!completionStatus) return
     setSubmittingCompletion(true)
 
+    // Not complete path
+    if (completionStatus === 'not-complete') {
+      const { data: raw2, error: err } = await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'portal-completion', token, resolved: false, notes: completionReason || null },
+      })
+      const data = typeof raw2 === 'string' ? (() => { try { return JSON.parse(raw2) } catch { return raw2 } })() : raw2
+      if (err || (!data?.ok && !data?.success)) {
+        setError('Something went wrong. Please try again.')
+        setSubmittingCompletion(false)
+        return
+      }
+      setSubmittingCompletion(false)
+      setSubmitMessage('Report submitted — the property manager has been notified.')
+      setJustSubmitted(true)
+      await loadTicket()
+      setTimeout(() => setJustSubmitted(false), 5000)
+      return
+    }
+
+    // Complete path — upload photos first
+    let photoUrls: string[] = []
+    if (completionPhotos.length > 0) {
+      setUploadingPhotos(true)
+      const urls: string[] = []
+      for (const file of completionPhotos) {
+        const ext = file.name.split('.').pop() || 'jpg'
+        const path = `portal/${token}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('ticket-images').upload(path, file, { contentType: file.type })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('ticket-images').getPublicUrl(path)
+          if (urlData?.publicUrl) urls.push(urlData.publicUrl)
+        }
+      }
+      photoUrls = urls
+      setUploadingPhotos(false)
+    }
+
     const { data: raw2, error: err } = await supabase.functions.invoke('yarro-scheduling', {
-      body: { source: 'portal-completion', token, notes: completionNotes || null, photos: [] },
+      body: { source: 'portal-completion', token, resolved: true, notes: completionNotes || null, photos: photoUrls },
     })
 
     const data = typeof raw2 === 'string' ? (() => { try { return JSON.parse(raw2) } catch { return raw2 } })() : raw2
@@ -504,26 +567,135 @@ export default function ContractorPortalPage() {
         {stage === 'complete' && !ticket.resolved_at && (
           <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-5 space-y-4">
-              <h3 className="text-sm font-medium text-gray-900">Mark job as complete</h3>
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Notes <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                <textarea
-                  className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Brief description of work completed..."
-                  value={completionNotes}
-                  onChange={(e) => setCompletionNotes(e.target.value)}
-                />
+              <h3 className="text-sm font-medium text-gray-900">Has this job been completed?</h3>
+
+              {/* Two choice buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCompletionStatus('complete')}
+                  className={`rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                    completionStatus === 'complete'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <CheckCircle2 className={`size-5 mx-auto mb-1.5 ${completionStatus === 'complete' ? 'text-green-500' : 'text-gray-400'}`} />
+                  Job Complete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompletionStatus('not-complete')}
+                  className={`rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                    completionStatus === 'not-complete'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <AlertTriangle className={`size-5 mx-auto mb-1.5 ${completionStatus === 'not-complete' ? 'text-orange-500' : 'text-gray-400'}`} />
+                  Not Complete
+                </button>
               </div>
-              <button
-                onClick={handleCompletion}
-                disabled={submittingCompletion}
-                className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {submittingCompletion ? <Loader2 className="size-4 animate-spin mx-auto" /> : 'Mark Complete'}
-              </button>
+
+              {/* Complete: photo upload + notes */}
+              {completionStatus === 'complete' && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  {/* Photo drop zone */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Photos <span className="font-normal text-gray-400">(optional, max 5)</span>
+                    </label>
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handlePhotoDrop}
+                      className="mt-1.5 relative rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                    >
+                      <label className="flex flex-col items-center justify-center py-6 cursor-pointer">
+                        <Upload className="size-6 text-gray-400 mb-2" />
+                        <span className="text-sm text-gray-600 font-medium">Drop photos here or tap to upload</span>
+                        <span className="text-xs text-gray-400 mt-1">JPG, PNG up to 10MB each</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handlePhotoSelect}
+                        />
+                      </label>
+                    </div>
+                    {/* Photo previews */}
+                    {completionPhotos.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {completionPhotos.map((file, i) => (
+                          <div key={i} className="relative group">
+                            <div className="size-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                              <img src={URL.createObjectURL(file)} alt="" className="size-full object-cover" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(i)}
+                              className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-gray-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Notes <span className="font-normal text-gray-400">(optional)</span>
+                    </label>
+                    <textarea
+                      className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      rows={3}
+                      placeholder="Brief description of work completed..."
+                      value={completionNotes}
+                      onChange={(e) => setCompletionNotes(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Not Complete: reason field */}
+              {completionStatus === 'not-complete' && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Reason <span className="font-normal text-gray-400">(required)</span>
+                    </label>
+                    <textarea
+                      className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      rows={3}
+                      placeholder="Why couldn't the job be completed?"
+                      value={completionReason}
+                      onChange={(e) => setCompletionReason(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Submit button */}
+              {completionStatus && (
+                <button
+                  onClick={handleCompletion}
+                  disabled={submittingCompletion || uploadingPhotos || (completionStatus === 'not-complete' && !completionReason.trim())}
+                  className={`w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    completionStatus === 'complete'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  {submittingCompletion || uploadingPhotos ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="size-4 animate-spin" />
+                      {uploadingPhotos ? 'Uploading photos...' : 'Submitting...'}
+                    </span>
+                  ) : completionStatus === 'complete' ? 'Submit Completion' : 'Report Issue'}
+                </button>
+              )}
             </div>
           </div>
         )}
