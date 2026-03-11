@@ -767,17 +767,19 @@ async function handleRescheduleRequest(
 
   const ticketId = data.ticket_id;
 
+  // Fetch full context for notifications (RPC only returns ticket_id)
+  const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+
   // Notify contractor via WhatsApp — "tenant wants to reschedule, check your portal"
-  if (data.contractor_phone && TEMPLATES.contractor_reschedule_request !== "PENDING_APPROVAL") {
-    const contractorPortalUrl = `https://app.yarro.ai/contractor/${data.contractor_token}`;
+  if (ctx?.ok && ctx.contractor?.contractor_phone && TEMPLATES.contractor_reschedule_request !== "PENDING_APPROVAL") {
     await sendAndLog(supabase, FN, "reschedule-request \u2192 contractor WhatsApp", {
       ticketId,
-      recipientPhone: data.contractor_phone,
+      recipientPhone: ctx.contractor.contractor_phone,
       recipientRole: "contractor",
       messageType: "contractor_reschedule_request",
       templateSid: TEMPLATES.contractor_reschedule_request,
       variables: {
-        "1": contractorPortalUrl,
+        "1": ctx.ticket?.contractor_token || token,
       },
     });
   }
@@ -819,47 +821,52 @@ async function handleRescheduleDecision(
 
   const ticketId = data.ticket_id;
 
+  // Fetch full context for notifications (RPC only returns ticket_id + approved)
+  const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+  const tenantPhone = ctx?.tenant?.phone;
+  const tenantToken = ctx?.ticket?.tenant_token;
+  const mgrPhone = ctx?.manager?.phone;
+  const addr = ctx?.property?.address || "Address not available";
+
   if (approved) {
     // Tenant gets "reschedule confirmed"
-    if (data.tenant_phone && TEMPLATES.tenant_reschedule_approved !== "PENDING_APPROVAL") {
-      const tenantPortalUrl = `https://app.yarro.ai/tenant/${data.tenant_token}`;
+    if (tenantPhone && tenantToken && TEMPLATES.tenant_reschedule_approved !== "PENDING_APPROVAL") {
       await sendAndLog(supabase, FN, "reschedule-decision \u2192 tenant approved", {
         ticketId,
-        recipientPhone: data.tenant_phone,
+        recipientPhone: tenantPhone,
         recipientRole: "tenant",
         messageType: "tenant_reschedule_approved",
         templateSid: TEMPLATES.tenant_reschedule_approved,
         variables: {
-          "1": tenantPortalUrl,
+          "1": tenantToken,
         },
       });
     }
 
     // PM gets info-only notification (approved only, per design)
-    if (data.manager_phone && TEMPLATES.pm_reschedule_approved !== "PENDING_APPROVAL") {
+    if (mgrPhone && TEMPLATES.pm_reschedule_approved !== "PENDING_APPROVAL") {
       await sendAndLog(supabase, FN, "reschedule-decision \u2192 PM approved", {
         ticketId,
-        recipientPhone: data.manager_phone,
+        recipientPhone: mgrPhone,
         recipientRole: "manager",
         messageType: "pm_reschedule_approved",
         templateSid: TEMPLATES.pm_reschedule_approved,
         variables: {
-          "1": data.property_address || "Address not available",
+          "1": addr,
         },
       });
     }
   } else {
     // Tenant gets "reschedule declined"
-    if (data.tenant_phone && TEMPLATES.tenant_reschedule_declined !== "PENDING_APPROVAL") {
-      const tenantPortalUrl = `https://app.yarro.ai/tenant/${data.tenant_token}`;
+    if (tenantPhone && tenantToken && TEMPLATES.tenant_reschedule_declined !== "PENDING_APPROVAL") {
       await sendAndLog(supabase, FN, "reschedule-decision \u2192 tenant declined", {
         ticketId,
-        recipientPhone: data.tenant_phone,
+        recipientPhone: tenantPhone,
         recipientRole: "tenant",
         messageType: "tenant_reschedule_declined",
         templateSid: TEMPLATES.tenant_reschedule_declined,
         variables: {
-          "1": tenantPortalUrl,
+          "1": tenantToken,
         },
       });
     }
