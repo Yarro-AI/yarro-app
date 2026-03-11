@@ -107,8 +107,9 @@ export default function LandlordDetailPage() {
     const { error } = await supabase.from('c1_landlords').update({ ...normalized, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
     const { error: propError } = await supabase.from('c1_properties').update({ landlord_name: normalized.full_name, landlord_phone: normalized.phone, landlord_email: normalized.email }).eq('landlord_id', data.id)
-    if (propError) console.error('Failed to sync landlord data to properties:', propError)
-    toast.success('Landlord updated'); await fetchLandlord()
+    if (propError) toast.error('Landlord saved but failed to sync data to linked properties. Try again or contact support.')
+    else toast.success('Landlord updated')
+    await fetchLandlord()
   }, [supabase, fetchLandlord])
 
   const { isEditing, editedData, isSaving, error: editError, startEditing, cancelEditing, updateField, saveChanges, resetData } = useEditMode<LandlordEditable>({
