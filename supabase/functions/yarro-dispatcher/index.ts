@@ -248,7 +248,9 @@ async function handleLandlordSms(
     messageType: "landlord_quote",
     templateSid: TEMPLATES.landlord_quote,
     variables: {
-      "1": prepData.contractor_name || "Contractor",
+      "1": prepData.contractor_category
+        ? `${prepData.contractor_name || "Contractor"} — ${prepData.contractor_category}`
+        : prepData.contractor_name || "Contractor",
       "2": prepData.property_address || "Address not available",
       "3": prepData.issue || "Maintenance issue",
       "4": llMediaSummary,
