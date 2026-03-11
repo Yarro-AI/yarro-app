@@ -12,63 +12,67 @@ interface EmailContent {
 
 const CONTENT: Record<string, (v: Vars) => EmailContent> = {
   // ─── Contractor Messages ───
+  // Variables match EXACTLY what each edge function sends — do not rearrange
+
+  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=media, 5=priority, 6=access
   contractor_dispatch: (v) => ({
-    subject: `New Job Request — ${v["1"] || "Maintenance"}`,
-    body: `Hi ${v["2"] || "there"},\n\nYou have a new maintenance job request.\n\nProperty: ${v["3"] || "N/A"}\nIssue: ${v["1"] || "N/A"}\nCategory: ${v["4"] || "N/A"}\n\nPlease use the link below to view the job details and submit your quote:\n${v["5"] || ""}\n\nIf you have any questions, reply to this email.`,
+    subject: `New Job Request — ${v["3"] || "Maintenance issue"}`,
+    body: `Hi,\n\nYou have a new maintenance job request from ${v["1"] || "your property manager"}.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nPriority: ${v["5"] || "Standard"}\n\nAccess: ${v["6"] || "Contact property manager for details"}\n\nPlease reply to this email with your soonest availability and quote estimate.`,
   }),
+
+  // scheduling finalize-job: 1=address, 2=issue, 3=quote, 4=access, 5=contractorToken
   contractor_job_schedule: (v) => ({
-    subject: `Job Scheduled — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nYour job has been approved and scheduled.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nDate: ${v["4"] || "N/A"}\nTime: ${v["5"] || "N/A"}\nTenant: ${v["6"] || "N/A"}\n\nPlease arrive within the scheduled time window. If you need to reschedule, use the portal link from your original job request.`,
+    subject: `Job Approved — ${v["1"] || "Property"}`,
+    body: `Hi,\n\nYour quote has been approved and you can now schedule the job.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nApproved Quote: ${v["3"] || "N/A"}\n\nAccess: ${v["4"] || "Contact property manager for details"}\n\nPlease use the link below to confirm your availability:\nhttps://app.yarro.ai/contractor/${v["5"] || ""}`,
   }),
-  contractor_job_confirmed: (v) => ({
-    subject: `Booking Confirmed — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nYour booking has been confirmed.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nDate: ${v["4"] || "N/A"}\nTime: ${v["5"] || "N/A"}\n\nPlease arrive within the scheduled time window.`,
-  }),
+
+  // job-reminder: 1=address, 2=issue, 3=slot, 4=access, 5=contractorToken
   contractor_job_reminder: (v) => ({
-    subject: `Reminder: Job Tomorrow — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nThis is a reminder that you have a job scheduled for tomorrow.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nTime: ${v["4"] || "N/A"}\n\nPlease confirm your attendance by using the portal link from your original job request.`,
+    subject: `Reminder: Job Today — ${v["1"] || "Property"}`,
+    body: `Hi,\n\nThis is a reminder that you have a job scheduled for today.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nTime: ${v["3"] || "N/A"}\n\nAccess: ${v["4"] || "Contact property manager for details"}\n\nPlease use the link below to confirm attendance or mark the job as complete:\nhttps://app.yarro.ai/contractor/${v["5"] || ""}`,
   }),
+
+  // followups contractor_reminder: 1=address, 2=issue, 3=contractorToken
   contractor_reminder: (v) => ({
     subject: `Action Required — Pending Job Request`,
-    body: `Hi ${v["1"] || "there"},\n\nYou have a pending job request that needs your attention.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\n\nPlease use the portal link from your original job request to respond.\n\nIf you are unable to take this job, please let us know so we can arrange an alternative.`,
+    body: `Hi,\n\nYou have a pending job request that needs your attention.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nPlease use the link below to respond:\nhttps://app.yarro.ai/contractor/${v["3"] || ""}\n\nIf you are unable to take this job, please let us know so we can arrange an alternative.`,
   }),
-  contractor_completion_reminder: (v) => ({
-    subject: `Completion Update Needed — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nWe are following up on a recently completed job.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\n\nPlease confirm the job has been completed using the portal link from your original job request.`,
-  }),
-  contractor_reschedule_request: (v) => ({
-    subject: `Reschedule Requested — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nThe tenant has requested to reschedule your upcoming job.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\n\nPlease use the portal link to review and respond to this request.`,
+
+  // followups completion_followup: 1=address, 2=issue, 3=contractorToken
+  completion_followup: (v) => ({
+    subject: `Completion Update Needed — ${v["1"] || "Property"}`,
+    body: `Hi,\n\nWe are following up on a recently completed job.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nPlease use the link below to confirm the job has been completed:\nhttps://app.yarro.ai/contractor/${v["3"] || ""}`,
   }),
 
   // ─── Landlord Messages ───
-  ll_ticket_created: (v) => ({
-    subject: `New Maintenance Ticket — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nA new maintenance ticket has been raised for one of your properties.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nCategory: ${v["4"] || "N/A"}\nPriority: ${v["5"] || "N/A"}\n\nYour property manager is handling this. No action is needed from you at this stage.`,
-  }),
+  // landlord_quote: 1=contractor(+category), 2=address, 3=issue, 4=media, 5=total_cost
   landlord_quote: (v) => ({
     subject: `Quote for Approval — ${v["2"] || "Property"}`,
-    body: `Hi ${v["1"] || "there"},\n\nA contractor has submitted a quote for your property.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nContractor: ${v["4"] || "N/A"}\nQuote: ${v["5"] || "N/A"}\n\nPlease respond to approve or decline this quote. Your property manager is copied on all updates.`,
+    body: `Hi,\n\nA contractor has submitted a quote for your property.\n\nContractor: ${v["1"] || "N/A"}\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nTotal Cost: ${v["5"] || "N/A"}\n\nPlease reply APPROVE or DECLINE to this email.`,
   }),
+
+  // landlord_allocate: 1=address, 2=issue, 3=tenant_name, 4=tenant_phone, 5=business_name, 6=token
   landlord_allocate: (v) => ({
-    subject: `Contractor Quote — Approval Required`,
-    body: `Hi ${v["1"] || "there"},\n\nA contractor has quoted for maintenance work at your property.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\nContractor: ${v["4"] || "N/A"}\nQuote: ${v["5"] || "N/A"}\nPortal: ${v["6"] || ""}\n\nPlease approve or decline the quote by replying to this email or using the tenant portal link above.`,
+    subject: `Maintenance Issue — ${v["1"] || "Property"}`,
+    body: `Hi,\n\nA maintenance issue has been reported at your property and allocated to you to handle directly.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nTenant: ${v["3"] || "N/A"} (${v["4"] || "N/A"})\n\nPlease use the link below to provide updates:\nhttps://app.yarro.ai/landlord/${v["6"] || ""}`,
   }),
+
+  // no_more_contractors: 1=address, 2=issue
   no_more_contractors: (v) => ({
     subject: `No Contractors Available — ${v["1"] || "Property"}`,
-    body: `Hi there,\n\nWe were unable to find an available contractor for the maintenance issue at your property.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nYour property manager has been notified and will follow up with alternative arrangements.`,
+    body: `Hi,\n\nWe were unable to find an available contractor for the maintenance issue at your property.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\n\nYour property manager has been notified and will follow up with alternative arrangements.`,
   }),
+
+  // ll_job_booked: 1=llName, 2=category, 3=formattedWindow, 4=issue, 5=address, 6=mgrContact
   ll_job_booked: (v) => ({
-    subject: `Job Booked — ${v["1"] || "Property"}`,
-    body: `Hi there,\n\nA maintenance job has been booked at your property.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nContractor: ${v["3"] || "N/A"}\nDate: ${v["4"] || "N/A"}\nTime: ${v["5"] || "N/A"}\n\nThe contractor will attend during the scheduled time window. No action is needed from you.`,
+    subject: `Job Booked — ${v["5"] || "Property"}`,
+    body: `Hi ${v["1"] || "there"},\n\nA ${v["2"] || "contractor"} has been booked for your property.\n\nProperty: ${v["5"] || "N/A"}\nIssue: ${v["4"] || "N/A"}\nScheduled: ${v["3"] || "N/A"}\n\nIf you have any questions, contact your property manager on ${v["6"] || "N/A"}.`,
   }),
+
+  // ll_job_completed: 1=address, 2=issue, 3=contrName
   ll_job_completed: (v) => ({
     subject: `Job Completed — ${v["1"] || "Property"}`,
-    body: `Hi there,\n\nThe maintenance job at your property has been completed.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nContractor: ${v["3"] || "N/A"}\n\nIf there are any concerns, please contact your property manager.`,
-  }),
-  landlord_followup: (v) => ({
-    subject: `Action Required — Pending Approval`,
-    body: `Hi ${v["1"] || "there"},\n\nA maintenance request is awaiting your response.\n\nProperty: ${v["2"] || "N/A"}\nIssue: ${v["3"] || "N/A"}\n\nPlease respond at your earliest convenience so we can proceed with the works.`,
+    body: `Hi,\n\nThe maintenance job at your property has been completed.\n\nProperty: ${v["1"] || "N/A"}\nIssue: ${v["2"] || "N/A"}\nContractor: ${v["3"] || "N/A"}\n\nIf there are any concerns, please contact your property manager.`,
   }),
 };
 
