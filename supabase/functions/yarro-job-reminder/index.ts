@@ -35,7 +35,7 @@ async function sendReminder(
       "2": reminder.issue_title || "Maintenance issue",
       "3": reminder.arrival_slot || "Time not confirmed",
       "4": reminder.access_text || "No access instructions",
-      "5": reminder.contractor_token || "",
+      "5": reminder.contractor_token || "missing-token",
     },
   });
 

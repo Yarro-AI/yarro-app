@@ -294,7 +294,7 @@ async function handleLandlordAllocate(
   const tenant = payload.tenant || {};
   const landlord = payload.landlord || {};
   const manager = payload.manager || {};
-  const token = payload.token || "";
+  const token = payload.token || "missing-token";
 
   const result = await sendAndLog(supabase, FN, "landlord-allocate → Twilio send", {
     ticketId: ticket.id,

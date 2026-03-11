@@ -64,7 +64,9 @@ export function shortRef(ticketId: string): string {
 
 /** Format UK phone: "447123456789" → "+44 7123 456789" */
 export function formatUkPhone(raw: string): string {
+  if (!raw) return "N/A";
   const digits = raw.replace(/\D/g, "");
+  if (!digits) return "N/A";
   if (digits.startsWith("44") && digits.length === 12) {
     return `+${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`;
   }

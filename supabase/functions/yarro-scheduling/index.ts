@@ -388,7 +388,7 @@ async function handleFilloutScheduling(
     const category = withArticle(ctx.ticket?.category || "contractor");
     const slot = timeOfDay(startIso);
     const contrPhone = ctx.contractor?.contractor_phone || "";
-    const tenantToken = ctx.ticket?.tenant_token || "";
+    const tenantToken = ctx.ticket?.tenant_token || "missing-token";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → tenant_job_booked", {
         ticketId,
@@ -546,7 +546,7 @@ async function handlePortalSchedule(
     const category = withArticle(ctx.ticket?.category || "contractor");
     const slot = timeOfDay(time_slot || date);
     const contrPhoneTenant = ctx.contractor?.contractor_phone || "";
-    const tenantToken = ctx.ticket?.tenant_token || "";
+    const tenantToken = ctx.ticket?.tenant_token || "missing-token";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "portal-schedule \u2192 tenant_job_booked", {
         ticketId,
