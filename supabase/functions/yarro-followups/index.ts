@@ -27,6 +27,7 @@ const ROUTES: Record<string, RouteConfig> = {
       "1": p.property_address || "Address not available",
       "2": p.issue_description || "Maintenance issue",
       "3": p.business_name || "Your property manager",
+      "4": p.portal_token || "",
     }),
   },
   // 9b: Landlord hasn't responded to approval request
@@ -69,6 +70,7 @@ const ROUTES: Record<string, RouteConfig> = {
       "1": p.property_address || "Address not available",
       "2": p.issue_description || "Maintenance issue",
       "3": p.scheduled_date || "N/A",
+      "4": p.contractor_token || "",
     }),
   },
   // 9e: Job overdue, escalate to PM

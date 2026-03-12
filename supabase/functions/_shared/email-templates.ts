@@ -39,20 +39,20 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     cta: v["5"] ? { text: "View Job Details", url: `https://app.yarro.ai/contractor/${v["5"]}` } : undefined,
   }),
 
-  // followups contractor_reminder: 1=address, 2=issue, 3=contractorToken
+  // followups contractor_reminder: 1=address, 2=issue, 3=business_name, 4=portal_token
   contractor_reminder: (v) => ({
     subject: "Action Required — Pending Job Request",
     heading: "Pending Job Request",
     body: `You have a pending job request at ${v["1"] || "a property"} that needs your attention.`,
-    cta: v["3"] ? { text: "Respond Now", url: `https://app.yarro.ai/contractor/${v["3"]}` } : undefined,
+    cta: v["4"] ? { text: "Respond Now", url: `https://app.yarro.ai/contractor/${v["4"]}` } : undefined,
   }),
 
-  // followups completion_followup: 1=address, 2=issue, 3=contractorToken
-  completion_followup: (v) => ({
+  // followups contractor_completion_reminder: 1=address, 2=issue, 3=scheduled_date, 4=contractor_token
+  contractor_completion_reminder: (v) => ({
     subject: `Completion Update Needed — ${v["1"] || "Property"}`,
     heading: "Completion Update Needed",
     body: `Please confirm the job at ${v["1"] || "the property"} has been completed.`,
-    cta: v["3"] ? { text: "Update Status", url: `https://app.yarro.ai/contractor/${v["3"]}` } : undefined,
+    cta: v["4"] ? { text: "Update Status", url: `https://app.yarro.ai/contractor/${v["4"]}` } : undefined,
   }),
 
   // ─── Landlord Messages ───

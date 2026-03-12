@@ -186,6 +186,7 @@ export async function sendAndLog(
     const emailContent = buildEmail(params.messageType, params.variables);
     if (!emailContent) {
       console.warn(`[sendAndLog] No email template for "${params.messageType}", falling back to WhatsApp`);
+      channel = "whatsapp"; // Reset so log reflects actual channel
       result = await sendWhatsApp(params.recipientPhone, params.templateSid, params.variables);
     } else {
       const emailResult = await sendEmail(recipientEmail, emailContent.subject, emailContent.html);
