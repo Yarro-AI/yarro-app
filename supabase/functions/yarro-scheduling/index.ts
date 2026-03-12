@@ -63,6 +63,25 @@ function parseCurrency(val: string | null): number | null {
   return isNaN(num) ? null : num;
 }
 
+/** Ensure tenant_token exists — generate + persist if missing */
+async function ensureTenantToken(
+  supabase: SupabaseClient,
+  ticketId: string,
+  existing: string | null | undefined,
+): Promise<string | null> {
+  if (existing) return existing;
+  const token = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+  const { error } = await supabase.from("c1_tickets").update({
+    tenant_token: token,
+    tenant_token_at: new Date().toISOString(),
+  }).eq("id", ticketId);
+  if (error) {
+    await alertTelegram(FN, "ensureTenantToken", error.message, { Ticket: ticketId });
+    return null;
+  }
+  return token;
+}
+
 // ─── Path A: Finalize Job (from c1_finalize_job SQL function) ────────────
 async function handleFinalizeJob(
   supabase: SupabaseClient,
@@ -155,14 +174,15 @@ async function handleFinalizeJob(
       });
     }
 
-    // 3. Send PM landlord approved notification
+    // 3. Send PM approval notification — correct template based on path
     if (manager.phone) {
-      await sendAndLog(supabase, FN, "finalize-job → PM landlord approved SMS", {
+      const isAutoApprove = flags.auto_approve === true;
+      await sendAndLog(supabase, FN, `finalize-job → PM ${isAutoApprove ? "auto" : "landlord"} approved SMS`, {
         ticketId,
         recipientPhone: manager.phone,
         recipientRole: "manager",
-        messageType: "pm_landlord_approved",
-        templateSid: TEMPLATES.pm_landlord_approved,
+        messageType: isAutoApprove ? "pm_auto_approved" : "pm_landlord_approved",
+        templateSid: isAutoApprove ? TEMPLATES.pm_auto_approved : TEMPLATES.pm_landlord_approved,
         variables: {
           "1": contractor.name || "Contractor",
           "2": property.address || "Address not available",
@@ -388,26 +408,28 @@ async function handleFilloutScheduling(
     const category = withArticle(ctx.ticket?.category || "contractor");
     const slot = timeOfDay(startIso);
     const contrPhone = ctx.contractor?.contractor_phone || "";
-    const tenantToken = ctx.ticket?.tenant_token || "missing-token";
-    sends.push((async () => {
-      const r = await sendAndLog(supabase, FN, "fillout → tenant_job_booked", {
-        ticketId,
-        recipientPhone: updatePhone,
-        recipientRole: "tenant",
-        messageType: "tenant_job_booked",
-        templateSid: TEMPLATES.tenant_job_booked,
-        variables: {
-          "1": tenantFirstName,
-          "2": friendlyDate,
-          "3": category,
-          "4": contrName,
-          "5": slot,
-          "6": formatUkPhone(contrPhone),
-          "7": tenantToken,
-        },
-      });
-      results.push({ type: "tenant_job_booked", sent: r.ok, error: r.error });
-    })());
+    const tenantToken = await ensureTenantToken(supabase, ticketId, ctx.ticket?.tenant_token);
+    if (tenantToken) {
+      sends.push((async () => {
+        const r = await sendAndLog(supabase, FN, "fillout → tenant_job_booked", {
+          ticketId,
+          recipientPhone: updatePhone,
+          recipientRole: "tenant",
+          messageType: "tenant_job_booked",
+          templateSid: TEMPLATES.tenant_job_booked,
+          variables: {
+            "1": tenantFirstName,
+            "2": friendlyDate,
+            "3": category,
+            "4": contrName,
+            "5": slot,
+            "6": formatUkPhone(contrPhone),
+            "7": tenantToken,
+          },
+        });
+        results.push({ type: "tenant_job_booked", sent: r.ok, error: r.error });
+      })());
+    }
   }
 
   // PM
@@ -640,7 +662,8 @@ async function handlePortalSchedule(
     const category = withArticle(ctx.ticket?.category || "contractor");
     const slot = timeOfDay(time_slot || date);
     const contrPhoneTenant = ctx.contractor?.contractor_phone || "";
-    const tenantToken = ctx.ticket?.tenant_token || "missing-token";
+    const tenantToken = await ensureTenantToken(supabase, ticketId, ctx.ticket?.tenant_token);
+    if (tenantToken) {
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "portal-schedule \u2192 tenant_job_booked", {
         ticketId,
@@ -660,6 +683,7 @@ async function handlePortalSchedule(
       });
       results.push({ type: "tenant_job_booked", sent: r.ok, error: r.error });
     })());
+    }
   }
 
   if (mgrPhone) {
@@ -862,7 +886,7 @@ async function handlePortalCompletion(
 
   // Tenant notification — CTA to leave feedback via tenant portal
   const tenantPhone = ctx.tenant?.phone;
-  const tenantToken = ctx.ticket?.tenant_token;
+  const tenantToken = await ensureTenantToken(supabase, ticketId, ctx.ticket?.tenant_token);
   if (tenantPhone && tenantToken) {
     const tenantFirstName = (ctx.tenant?.name || "").split(" ")[0] || "there";
     sends.push((async () => {
@@ -995,7 +1019,7 @@ async function handleRescheduleDecision(
   // Fetch full context for notifications (RPC only returns ticket_id + approved)
   const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
   const tenantPhone = ctx?.tenant?.phone;
-  const tenantToken = ctx?.ticket?.tenant_token;
+  const tenantToken = await ensureTenantToken(supabase, ticketId, ctx?.ticket?.tenant_token);
   const mgrPhone = ctx?.manager?.phone;
   const addr = ctx?.property?.address || "Address not available";
   const issueTitle = ctx?.ticket?.issue_title || "Maintenance issue";

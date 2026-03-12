@@ -227,29 +227,7 @@ async function handleLandlordSms(
       });
     }
 
-    // Notify PM of auto-approval (same vars as 4b, different first-line template)
-    const manager = payload.manager || {};
-    if (manager.phone) {
-      const contrDisplay = prepData.contractor_category
-        ? `${prepData.contractor_name || "Contractor"} — ${prepData.contractor_category}`
-        : prepData.contractor_name || "Contractor";
-      await sendAndLog(supabase, FN, "landlord-sms → auto-approve → PM notification", {
-        ticketId: ticket.id,
-        recipientPhone: manager.phone,
-        recipientRole: "manager",
-        messageType: "pm_auto_approved",
-        templateSid: TEMPLATES.pm_auto_approved,
-        variables: {
-          "1": contrDisplay,
-          "2": prepData.property_address || "Address not available",
-          "3": prepData.issue || "Maintenance issue",
-          "4": prepData.landlord_name || "Landlord",
-          "5": prepData.total_cost || "£0",
-          "6": prepData.contractor_amount || "£0",
-          "7": prepData.manager_markup || "£0",
-        },
-      });
-    }
+    // PM auto-approval notification is sent by yarro-scheduling finalize-job (uses pm_auto_approved template)
 
     console.log(`[${FN}] landlord-sms auto-approved for ticket ${ticket.id}`);
     return new Response(
