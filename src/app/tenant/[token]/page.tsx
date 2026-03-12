@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
-import { CheckCircle2, Loader2, Phone, CalendarClock, ThumbsUp, ThumbsDown, Clock, Search, Wrench, CalendarCheck } from 'lucide-react'
+import { CheckCircle2, Loader2, Phone, CalendarClock, ThumbsUp, ThumbsDown, Clock, Search, Wrench, CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,6 +85,88 @@ function formatPhone(raw: string): string {
     return `+44 ${digits.slice(2, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`
   }
   return '+' + digits.replace(/(\d{2})(\d{4})(\d+)/, '$1 $2 $3')
+}
+
+
+// ─── Mini Calendar (same as contractor portal) ──────────────────────────
+
+function MiniCalendar({ selected, onSelect, minDate }: { selected: string; onSelect: (d: string) => void; minDate: Date }) {
+  const [viewDate, setViewDate] = useState(() => {
+    if (selected) return new Date(selected + 'T00:00:00')
+    return new Date()
+  })
+
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const startOffset = (firstDay + 6) % 7
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  minDate.setHours(0, 0, 0, 0)
+
+  const monthLabel = new Date(year, month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  const canGoPrev = new Date(year, month, 1) > minDate
+
+  const days: (number | null)[] = []
+  for (let i = 0; i < startOffset; i++) days.push(null)
+  for (let d = 1; d <= daysInMonth; d++) days.push(d)
+
+  return (
+    <div className="mt-1.5">
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={() => canGoPrev && setViewDate(new Date(year, month - 1, 1))}
+          className={`p-1.5 rounded-lg transition-colors ${canGoPrev ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-200 cursor-default'}`}
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-900">{monthLabel}</span>
+        <button
+          type="button"
+          onClick={() => setViewDate(new Date(year, month + 1, 1))}
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center">
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
+          <div key={d} className="text-[10px] font-medium text-gray-400 pb-1.5">{d}</div>
+        ))}
+        {days.map((day, i) => {
+          if (day === null) return <div key={`e-${i}`} />
+          const date = new Date(year, month, day)
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const isPast = date < minDate
+          const isSelected = selected === dateStr
+          const isToday = date.getTime() === today.getTime()
+
+          return (
+            <button
+              key={dateStr}
+              type="button"
+              disabled={isPast}
+              onClick={() => onSelect(dateStr)}
+              className={`h-9 w-full rounded-lg text-sm transition-colors ${
+                isSelected
+                  ? 'bg-blue-600 text-white font-semibold'
+                  : isPast
+                    ? 'text-gray-200 cursor-default'
+                    : isToday
+                      ? 'bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
+                      : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default function TenantPortalPage() {
@@ -360,12 +442,10 @@ export default function TenantPortalPage() {
               <h3 className="text-sm font-medium text-gray-900">Request a new date</h3>
               <div>
                 <label className="text-sm font-medium text-gray-700">Preferred date</label>
-                <input
-                  type="date"
-                  className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  value={rescheduleDate}
-                  onChange={(e) => setRescheduleDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                <MiniCalendar
+                  selected={rescheduleDate}
+                  onSelect={(d) => setRescheduleDate(d)}
+                  minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
                 />
               </div>
               <div>
