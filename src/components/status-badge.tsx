@@ -64,6 +64,7 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   'landlord needs help': { border: 'border-red-400 dark:border-red-500', text: 'text-red-600 dark:text-red-400' },
   'landlord in progress':{ border: 'border-amber-400 dark:border-amber-500', text: 'text-amber-600 dark:text-amber-400' },
   'landlord resolved':   { border: 'border-green-400 dark:border-green-500', text: 'text-green-600 dark:text-green-400' },
+  'reschedule requested': { border: 'border-amber-400 dark:border-amber-500', text: 'text-amber-600 dark:text-amber-400' },
   'on hold':             { border: 'border-gray-400 dark:border-gray-500', text: 'text-gray-500 dark:text-gray-400' },
   'dismissed':           { border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-500 dark:text-gray-400' },
   'archived':            { border: 'border-gray-300 dark:border-gray-600', text: 'text-gray-400 dark:text-gray-500' },

@@ -56,6 +56,8 @@ interface TicketRow {
   next_action?: string | null
   next_action_reason?: string | null
   ooh_dispatched?: boolean | null
+  reschedule_requested?: boolean | null
+  reschedule_status?: string | null
   sla_due_at?: string | null
   resolved_at?: string | null
   message_stage?: string | null
@@ -176,6 +178,8 @@ export default function TicketsPage() {
         next_action,
         next_action_reason,
         ooh_dispatched,
+        reschedule_requested,
+        reschedule_status,
         sla_due_at,
         resolved_at,
         c1_properties(address),
@@ -218,14 +222,21 @@ export default function TicketsPage() {
         new: 'Created',
       }
 
-      const mapped = data.map((t) => ({
-        ...t,
-        address: (t.c1_properties as unknown as { address: string } | null)?.address,
-        tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
-        contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
-        message_stage: null,
-        display_stage: reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created',
-      }))
+      const mapped = data.map((t) => {
+        let display_stage = reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created'
+        // Override display stage for pending reschedule requests
+        if (t.reschedule_requested && t.reschedule_status === 'pending') {
+          display_stage = 'Reschedule Requested'
+        }
+        return {
+          ...t,
+          address: (t.c1_properties as unknown as { address: string } | null)?.address,
+          tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
+          contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
+          message_stage: null,
+          display_stage,
+        }
+      })
       setTickets(mapped)
     }
     setLoading(false)

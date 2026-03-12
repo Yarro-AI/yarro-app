@@ -1,7 +1,7 @@
 'use client'
 
 import { format, formatDistanceToNow } from 'date-fns'
-import { Users, Wrench, MapPin, Crown, Phone, Building2 } from 'lucide-react'
+import { Users, Wrench, MapPin, Crown, Phone, Building2, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
@@ -197,6 +197,38 @@ export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTa
           <DetailCell label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight waiting />
         </div>
       </div>
+
+      {/* Reschedule Request */}
+      {basic.reschedule_requested && (
+        <>
+          <DashedLine />
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Reschedule Request</p>
+            <div className="flex items-center gap-2 px-1">
+              <CalendarClock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span className="text-sm font-medium">
+                {basic.reschedule_status === 'pending' ? 'Awaiting contractor response'
+                : basic.reschedule_status === 'approved' ? 'Approved by contractor'
+                : basic.reschedule_status === 'declined' ? 'Declined by contractor'
+                : 'Requested'}
+              </span>
+            </div>
+            {basic.reschedule_date && (
+              <p className="text-xs text-muted-foreground px-1">
+                Proposed date: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
+              </p>
+            )}
+            {basic.reschedule_reason && (
+              <p className="text-sm px-1">Reason: {basic.reschedule_reason}</p>
+            )}
+            {basic.reschedule_decided_at && (
+              <p className="text-xs text-muted-foreground px-1">
+                Decided {formatDistanceToNow(new Date(basic.reschedule_decided_at), { addSuffix: true })}
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       <DashedLine />
 

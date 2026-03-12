@@ -98,6 +98,11 @@ export interface TicketBasic {
   landlord_cost: number | null
   landlord_outcome_at: string | null
   landlord_submissions: LandlordSubmission[] | null
+  reschedule_requested: boolean | null
+  reschedule_date: string | null
+  reschedule_reason: string | null
+  reschedule_status: string | null
+  reschedule_decided_at: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
@@ -413,6 +418,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
             ooh_dispatched, ooh_outcome, ooh_notes, ooh_cost, ooh_dispatched_at, ooh_outcome_at, ooh_submissions,
             landlord_allocated, landlord_allocated_at, landlord_outcome, landlord_notes, landlord_cost, landlord_outcome_at, landlord_submissions,
+            reschedule_requested, reschedule_date, reschedule_reason, reschedule_status, reschedule_decided_at,
             c1_properties(address),
             c1_tenants(full_name),
             c1_contractors(contractor_name)

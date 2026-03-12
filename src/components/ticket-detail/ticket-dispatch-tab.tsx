@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
-import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle, Phone } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, MessageCircle, Plus, Loader2, AlertTriangle, Send, Wrench, UserCheck, Building2, CalendarCheck, CheckCircle2, Cog, Check, XCircle, Phone, CalendarClock, Mail, Globe } from 'lucide-react'
 import { ChatHistory } from '@/components/chat-message'
 import type { MessageData, OutboundLogEntry, OOHSubmission, LandlordSubmission } from '@/hooks/use-ticket-detail'
 import { getContractors, getRecipient, getContractorStatus, formatAmount } from '@/hooks/use-ticket-detail'
@@ -34,6 +34,10 @@ const TYPE_LABELS: Record<string, string> = {
   pm_job_not_completed: 'Job Not Completed — Manager Alerted',
   ll_job_completed: 'Job Completed — Landlord Notified',
   landlord_allocate: 'Allocated to Landlord',
+  contractor_reschedule_request: 'Reschedule Request Sent to Contractor',
+  tenant_reschedule_approved: 'Reschedule Approved — Tenant Notified',
+  tenant_reschedule_declined: 'Reschedule Declined — Tenant Notified',
+  pm_reschedule_approved: 'Reschedule Approved — Manager Notified',
 }
 
 const TICKET_CREATED_LOG_TYPES = new Set(['pm_ticket_created', 'll_ticket_created'])
@@ -45,6 +49,7 @@ const LANDLORD_LOG_TYPES = new Set(['landlord_quote', 'landlord_followup', 'pm_l
 const BOOKING_LOG_TYPES = new Set(['contractor_job_schedule', 'contractor_job_confirmed', 'tenant_job_booked', 'pm_job_booked', 'landlord_job_booked', 'll_job_booked'])
 const FOLLOWUP_LOG_TYPES = new Set(['contractor_job_reminder', 'contractor_completion_reminder', 'pm_completion_overdue'])
 const COMPLETION_LOG_TYPES = new Set(['pm_job_completed', 'pm_job_not_completed', 'll_job_completed'])
+const RESCHEDULE_LOG_TYPES = new Set(['contractor_reschedule_request', 'tenant_reschedule_approved', 'tenant_reschedule_declined', 'pm_reschedule_approved'])
 
 // ─── Types ───
 
@@ -69,8 +74,16 @@ interface PurposeEntry {
   isEscalation: boolean
   isCompleted?: boolean
   isRedispatchable?: boolean
+  channel?: 'whatsapp' | 'email' | 'portal'
   chatMessages: ChatMsg[]
   subEntries: SubEntry[]
+}
+
+function deriveChannel(templateSid: string | null): 'whatsapp' | 'email' | 'portal' | undefined {
+  if (!templateSid) return undefined
+  if (templateSid.startsWith('email:')) return 'email'
+  if (templateSid.startsWith('HX')) return 'whatsapp'
+  return undefined
 }
 
 // ─── Status badge styles ───
@@ -137,6 +150,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       status: 'sent',
       timestamp: entry.sent_at,
       isEscalation: false,
+      channel: deriveChannel(entry.template_sid),
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
@@ -165,6 +179,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         timestamp: sub.submitted_at,
         isEscalation: sub.outcome === 'unresolved',
         isCompleted: sub.outcome === 'resolved',
+        channel: 'portal',
         chatMessages: chatMsgs,
         subEntries: [],
       })
@@ -210,6 +225,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         timestamp: sub.submitted_at,
         isEscalation: sub.outcome === 'need_help',
         isCompleted: sub.outcome === 'resolved',
+        channel: 'portal',
         chatMessages: chatMsgs,
         subEntries: [],
       })
@@ -242,6 +258,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       status: 'sent',
       timestamp: entry.sent_at,
       isEscalation: false,
+      channel: deriveChannel(entry.template_sid),
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
@@ -365,6 +382,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
         amount: isCurrentRound && matched?.quote_amount ? formatAmount(matched.quote_amount) : undefined,
         timestamp: dispatch.sent_at,
         isEscalation: false,
+        channel: deriveChannel(dispatch.template_sid),
         chatMessages: chatMsgs,
         subEntries,
       })
@@ -526,6 +544,7 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
       status: 'sent',
       timestamp: entry.sent_at,
       isEscalation: false,
+      channel: deriveChannel(entry.template_sid),
       chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
       subEntries: [],
     })
@@ -624,6 +643,26 @@ function buildEntries(messages: MessageData | null, outboundLog: OutboundLogEntr
     })
   }
 
+  // ─── Reschedule: tenant-initiated reschedule flow ───
+  const rescheduleLogs = outboundLog.filter(e => RESCHEDULE_LOG_TYPES.has(e.message_type))
+  for (const entry of rescheduleLogs) {
+    const isApproved = entry.message_type === 'tenant_reschedule_approved' || entry.message_type === 'pm_reschedule_approved'
+    const isDeclined = entry.message_type === 'tenant_reschedule_declined'
+    entries.push({
+      id: entry.id,
+      phase: 'Reschedule',
+      label: TYPE_LABELS[entry.message_type] || entry.message_type,
+      sublabel: format(new Date(entry.sent_at), 'dd MMM, HH:mm'),
+      status: isApproved ? 'approved' : isDeclined ? 'declined' : 'awaiting',
+      timestamp: entry.sent_at,
+      isEscalation: false,
+      isCompleted: isApproved,
+      channel: deriveChannel(entry.template_sid),
+      chatMessages: entry.body ? [{ role: 'assistant', text: entry.body, timestamp: entry.sent_at, allowHtml: true }] : [],
+      subEntries: [],
+    })
+  }
+
   // Sort all entries chronologically — dispatch tab is a timeline, not phase-grouped
   entries.sort((a, b) => {
     const tA = a.timestamp ? new Date(a.timestamp).getTime() : 0
@@ -660,6 +699,7 @@ const PHASE_ICONS: Record<string, typeof Cog> = {
   'Job Booking': CalendarCheck,
   'Follow-up': MessageCircle,
   Completion: CheckCircle2,
+  Reschedule: CalendarClock,
 }
 
 // ─── Component ───
@@ -1045,6 +1085,11 @@ export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatc
                       <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium capitalize', STATUS_STYLES[entry.status] || STATUS_STYLES.pending)}>
                         {entry.status}
                       </span>
+                      {entry.channel && (
+                        <span className="text-muted-foreground/60" title={entry.channel === 'email' ? 'Sent via email' : entry.channel === 'whatsapp' ? 'Sent via WhatsApp' : 'Via portal'}>
+                          {entry.channel === 'email' ? <Mail className="h-3 w-3" /> : entry.channel === 'whatsapp' ? <MessageCircle className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                        </span>
+                      )}
                     </div>
                     {entry.sublabel && (
                       <p className="text-xs text-muted-foreground mt-0.5">{entry.sublabel}</p>

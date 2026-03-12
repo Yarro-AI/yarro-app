@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Button } from '@/components/ui/button'
-import { Archive, Pause, Play, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard, Phone, Clock, XCircle, Loader2 } from 'lucide-react'
+import { Archive, Pause, Play, AlertTriangle, MessageSquare, Wrench, CheckCircle2, LayoutDashboard, Phone, Clock, XCircle, Loader2, CalendarClock } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
@@ -185,6 +185,12 @@ export function TicketDetailModal({
                     </button>
                   ) : (
                     displayStage && <StatusBadge status={displayStage} size="md" />
+                  )}
+                  {basic?.reschedule_requested && basic?.reschedule_status === 'pending' && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-400 dark:border-amber-500 px-2.5 py-1 text-sm font-medium text-amber-600 dark:text-amber-400">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      Reschedule Requested
+                    </span>
                   )}
                   {context.priority && <StatusBadge status={context.priority} size="md" />}
                   {isHandoff && onReview && (
