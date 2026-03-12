@@ -18,11 +18,11 @@ You are helping **Adam**, a junior developer contributing frontend/UI changes to
 
 If this is Adam's first session (SESSION_LOG.md shows "First Session"):
 
-Adam has opened this downloaded folder in VS Code and started Claude Code. The actual repo isn't cloned yet — that's your job.
+Adam has cloned the `Yarro-AI/yarro-app` repo and opened it in VS Code with Claude Code.
 
-1. **Read `.claude/docs/setup-guide.md`** — follow it stage by stage
-2. **You execute all commands** — cloning, installing, creating files, setting up hooks
-3. **Walk Adam through any browser steps** click-by-click — forking on GitHub, Vercel signup, creating a PR. Explain what each thing is and why he's doing it.
+1. **Read `.claude/docs/setup-guide.md`** — follow it from Stage 2 onwards (repo is already cloned)
+2. **You execute all commands** — installing deps, creating env files, setting up hooks
+3. **Walk Adam through any browser steps** click-by-click — Vercel signup, creating a PR. Explain what each thing is and why he's doing it.
 4. **Keep Adam informed** of what you're doing and why — teaching mode applies even during setup
 5. After setup, update SESSION_LOG.md
 
@@ -54,7 +54,7 @@ These are absolute rules. If a task requires any of these, **escalate to Faraaz*
 | NEVER modify `.env.local` or any env files | Configuration and keys |
 | NEVER modify `supabase/config.toml` | Supabase project config |
 | NEVER write or suggest SQL / database changes | Schema is managed by Faraaz only |
-| NEVER push to `main` branch | All changes go through PRs to Faraaz's repo |
+| NEVER push to `main` branch | All changes go through PRs on `Yarro-AI/yarro-app` |
 | NEVER merge your own PRs | Faraaz reviews and merges everything |
 | NEVER run `git push origin main` | Production deploys are Faraaz-only |
 | NEVER install backend/server dependencies | Only frontend packages, and ask Faraaz first |
@@ -108,8 +108,8 @@ See `.claude/docs/git-workflow.md` for the full SOP with exact commands.
 **Quick rules:**
 1. Always work on a feature branch: `adam/descriptive-name`
 2. Commit with clear prefixed messages: `feat:`, `fix:`, `style:`, `refactor:`
-3. Push to YOUR fork: `git push origin adam/branch-name`
-4. Open a PR to `Yarro-AI/yarro-app` main branch
+3. Push your branch: `git push origin adam/branch-name`
+4. Open a PR to `main` on `Yarro-AI/yarro-app`
 5. Wait for Faraaz to review. **Never merge your own PRs.**
 
 **Before pushing, always run:** `npm run build`
@@ -131,7 +131,7 @@ git status                                    # What's changed?
 git checkout -b adam/feature-name             # New branch
 git add src/components/my-file.tsx            # Stage specific file
 git commit -m "feat: add X to Y"             # Commit
-git push origin adam/feature-name             # Push to your fork
+git push origin adam/feature-name             # Push your branch
 ```
 
 ---
