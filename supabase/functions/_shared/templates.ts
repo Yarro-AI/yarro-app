@@ -87,9 +87,24 @@ export function formatFriendlyDate(isoOrDate: string | Date): string {
   return `${weekday} ${ordinal} ${month}`;
 }
 
-/** "A plumber" / "An electrician" — article + lowercase category */
+/** Map raw DB category to natural-language job title for messages */
+const CATEGORY_DISPLAY: Record<string, string> = {
+  "gas": "gas engineer",
+  "pest control": "pest control specialist",
+  "general / handyman": "handyman",
+  "roofing / guttering": "roofer",
+  "drainage": "drainage engineer",
+  "cctv": "CCTV engineer",
+  "cleaning": "cleaner",
+};
+
+export function categoryDisplayName(raw: string): string {
+  return CATEGORY_DISPLAY[raw.toLowerCase()] || raw.toLowerCase();
+}
+
+/** "A plumber" / "An electrician" — article + display-friendly category */
 export function withArticle(category: string): string {
-  const lower = category.toLowerCase();
+  const lower = categoryDisplayName(category);
   const vowels = "aeiou";
   const article = vowels.includes(lower[0]) ? "An" : "A";
   return `${article} ${lower}`;

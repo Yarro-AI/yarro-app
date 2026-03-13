@@ -582,6 +582,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       dismissed: 'Dismissed',
       new: 'Created',
     }
+    if (basic.on_hold) return 'On Hold'
     return reasonMap[basic.next_action_reason || ''] || reasonMap[basic.next_action || ''] || 'Created'
   })()
 

@@ -228,6 +228,8 @@ export default function TicketsPage() {
         if (t.reschedule_requested && t.reschedule_status === 'pending') {
           display_stage = 'Reschedule Requested'
         }
+        // On-hold overrides everything
+        if (t.on_hold) display_stage = 'On Hold'
         return {
           ...t,
           address: (t.c1_properties as unknown as { address: string } | null)?.address,

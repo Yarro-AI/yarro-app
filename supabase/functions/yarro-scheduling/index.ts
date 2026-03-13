@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog, logOutbound } from "../_shared/twilio.ts";
-import { TEMPLATES, formatFriendlyDate, formatUkPhone, withArticle, timeOfDay } from "../_shared/templates.ts";
+import { TEMPLATES, formatFriendlyDate, formatUkPhone, withArticle, timeOfDay, categoryDisplayName } from "../_shared/templates.ts";
 
 // ─── Function: yarro-scheduling ──────────────────────────────────────────
 
@@ -457,7 +457,7 @@ async function handleFilloutScheduling(
   // Landlord
   if (llPhone) {
     const llName = ctx.property?.landlord_name || "there";
-    const category = (ctx.ticket?.category || "contractor").toLowerCase();
+    const category = categoryDisplayName(ctx.ticket?.category || "contractor");
     const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → ll_job_booked", {
@@ -627,7 +627,7 @@ async function handlePortalSchedule(
     month: "2-digit",
     year: "2-digit",
   }).format(scheduledDate);
-  const formattedWindow = time_slot ? `${time_slot} ${formattedDate}` : formattedDate;
+  const formattedWindow = time_slot ? `the ${time_slot.toLowerCase()} of ${formattedDate}` : formattedDate;
 
   // Get full ticket context for notifications
   const { data: ctx, error: rpcError } = await supabase.rpc(
@@ -709,7 +709,7 @@ async function handlePortalSchedule(
 
   if (llPhone) {
     const llName = ctx.property?.landlord_name || "there";
-    const category = (ctx.ticket?.category || "contractor").toLowerCase();
+    const category = categoryDisplayName(ctx.ticket?.category || "contractor");
     const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "portal-schedule → ll_job_booked", {
