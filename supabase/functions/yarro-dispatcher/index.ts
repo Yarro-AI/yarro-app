@@ -464,6 +464,9 @@ Deno.serve(async (req: Request) => {
       }
 
       default:
+        await alertTelegram(FN, "Unknown instruction", `Received unrecognized instruction: ${instruction}`, {
+          Ticket: payload?.ticket?.id || "unknown",
+        });
         return new Response(
           JSON.stringify({ error: `Unknown instruction: ${instruction}` }),
           { status: 400, headers: { "Content-Type": "application/json" } },

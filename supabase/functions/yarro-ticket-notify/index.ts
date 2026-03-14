@@ -261,18 +261,24 @@ async function handleIntake(
   // ── OOH CHECK: route emergencies to OOH contacts outside business hours ──
   // Note: emergencies from AI always have handoff=true, so we must NOT exclude them
   if (pmId && pmSettings.ooh_enabled) {
-    const { data: withinHours } = await supabase.rpc("c1_is_within_business_hours", {
+    const { data: withinHours, error: hoursErr } = await supabase.rpc("c1_is_within_business_hours", {
       p_pm_id: pmId,
     });
+    if (hoursErr) {
+      await alertTelegram(FN, "intake → business hours check", hoursErr.message, { Ticket: ticketId });
+    }
 
     if (!withinHours) {
       const priority = (ctx.priority || "").toLowerCase();
       const isEmergencyOrUrgent = priority === "emergency" || priority === "urgent";
 
       if (isEmergencyOrUrgent) {
-        const { data: contacts } = await supabase.rpc("c1_get_ooh_contacts", {
+        const { data: contacts, error: contactsErr } = await supabase.rpc("c1_get_ooh_contacts", {
           p_pm_id: pmId,
         });
+        if (contactsErr) {
+          await alertTelegram(FN, "intake → OOH contacts fetch", contactsErr.message, { Ticket: ticketId });
+        }
 
         if (contacts && contacts.length > 0) {
           // Generate token and mark ticket as OOH-dispatched

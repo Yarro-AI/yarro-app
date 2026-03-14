@@ -952,7 +952,10 @@ async function handleRescheduleRequest(
   const ticketId = data.ticket_id;
 
   // Fetch full context for notifications (RPC only returns ticket_id)
-  const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+  const { data: ctx, error: ctxErr } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+  if (ctxErr || !ctx?.ok) {
+    await alertTelegram(FN, "reschedule-request → context fetch", ctxErr?.message || "RPC returned not ok", { Ticket: ticketId });
+  }
 
   const addr = ctx?.property?.address || "Address not available";
   const issueTitle = ctx?.ticket?.issue_title || "Maintenance issue";
@@ -1017,7 +1020,10 @@ async function handleRescheduleDecision(
   const ticketId = data.ticket_id;
 
   // Fetch full context for notifications (RPC only returns ticket_id + approved)
-  const { data: ctx } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+  const { data: ctx, error: ctxErr } = await supabase.rpc("c1_job_reminder_payload", { p_ticket_id: ticketId });
+  if (ctxErr || !ctx?.ok) {
+    await alertTelegram(FN, "reschedule-decision → context fetch", ctxErr?.message || "RPC returned not ok", { Ticket: ticketId });
+  }
   const tenantPhone = ctx?.tenant?.phone;
   const tenantToken = await ensureTenantToken(supabase, ticketId, ctx?.ticket?.tenant_token);
   const mgrPhone = ctx?.manager?.phone;

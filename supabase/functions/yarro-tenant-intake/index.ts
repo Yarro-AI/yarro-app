@@ -391,10 +391,17 @@ Deno.serve(async (req: Request) => {
     if (result.branch === "normal") {
       // ── Normal: send reply + append to conversation ──
       await sendFreeformWhatsApp(phone, result.message);
-      await supabase.rpc("c1_convo_append_outbound", {
+      const { error: appendErr } = await supabase.rpc("c1_convo_append_outbound", {
         _conversation_id: ctx.conversation.id,
         _entry: outboundEntry,
       });
+      if (appendErr) {
+        console.error(`[${FN}] c1_convo_append_outbound error:`, appendErr.message);
+        await alertTelegram(FN, "c1_convo_append_outbound", appendErr.message, {
+          Phone: phone,
+          ConvoId: ctx.conversation.id,
+        });
+      }
 
     } else if (["final", "handoff", "emergency"].includes(result.branch)) {
       // ── Final/Handoff/Emergency: send reply + finalize + create ticket ──

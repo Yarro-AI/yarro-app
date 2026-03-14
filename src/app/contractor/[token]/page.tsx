@@ -864,7 +864,7 @@ export default function ContractorPortalPage() {
         )}
 
         {/* Completion form */}
-        {stage === 'complete' && !ticket!.resolved_at && ticket!.scheduled_date && new Date(ticket!.scheduled_date) <= new Date(new Date().toDateString()) && (
+        {stage === 'complete' && !ticket!.resolved_at && ticket!.scheduled_date && new Date(new Date(ticket!.scheduled_date).toDateString()) <= new Date(new Date().toDateString()) && (
           <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-5 space-y-4">
               <h3 className="text-sm font-medium text-gray-900">Has this job been completed?</h3>

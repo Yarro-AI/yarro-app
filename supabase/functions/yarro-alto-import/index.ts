@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
+import { alertTelegram } from "../_shared/telegram.ts";
 
 const FN = "yarro-alto-import";
 const ALTO_TOKEN_URL = "https://api.alto.zoopladev.co.uk/token";
@@ -202,9 +203,11 @@ Deno.serve(async (req) => {
       headers: { "Access-Control-Allow-Origin": "*" },
     });
   } catch (err) {
-    console.error(`[${FN}] Error:`, err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[${FN}] Error:`, msg);
+    await alertTelegram(FN, "Unhandled exception", msg);
     return Response.json(
-      { success: false, error: err instanceof Error ? err.message : "Internal error" },
+      { success: false, error: msg },
       { status: 500, headers: { "Access-Control-Allow-Origin": "*" } },
     );
   }

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient } from "../_shared/supabase.ts";
+import { alertTelegram } from "../_shared/telegram.ts";
 
 // Handles ALL replies to the OUTBOUND WhatsApp number (+447463558759).
 // Two jobs:
@@ -42,6 +43,10 @@ Deno.serve(async (req: Request) => {
 
     if (replyError) {
       console.error(`[${FN}] c1_inbound_reply error:`, replyError.message);
+      await alertTelegram(FN, "c1_inbound_reply RPC", replyError.message, {
+        From: phone,
+        Body: displayBody.slice(0, 200),
+      });
     } else {
       console.log(`[${FN}] c1_inbound_reply result:`, JSON.stringify(replyResult)?.slice(0, 200));
     }
@@ -57,7 +62,11 @@ Deno.serve(async (req: Request) => {
       sent_at: new Date().toISOString(),
     };
     if (replyResult?.ticket_id) logEntry.ticket_id = replyResult.ticket_id;
-    await supabase.from("c1_outbound_log").insert(logEntry);
+    const { error: logErr } = await supabase.from("c1_outbound_log").insert(logEntry);
+    if (logErr) {
+      console.error(`[${FN}] Log insert error:`, logErr.message);
+      await alertTelegram(FN, "Outbound log insert", logErr.message, { From: phone });
+    }
 
     // 3. Telegram alert for visibility
     const replyStatus = replyError
@@ -93,7 +102,9 @@ Deno.serve(async (req: Request) => {
 
     return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
   } catch (err) {
-    console.error(`[${FN}] Error:`, err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[${FN}] Error:`, msg);
+    await alertTelegram(FN, "Unhandled exception", msg).catch(() => {});
     return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } }); // Always 200 for Twilio
   }
 });

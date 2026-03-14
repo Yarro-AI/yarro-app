@@ -12,6 +12,7 @@ interface RouteConfig {
   templateSid: string;
   messageType: string;
   recipientRole: string;
+  confirmType: string;
   getTo: (p: Record<string, any>) => string;
   getVariables: (p: Record<string, any>) => Record<string, string>;
 }
@@ -22,6 +23,7 @@ const ROUTES: Record<string, RouteConfig> = {
     templateSid: TEMPLATES.contractor_reminder,
     messageType: "contractor_reminder",
     recipientRole: "contractor",
+    confirmType: "contractor_reminder",
     getTo: (p) => p.contractor_phone,
     getVariables: (p) => ({
       "1": p.property_address || "Address not available",
@@ -35,6 +37,7 @@ const ROUTES: Record<string, RouteConfig> = {
     templateSid: TEMPLATES.pm_contractor_timeout,
     messageType: "landlord_followup",
     recipientRole: "landlord",
+    confirmType: "landlord_followup",
     getTo: (p) => p.landlord_phone,
     getVariables: (p) => ({
       "1": p.property_address || "Address not available",
@@ -49,6 +52,7 @@ const ROUTES: Record<string, RouteConfig> = {
     templateSid: TEMPLATES.landlord_reminder,
     messageType: "pm_landlord_timeout",
     recipientRole: "manager",
+    confirmType: "landlord_timeout",
     getTo: (p) => p.manager_phone,
     getVariables: (p) => ({
       "1": p.property_address || "Address not available",
@@ -65,6 +69,7 @@ const ROUTES: Record<string, RouteConfig> = {
     templateSid: TEMPLATES.completion_followup,
     messageType: "contractor_completion_reminder",
     recipientRole: "contractor",
+    confirmType: "completion_reminder",
     getTo: (p) => p.contractor_phone,
     getVariables: (p) => ({
       "1": p.property_address || "Address not available",
@@ -78,6 +83,7 @@ const ROUTES: Record<string, RouteConfig> = {
     templateSid: TEMPLATES.pm_completion_overdue,
     messageType: "pm_completion_overdue",
     recipientRole: "manager",
+    confirmType: "completion_escalation",
     getTo: (p) => p.manager_phone,
     getVariables: (p) => ({
       "1": p.property_address || "Address not available",
@@ -135,6 +141,25 @@ Deno.serve(async (req: Request) => {
       templateSid: config.templateSid,
       variables: config.getVariables(payload),
     });
+
+    // Confirm delivery in DB (mark-after-send — prevents lost messages on 503)
+    if (result.ok && config.confirmType) {
+      const confirmParams: Record<string, unknown> = {
+        p_ticket_id: payload.ticket_id,
+        p_confirm_type: config.confirmType,
+      };
+      if (payload.contractor_id) {
+        confirmParams.p_contractor_id = payload.contractor_id;
+      }
+      const { error: confirmErr } = await supabase.rpc("c1_confirm_followup_sent", confirmParams);
+      if (confirmErr) {
+        console.error(`[${FN}] Confirm failed for ${route}:`, confirmErr.message);
+        await alertTelegram(FN, `${route} → confirm`, `Message sent but DB confirm failed: ${confirmErr.message}`, {
+          Ticket: payload.ticket_id,
+          "Confirm Type": config.confirmType,
+        });
+      }
+    }
 
     return new Response(
       JSON.stringify({

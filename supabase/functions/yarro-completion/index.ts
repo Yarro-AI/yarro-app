@@ -219,6 +219,11 @@ Deno.serve(async (req: Request) => {
     if (parsed.media_urls.length > 0) {
       console.log(`[${FN}] Uploading ${parsed.media_urls.length} media files`);
       finalMediaUrls = await uploadMedia(supabase, parsed.ticket_id, parsed.media_urls);
+      if (finalMediaUrls.length === 0 && parsed.media_urls.length > 0) {
+        await alertTelegram(FN, "Media upload", `All ${parsed.media_urls.length} uploads failed`, {
+          Ticket: parsed.ticket_id,
+        });
+      }
     }
 
     // Call RPC
