@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import Link from 'next/link'
 import { Phone, Mail, Building2, CheckCircle, Users, RefreshCw } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
 import { cn } from '@/lib/utils'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -454,25 +455,17 @@ export default function TenantsPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Tenants
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage tenant contacts across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageShell
+      title="Tenants"
+      actions={
+        <>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchTenants()} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} className="w-32 text-sm h-10" />
-        </div>
-      </div>
+        </>
+      }
+    >
 
       {/* Data Table */}
       <div className="flex-1 min-h-0">
@@ -628,6 +621,6 @@ export default function TenantsPage() {
         itemName={selectedTenant?.full_name || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }

@@ -18,6 +18,7 @@ import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { Phone, Mail, Building2, Contact, RefreshCw } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
@@ -343,25 +344,17 @@ export default function LandlordsPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Contact className="h-5 w-5" />
-            Landlords
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage landlord contacts across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageShell
+      title="Landlords"
+      actions={
+        <>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchLandlords()} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           <InteractiveHoverButton text="Add Landlord" onClick={handleAddClick} className="w-36 text-sm h-10" />
-        </div>
-      </div>
+        </>
+      }
+    >
 
       {/* Data Table */}
       <div className="flex-1 min-h-0">
@@ -500,6 +493,6 @@ export default function LandlordsPage() {
         itemName={selectedLandlord?.full_name || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }
