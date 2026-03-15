@@ -632,7 +632,7 @@ export default function RulesPage() {
                       <span className="text-sm font-medium">{contact.name}</span>
                       <span className="text-xs text-muted-foreground">{contact.phone}</span>
                       {contact.contractor_id && (
-                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
                           Contractor
                         </span>
                       )}

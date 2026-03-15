@@ -18,10 +18,10 @@ import { cn } from '@/lib/utils'
 import { PageShell } from '@/components/page-shell'
 
 const FEEDBACK_CATEGORIES = [
-  { value: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20 hover:border-red-500/40', activeBorder: 'border-red-500/50 ring-2 ring-red-500/20', activeBg: 'bg-red-500/15' },
-  { value: 'feature', label: 'Feature Request', desc: 'I\'d like Yarro to do something new', icon: Lightbulb, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20 hover:border-amber-500/40', activeBorder: 'border-amber-500/50 ring-2 ring-amber-500/20', activeBg: 'bg-amber-500/15' },
-  { value: 'improvement', label: 'Improvement', desc: 'Something could work better', icon: Sparkles, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20 hover:border-blue-500/40', activeBorder: 'border-blue-500/50 ring-2 ring-blue-500/20', activeBg: 'bg-blue-500/15' },
-  { value: 'general', label: 'General', desc: 'Other feedback or comments', icon: HelpCircle, color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20 hover:border-gray-500/40', activeBorder: 'border-gray-500/50 ring-2 ring-gray-500/20', activeBg: 'bg-gray-500/15' },
+  { value: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: Bug, color: 'text-danger', bg: 'bg-danger/10', border: 'border-danger/20 hover:border-danger/40', activeBorder: 'border-danger/50 ring-2 ring-danger/20', activeBg: 'bg-danger/15' },
+  { value: 'feature', label: 'Feature Request', desc: 'I\'d like Yarro to do something new', icon: Lightbulb, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20 hover:border-warning/40', activeBorder: 'border-warning/50 ring-2 ring-warning/20', activeBg: 'bg-warning/15' },
+  { value: 'improvement', label: 'Improvement', desc: 'Something could work better', icon: Sparkles, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20 hover:border-primary/40', activeBorder: 'border-primary/50 ring-2 ring-primary/20', activeBg: 'bg-primary/15' },
+  { value: 'general', label: 'General', desc: 'Other feedback or comments', icon: HelpCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border hover:border-border/60', activeBorder: 'border-border ring-2 ring-border/40', activeBg: 'bg-muted' },
 ]
 
 interface FeedbackEntry {
@@ -136,7 +136,7 @@ export default function FeedbackPage() {
                 >
                   <div className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0',
-                    isActive ? 'bg-white/50 dark:bg-white/10' : 'bg-white/30 dark:bg-white/5'
+                    isActive ? 'bg-white/10' : 'bg-white/5'
                   )}>
                     <Icon className={cn('h-5 w-5', cat.color)} />
                   </div>
@@ -204,7 +204,7 @@ export default function FeedbackPage() {
                     text={sent ? 'Sent!' : sending ? 'Sending...' : 'Send Feedback'}
                     onClick={handleSubmit}
                     disabled={sending || sent || !message.trim()}
-                    className={cn('w-44 text-sm h-10', sent && 'bg-emerald-500')}
+                    className={cn('w-44 text-sm h-10', sent && 'bg-success text-success-foreground')}
                   />
                   {!message.trim() && (
                     <p className="text-xs text-muted-foreground">Write something above to send</p>

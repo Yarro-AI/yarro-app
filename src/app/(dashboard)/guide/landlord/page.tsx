@@ -41,8 +41,8 @@ export default function LandlordGuidePage() {
                 <div className="flex flex-col gap-6">
                   {/* Step 1 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Bell className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">1. Get Notified</h3>
@@ -57,8 +57,8 @@ export default function LandlordGuidePage() {
 
                   {/* Step 2 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <ThumbsUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center">
+                      <ThumbsUp className="h-6 w-6 text-success" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">2. Approve Quotes (When Needed)</h3>
@@ -67,7 +67,7 @@ export default function LandlordGuidePage() {
                         <li>Tap "Approve" to proceed</li>
                         <li>Tap "Decline" to stop the work</li>
                       </ul>
-                      <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-500/10 inline-block px-2 py-1 rounded">
+                      <p className="text-sm text-success mt-2 bg-success/10 inline-block px-2 py-1 rounded">
                         Below your limit = auto-approved
                       </p>
                     </div>
@@ -89,7 +89,7 @@ export default function LandlordGuidePage() {
                     />
                   </div>
 
-                  <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
+                  <div className="bg-primary/10 rounded-xl p-5 border border-primary/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Auto-Approve Limits</h4>
                     <p className="text-sm text-muted-foreground">
                       Each property can have a different limit. Work below this amount proceeds without your approval. Talk to your PM to adjust.
