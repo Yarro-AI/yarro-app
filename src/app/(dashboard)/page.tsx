@@ -225,44 +225,32 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
 
       {/* Tab row */}
       <div className="flex items-end justify-between px-8 border-b border-border/40 flex-shrink-0">
-        <div className="flex items-end gap-0">
+        <div className="flex items-end gap-6">
           <button
             onClick={() => setLeftTab('todo')}
-            className={cn(
-              'flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 border-b-2 transition-colors -mb-px',
+            className="flex items-center py-2.5 -mb-px transition-colors group"
+          >
+            <span className={cn(
+              'text-sm font-medium border-b-2 pb-px transition-colors',
               leftTab === 'todo'
                 ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
-            )}
-          >
-            To-do
-            {actionable.length > 0 && (
-              <span className={cn(
-                'text-[11px] font-semibold tabular-nums',
-                leftTab === 'todo' ? 'text-primary' : 'text-muted-foreground/60'
-              )}>
-                {actionable.length}
-              </span>
-            )}
+                : 'text-muted-foreground border-transparent group-hover:text-foreground group-hover:border-border'
+            )}>
+              To-do
+            </span>
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className={cn(
-              'flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 border-b-2 transition-colors -mb-px',
+            className="flex items-center py-2.5 -mb-px transition-colors group"
+          >
+            <span className={cn(
+              'text-sm font-medium border-b-2 pb-px transition-colors',
               leftTab === 'in_progress'
                 ? 'text-primary border-primary'
-                : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
-            )}
-          >
-            In Progress
-            {inProgressTickets.length > 0 && (
-              <span className={cn(
-                'text-[11px] font-semibold tabular-nums',
-                leftTab === 'in_progress' ? 'text-primary' : 'text-muted-foreground/60'
-              )}>
-                {inProgressTickets.length}
-              </span>
-            )}
+                : 'text-muted-foreground border-transparent group-hover:text-foreground group-hover:border-border'
+            )}>
+              In Progress
+            </span>
           </button>
         </div>
         <Link href="/tickets" className="flex-shrink-0 pb-2">
