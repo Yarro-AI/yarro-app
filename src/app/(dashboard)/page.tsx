@@ -228,21 +228,26 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
         <div className="flex items-center gap-1 flex-1 min-w-0">
           <button
             onClick={() => setLeftTab('todo')}
-            className={`text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'todo' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'todo' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
           >
             To-do
+            {actionable.length > 0 && (
+              <span className={`text-xs font-bold rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 ${leftTab === 'todo' ? 'bg-white/20 text-background' : 'bg-muted text-muted-foreground'}`}>
+                {actionable.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className={`text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'in_progress' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
+            className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors ${leftTab === 'in_progress' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-card-foreground'}`}
           >
             In Progress
+            {inProgressTickets.length > 0 && (
+              <span className={`text-xs font-bold rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 ${leftTab === 'in_progress' ? 'bg-white/20 text-background' : 'bg-muted text-muted-foreground'}`}>
+                {inProgressTickets.length}
+              </span>
+            )}
           </button>
-          {(leftTab === 'todo' ? actionable.length : inProgressTickets.length) > 0 && (
-            <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5 ml-1">
-              {leftTab === 'todo' ? actionable.length : inProgressTickets.length}
-            </span>
-          )}
         </div>
       </div>
 
@@ -666,10 +671,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col lg:flex-row">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
 
           {/* Left column — title + To-do */}
-          <div className="flex flex-col flex-1 min-h-0 min-w-0 lg:border-r lg:border-border/40">
+          <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:border-r lg:border-border/40">
 
             {/* Page title */}
             <div className="flex-shrink-0 px-8 pt-5 pb-4 lg:pt-8 lg:pb-6">
@@ -677,43 +682,21 @@ export default function DashboardPage() {
                 {(() => {
                   const h = new Date().getHours()
                   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-                })()}, {propertyManager?.name?.split(' ')[0] ?? 'there'}
+                })()}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length > 0 && (
-                  <span className="ml-2 font-medium text-foreground">
-                    · {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length} {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length === 1 ? 'item needs' : 'items need'} your attention
-                  </span>
-                )}
               </p>
             </div>
 
-            {/* Action required label */}
-            <div className="flex-shrink-0 px-8 pb-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Action required</span>
-                {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length > 0 && (
-                  <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                    {todoItems.filter(i => i.action_type !== 'FOLLOW_UP').length}
-                  </span>
-                )}
-              </div>
-              <Link href="/tickets">
-                <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80">
-                  View all <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
-
             {/* TodoPanel — borderless list */}
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col">
               <TodoPanel todoItems={todoItems} allTickets={allTickets} />
             </div>
           </div> {/* closes left column */}
 
           {/* Right column — Scheduled + Recent Activity */}
-          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] flex-shrink-0 min-h-0 divide-y divide-border/40">
+          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 divide-y divide-border/40 border-t border-border/40 lg:border-t-0">
               {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
