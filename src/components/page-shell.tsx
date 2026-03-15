@@ -10,6 +10,7 @@ interface PageShellProps {
   headerExtra?: React.ReactNode
   children: React.ReactNode
   noPadding?: boolean
+  scrollable?: boolean
   className?: string
 }
 
@@ -20,6 +21,7 @@ export function PageShell({
   headerExtra,
   children,
   noPadding = false,
+  scrollable = false,
   className,
 }: PageShellProps) {
   return (
@@ -46,7 +48,7 @@ export function PageShell({
       )}
 
       {/* Content area — children manage their own internal layout/scroll */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className={cn('flex-1 min-h-0', scrollable ? 'overflow-y-auto' : 'flex flex-col overflow-hidden')}>
         {children}
       </div>
     </div>
