@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -92,6 +92,16 @@ export default function ContractorsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredContractors = useMemo(() => {
+    if (!search) return contractors
+    const lower = search.toLowerCase()
+    return contractors.filter(c =>
+      c.contractor_name?.toLowerCase().includes(lower) ||
+      c.category?.toLowerCase().includes(lower) ||
+      c.contractor_email?.toLowerCase().includes(lower)
+    )
+  }, [contractors, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -600,6 +610,18 @@ export default function ContractorsPage() {
   return (
     <PageShell
       title="Contractors"
+      topBar={
+        <>
+          {/* TODO: replace with shared SearchInput component */}
+          <input
+            type="text"
+            placeholder="Search contractors..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-64 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+          />
+        </>
+      }
       actions={
         <>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>
@@ -613,10 +635,9 @@ export default function ContractorsPage() {
       {/* Data Table */}
       <div className="flex-1 min-h-0">
         <DataTable
-          data={contractors}
+          data={filteredContractors}
           columns={columns}
-          searchPlaceholder="Search contractors..."
-          searchKeys={['contractor_name', 'category', 'contractor_email']}
+          hideToolbar
           onRowClick={handleRowClick}
           onViewClick={handleRowClick}
           getRowId={(c) => c.id}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -58,6 +58,16 @@ export default function LandlordsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredLandlords = useMemo(() => {
+    if (!search) return landlords
+    const lower = search.toLowerCase()
+    return landlords.filter(l =>
+      l.full_name?.toLowerCase().includes(lower) ||
+      l.phone?.toLowerCase().includes(lower) ||
+      l.email?.toLowerCase().includes(lower)
+    )
+  }, [landlords, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -346,6 +356,18 @@ export default function LandlordsPage() {
   return (
     <PageShell
       title="Landlords"
+      topBar={
+        <>
+          {/* TODO: replace with shared SearchInput component */}
+          <input
+            type="text"
+            placeholder="Search landlords..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-64 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+          />
+        </>
+      }
       actions={
         <>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchLandlords()} disabled={loading}>
@@ -359,10 +381,9 @@ export default function LandlordsPage() {
       {/* Data Table */}
       <div className="flex-1 min-h-0">
         <DataTable
-          data={landlords}
+          data={filteredLandlords}
           columns={columns}
-          searchPlaceholder="Search landlords..."
-          searchKeys={['full_name', 'phone', 'email']}
+          hideToolbar
           onRowClick={handleRowClick}
           onViewClick={handleRowClick}
           getRowId={(l) => l.id}

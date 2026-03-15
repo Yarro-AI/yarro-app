@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -81,6 +81,17 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [properties, setProperties] = useState<PropertyOption[]>([])
+  const [search, setSearch] = useState('')
+  const filteredTenants = useMemo(() => {
+    if (!search) return tenants
+    const lower = search.toLowerCase()
+    return tenants.filter(t =>
+      t.full_name?.toLowerCase().includes(lower) ||
+      t.phone?.toLowerCase().includes(lower) ||
+      t.email?.toLowerCase().includes(lower) ||
+      t.address?.toLowerCase().includes(lower)
+    )
+  }, [tenants, search])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createClient()
@@ -457,6 +468,18 @@ export default function TenantsPage() {
   return (
     <PageShell
       title="Tenants"
+      topBar={
+        <>
+          {/* TODO: replace with shared SearchInput component */}
+          <input
+            type="text"
+            placeholder="Search tenants..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-64 px-3 rounded-lg border border-border bg-background text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+          />
+        </>
+      }
       actions={
         <>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchTenants()} disabled={loading}>
@@ -470,10 +493,9 @@ export default function TenantsPage() {
       {/* Data Table */}
       <div className="flex-1 min-h-0">
         <DataTable
-          data={tenants}
+          data={filteredTenants}
           columns={columns}
-          searchPlaceholder="Search tenants..."
-          searchKeys={['full_name', 'phone', 'email', 'address']}
+          hideToolbar
           onRowClick={handleRowClick}
           onViewClick={handleRowClick}
           getRowId={(t) => t.id}
