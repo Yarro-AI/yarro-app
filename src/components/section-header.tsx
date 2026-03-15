@@ -1,32 +1,31 @@
-'use client'
-
-import { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { typography } from '@/lib/typography'
 
 interface SectionHeaderProps {
-  icon: LucideIcon
-  iconColor?: string        // Tailwind bg color class like "bg-emerald-500/10"
-  iconTextColor?: string    // Tailwind text color class like "text-emerald-600"
   title: string
-  description: string
+  actions?: React.ReactNode
+  className?: string
+  size?: 'sm' | 'md'
 }
 
 export function SectionHeader({
-  icon: Icon,
-  iconColor = 'bg-primary/10',
-  iconTextColor = 'text-primary',
   title,
-  description,
+  actions,
+  className,
+  size = 'md',
 }: SectionHeaderProps) {
   return (
-    <div className="flex items-center gap-3">
-      <div className={cn('p-2 rounded-lg', iconColor)}>
-        <Icon className={cn('h-4 w-4', iconTextColor)} />
-      </div>
-      <div>
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
+    <div
+      className={cn(
+        'flex items-center justify-between border-b border-border/40 flex-shrink-0',
+        size === 'sm' ? 'px-5 py-3' : 'px-5 py-4',
+        className
+      )}
+    >
+      <span className={typography.sectionTitle}>{title}</span>
+      {actions && (
+        <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>
+      )}
     </div>
   )
 }

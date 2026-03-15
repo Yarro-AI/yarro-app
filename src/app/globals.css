@@ -56,7 +56,16 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
+
+  /* Spacing scale */
+  --page-padding-x: 2rem;       /* px-8 */
+  --page-padding-top: 2rem;     /* pt-8 */
+  --page-padding-bottom: 2rem;  /* pb-8 */
+  --card-padding-x: 1.25rem;    /* px-5 */
+  --card-padding-y: 0.75rem;    /* py-3 */
+  --section-gap: 1.5rem;        /* gap-6 */
+  --item-gap: 1rem;             /* gap-4 */
 
   /* Yarro Brand */
   --yarro: #0059FF;

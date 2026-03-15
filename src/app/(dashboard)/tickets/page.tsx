@@ -22,6 +22,7 @@ import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
+import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
@@ -618,19 +619,10 @@ export default function TicketsPage() {
   }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Ticket className="h-5 w-5" />
-            Tickets
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage maintenance tickets across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PageShell
+      title="Tickets"
+      actions={
+        <>
           <Button
             variant="ghost"
             size="icon"
@@ -645,8 +637,9 @@ export default function TicketsPage() {
             className="w-24 text-xs h-7"
             onClick={() => setCreateDrawerOpen(true)}
           />
-        </div>
-      </div>
+        </>
+      }
+    >
 
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
@@ -912,6 +905,6 @@ export default function TicketsPage() {
         confirmingLabel="Archiving..."
       />
 
-    </div>
+    </PageShell>
   )
 }
