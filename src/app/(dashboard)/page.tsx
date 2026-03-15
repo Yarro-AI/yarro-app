@@ -703,16 +703,10 @@ export default function DashboardPage() {
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:border-r lg:border-border/40">
 
             {/* Page title */}
-            <div className="flex-shrink-0 px-8 pt-5 pb-4 lg:pt-8 lg:pb-6">
+            <div className="flex-shrink-0 px-8 pt-5 pb-0 lg:pt-8 lg:pb-0">
               <h1 className="text-2xl font-bold text-foreground">
-                {(() => {
-                  const h = new Date().getHours()
-                  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-                })()}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
                 {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
+              </h1>
             </div>
 
             {/* TodoPanel — borderless list */}
