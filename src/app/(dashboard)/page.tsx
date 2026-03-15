@@ -275,7 +275,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
               <Link
                 key={item.id}
                 href={href}
-                className="flex items-center gap-3 py-3 px-8 transition-colors min-w-0 hover:bg-muted/30 group"
+                className="flex items-start gap-3 py-3 px-8 transition-colors min-w-0 hover:bg-muted/30 group"
               >
                 {/* Left: info */}
                 <div className="flex-1 min-w-0">
@@ -307,12 +307,10 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                   </div>
                 </div>
 
-                {/* Right: CTA button */}
-                <InteractiveHoverButton
-                  text={ctaText}
-                  className="w-[90px] text-xs h-8 flex-shrink-0"
-                  tabIndex={-1}
-                />
+                {/* Right: CTA text link */}
+                <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">
+                  {ctaText}
+                </span>
               </Link>
             )
           })}
