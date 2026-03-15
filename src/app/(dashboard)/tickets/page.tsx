@@ -698,8 +698,14 @@ export default function TicketsPage() {
         )
       })()}
 
-      {/* Filters + Date + Search */}
+      {/* Search + Filters + Date */}
       <div className="flex-shrink-0 flex items-center gap-3 mb-3">
+        <CommandSearchInput
+          placeholder="Search tickets..."
+          value={search}
+          onChange={setSearch}
+          className="flex-1 min-w-[160px]"
+        />
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -810,13 +816,6 @@ export default function TicketsPage() {
         </Popover>
 
         <DateFilter value={dateRange} onChange={setDateRange} />
-
-        <CommandSearchInput
-          placeholder="Search tickets..."
-          value={search}
-          onChange={setSearch}
-          className="flex-1 min-w-[160px]"
-        />
       </div>
 
       {/* Scrollable data region — single table */}
