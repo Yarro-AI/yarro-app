@@ -299,17 +299,14 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                       />
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                  {NEXT_STEPS[item.next_action_reason || ''] && (
-                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">{NEXT_STEPS[item.next_action_reason || '']}</p>
-                  )}
+                  <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
                   <div className="flex items-center gap-2 mt-1">
                     {(() => {
                       const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
                       return (
                         <span className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
-                          <span className="text-xs font-medium text-muted-foreground/70">{badge.label}</span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                          <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
                         </span>
                       )
                     })()}
