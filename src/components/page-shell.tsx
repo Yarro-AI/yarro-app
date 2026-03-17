@@ -45,13 +45,12 @@ export function PageShell({
       {/* Padded content area */}
       <div className={cn(
         'flex flex-col flex-1 min-h-0 overflow-hidden',
-        noPadding ? 'pt-0' : topBar ? 'pt-2' : 'pt-8',
         !noPadding && 'pb-8'
       )}>
         {/* Page header — always padded horizontally */}
         <div className={cn(
-          'flex-shrink-0 flex items-start justify-between gap-4 px-8',
-          headerBorder ? 'pb-6 border-b border-foreground/10' : noPadding ? '' : 'mb-6'
+          'flex-shrink-0 flex items-center justify-between gap-4 px-8 h-16',
+          headerBorder ? 'border-b border-foreground/10' : ''
         )}>
           <div className="min-w-0">
             <h1 className={typography.pageTitle}>{title}</h1>
