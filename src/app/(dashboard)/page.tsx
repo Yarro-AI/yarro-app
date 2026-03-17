@@ -706,7 +706,7 @@ export default function DashboardPage() {
       noPadding
     >
         {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row gap-8 p-8 bg-muted lg:items-stretch">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row gap-8 px-8 pb-8 bg-muted lg:items-stretch">
 
           {/* Left column — To-do */}
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
