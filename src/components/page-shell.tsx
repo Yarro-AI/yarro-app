@@ -11,6 +11,7 @@ interface PageShellProps {
   topBar?: React.ReactNode
   children: React.ReactNode
   noPadding?: boolean
+  headerBorder?: boolean
   scrollable?: boolean
   className?: string
 }
@@ -23,6 +24,7 @@ export function PageShell({
   topBar,
   children,
   noPadding = false,
+  headerBorder = false,
   scrollable = false,
   className,
 }: PageShellProps) {
@@ -35,7 +37,7 @@ export function PageShell({
     >
       {/* Top bar — search pinned above title, full-width, no page padding */}
       {topBar && (
-        <div className="flex-shrink-0 flex items-center gap-3 border-b border-foreground/10 px-8 h-14">
+        <div className="flex-shrink-0 flex items-center gap-3 px-8 h-14">
           {topBar}
         </div>
       )}
@@ -43,11 +45,14 @@ export function PageShell({
       {/* Padded content area */}
       <div className={cn(
         'flex flex-col flex-1 min-h-0 overflow-hidden',
-        topBar ? 'pt-6' : 'pt-8',
+        noPadding ? 'pt-0' : topBar ? 'pt-2' : 'pt-8',
         !noPadding && 'pb-8'
       )}>
         {/* Page header — always padded horizontally */}
-        <div className="flex-shrink-0 flex items-start justify-between gap-4 mb-6 px-8">
+        <div className={cn(
+          'flex-shrink-0 flex items-start justify-between gap-4 px-8',
+          headerBorder ? 'pb-6 border-b border-foreground/10' : 'mb-6'
+        )}>
           <div className="min-w-0">
             <h1 className={typography.pageTitle}>{title}</h1>
             {subtitle && <p className={typography.pageSubtitle}>{subtitle}</p>}

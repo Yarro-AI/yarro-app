@@ -161,14 +161,14 @@ export function DataTable<T>({
       >
         <Table>
           {showHeader && (
-            <TableHeader className="[&_tr]:border-0">
+            <TableHeader className="[&_tr]:border-0 sticky top-0 z-10 bg-card">
               <TableRow className="hover:bg-transparent">
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
                     style={{ width: col.width }}
                     className={cn(
-                      'h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60',
+                      'h-11 px-4 text-xs font-medium text-muted-foreground tracking-normal',
                       col.sortable && 'cursor-pointer select-none hover:text-foreground'
                     )}
                     onClick={() => col.sortable && handleSort(col.key)}
@@ -217,12 +217,12 @@ export function DataTable<T>({
                   onClick={() => onRowClick?.(row)}
                 >
                   {columns.map((col) => (
-                    <TableCell key={col.key} className="py-3">
+                    <TableCell key={col.key} className="py-3 px-4">
                       {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '-')}
                     </TableCell>
                   ))}
                   {onViewClick && (
-                    <TableCell className="py-3">
+                    <TableCell className="py-3 px-4">
                       <Button
                         variant="ghost"
                         size="sm"

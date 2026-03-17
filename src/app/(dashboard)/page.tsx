@@ -227,14 +227,14 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
 
       {/* Tab row */}
-      <div className="flex items-end justify-between px-8 border-b border-foreground/10 flex-shrink-0 pt-4">
-        <div className="flex items-end gap-6">
+      <div className="flex items-center justify-between px-6 flex-shrink-0 pt-3 pb-3 border-b border-foreground/10">
+        <div className="flex items-center gap-6">
           <button
             onClick={() => setLeftTab('todo')}
-            className="flex items-center py-2 transition-colors group focus:outline-none"
+            className="flex items-center transition-colors group focus:outline-none"
           >
             <span className={cn(
-              'text-sm font-medium transition-colors',
+              'text-base font-semibold transition-colors',
               leftTab === 'todo'
                 ? 'text-primary'
                 : 'text-muted-foreground group-hover:text-foreground'
@@ -244,10 +244,10 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
           </button>
           <button
             onClick={() => setLeftTab('in_progress')}
-            className="flex items-center py-2 transition-colors group focus:outline-none"
+            className="flex items-center transition-colors group focus:outline-none"
           >
             <span className={cn(
-              'text-sm font-medium transition-colors',
+              'text-base font-semibold transition-colors',
               leftTab === 'in_progress'
                 ? 'text-primary'
                 : 'text-muted-foreground group-hover:text-foreground'
@@ -256,12 +256,6 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
             </span>
           </button>
         </div>
-        <Link href="/tickets" className="flex-shrink-0 pb-2">
-          <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent px-0">
-            View all
-            <ArrowRight className="ml-1 h-3 w-3" />
-          </Button>
-        </Link>
       </div>
 
       {leftTab === 'todo' ? (
@@ -327,7 +321,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
               </>
             )
 
-            const rowClass = "flex items-start gap-3 py-3 px-8 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer"
+            const rowClass = "flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer"
 
             // Action flows navigate to /tickets (page-specific Create/Review drawer)
             if (actionHref) {
@@ -361,7 +355,7 @@ function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTicket
                 <button
                   key={ticket.id}
                   onClick={() => openTicket(ticket.id)}
-                  className="flex items-center gap-3 py-3 px-8 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer"
+                  className="flex items-center gap-3 py-3 px-6 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-card-foreground truncate">{ticket.address || '—'}</p>
@@ -654,7 +648,7 @@ export default function DashboardPage() {
     <PageShell
       title={greetingLabel}
       topBar={
-        <div className="relative min-w-0">
+        <div className="relative min-w-0 w-1/2">
           <div className={cn(
             'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background transition-all w-64',
             searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'
@@ -712,10 +706,10 @@ export default function DashboardPage() {
       noPadding
     >
         {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row gap-8 p-8 bg-muted lg:items-stretch">
 
           {/* Left column — To-do */}
-          <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:border-r lg:border-border/40">
+          <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
             {/* TodoPanel — borderless list */}
             <div className="flex flex-col">
               <TodoPanel todoItems={todoItems} allTickets={allTickets} />
@@ -723,7 +717,7 @@ export default function DashboardPage() {
           </div> {/* closes left column */}
 
           {/* Right column — Scheduled + Recent Activity */}
-          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 divide-y divide-border/40 border-t border-foreground/10 lg:border-t-0">
+          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 gap-4 lg:h-full">
               {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
@@ -741,9 +735,9 @@ export default function DashboardPage() {
                 const overdueScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) < startOfToday)
 
                 return (
-                  <div className="flex flex-col min-w-0 min-h-0 overflow-hidden flex-1">
-                    <div className="flex items-center px-6 pt-6 pb-3 flex-shrink-0">
-                      <span className="text-sm font-semibold text-muted-foreground flex-1 min-w-0">Scheduled</span>
+                  <div className="flex flex-col min-w-0 min-h-0 overflow-hidden flex-1 bg-card border border-border rounded-xl">
+                    <div className="flex items-center px-6 pt-3 pb-3 flex-shrink-0 border-b border-foreground/10">
+                      <span className="text-base font-semibold text-muted-foreground flex-1 min-w-0">Scheduled</span>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {(upcomingScheduled.length + overdueScheduled.length) > 0 && (
                           <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
@@ -819,9 +813,9 @@ export default function DashboardPage() {
               })()}
 
             {/* Recent activity */}
-            <div className="flex flex-col min-h-0 overflow-hidden flex-1">
-              <div className="flex items-center px-6 pt-6 pb-3 min-w-0 flex-shrink-0">
-                <span className="text-sm font-semibold text-muted-foreground flex-1 min-w-0">Recent activity</span>
+            <div className="flex flex-col min-h-0 overflow-hidden flex-1 bg-card border border-border rounded-xl">
+              <div className="flex items-center px-6 pt-3 pb-3 min-w-0 flex-shrink-0 border-b border-foreground/10">
+                <span className="text-base font-semibold text-muted-foreground flex-1 min-w-0">Recent activity</span>
                 <Link href="/tickets" className="flex-shrink-0">
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
                     View all
