@@ -36,6 +36,7 @@ export interface TicketContext {
   manager_phone: string
   manager_email: string
   business_name: string
+  landlord_id: string | null
   landlord_name: string
   landlord_email: string
   landlord_phone: string
