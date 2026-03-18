@@ -318,7 +318,7 @@ export function TicketDetailModal({
 
               {activeTab === 'conversation' && showConversationTab && (
                 <div className="flex-1 min-h-0 overflow-hidden px-6 py-4">
-                  <TicketConversationTab conversation={conversation || null} outboundLog={outboundLog} />
+                  <TicketConversationTab conversation={conversation || null} outboundLog={outboundLog} messages={messages} />
                 </div>
               )}
 
