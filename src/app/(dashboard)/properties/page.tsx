@@ -26,11 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact } from 'lucide-react'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { PageShell } from '@/components/page-shell'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -531,22 +529,18 @@ export default function PropertiesPage() {
       }
       actions={
         <>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
           <InteractiveHoverButton text="Add Property" onClick={handleAddClick} />
         </>
       }
     >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
           data={filteredProperties}
           columns={columns}
           hideToolbar
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(p) => p.property_id || ''}
           emptyMessage="No properties found"
           loading={loading}
