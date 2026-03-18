@@ -418,6 +418,11 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             {basic.scheduled_date ? (
               <span className="text-sm font-medium text-foreground">
                 {format(new Date(basic.scheduled_date), 'd MMM yyyy')}
+                {(() => {
+                  const h = new Date(basic.scheduled_date).getHours()
+                  const slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
+                  return <span className="text-muted-foreground font-normal ml-1.5">· {slot}</span>
+                })()}
               </span>
             ) : (
               <span className="text-sm text-muted-foreground/60">Not yet scheduled</span>

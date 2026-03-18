@@ -196,7 +196,12 @@ function getContractorReplies(messages: MessageData | null, outboundLog: Outboun
       const contractorName = contractors[0]?.name || 'Contractor'
       replies.push({
         name: contractorName,
-        text: `Booked: ${format(new Date(scheduledDate), 'dd MMM yyyy')}`,
+        text: (() => {
+          const d = new Date(scheduledDate)
+          const h = d.getHours()
+          const slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
+          return `Booked: ${format(d, 'dd MMM yyyy')} · ${slot}`
+        })(),
         timestamp: bookTime.toISOString(),
         channel: contractorChannel === 'email' ? 'portal' : undefined,
       })
