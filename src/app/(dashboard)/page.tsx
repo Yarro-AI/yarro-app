@@ -628,7 +628,7 @@ export default function DashboardPage() {
 
   if (loading && !stats) {
     return (
-      <PageShell title={greetingLabel} noPadding>
+      <PageShell title={greetingLabel}>
         <div className="p-4 h-full overflow-hidden">
           <div className="animate-pulse space-y-3">
             <div className="h-8 w-48 bg-muted rounded" />
@@ -703,10 +703,9 @@ export default function DashboardPage() {
           <Link href="/tickets?create=true">Create ticket</Link>
         </Button>
       }
-      noPadding
     >
         {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row gap-8 px-8 pb-8 bg-muted lg:items-stretch">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row gap-8 bg-muted lg:items-stretch">
 
           {/* Left column — To-do */}
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
@@ -717,7 +716,7 @@ export default function DashboardPage() {
           </div> {/* closes left column */}
 
           {/* Right column — Scheduled + Recent Activity */}
-          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 gap-4 lg:h-full">
+          <div className="flex flex-col lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] lg:flex-shrink-0 lg:min-h-0 gap-8 lg:h-full">
               {/* RIGHT: Scheduled jobs */}
               {(() => {
                 const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
