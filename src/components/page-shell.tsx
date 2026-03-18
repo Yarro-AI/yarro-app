@@ -45,7 +45,7 @@ export function PageShell({
       {/* Padded content area */}
       <div className={cn(
         'flex flex-col flex-1 min-h-0 overflow-hidden',
-        topBar ? 'pt-4' : 'pt-8',
+        topBar ? 'pt-2' : 'pt-8',
         !noPadding && 'pb-8'
       )}>
         {/* Page header — always padded horizontally */}
