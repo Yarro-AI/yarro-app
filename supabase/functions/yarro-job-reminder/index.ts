@@ -12,6 +12,7 @@ interface JobReminder {
   scheduled_date: string;
   property_address: string;
   contractor_phone: string;
+  contractor_id?: string;
   access_text: string;
   formatted_time: string;
   formatted_window: string;
@@ -29,6 +30,7 @@ async function sendReminder(
     ticketId: reminder.ticket_id,
     recipientPhone: reminder.contractor_phone,
     recipientRole: "contractor",
+    recipientId: reminder.contractor_id,
     messageType: "contractor_job_reminder",
     templateSid: TEMPLATES.contractor_job_reminder,
     variables: {

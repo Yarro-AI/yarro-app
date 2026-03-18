@@ -319,6 +319,7 @@ Deno.serve(async (req: Request) => {
               ticketId,
               recipientPhone: llPhone,
               recipientRole: "landlord",
+              recipientId: rpcResult.landlord_id,
               messageType: "ll_job_completed",
               templateSid: TEMPLATES.ll_job_completed,
               variables: {

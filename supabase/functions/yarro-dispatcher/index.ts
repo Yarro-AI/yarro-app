@@ -259,6 +259,7 @@ async function handleLandlordSms(
     ticketId: ticket.id,
     recipientPhone: prepData.landlord_phone,
     recipientRole: "landlord",
+    recipientId: prepData.landlord_id,
     messageType: "landlord_quote",
     templateSid: TEMPLATES.landlord_quote,
     variables: {
@@ -316,6 +317,7 @@ async function handleLandlordAllocate(
     ticketId: ticket.id,
     recipientPhone: landlord.phone,
     recipientRole: "landlord",
+    recipientId: landlord.id,
     messageType: "landlord_allocate",
     templateSid: TEMPLATES.allocate_landlord,
     variables: {

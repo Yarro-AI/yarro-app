@@ -169,8 +169,11 @@ function getContractorReplies(messages: MessageData | null, outboundLog: Outboun
     if (c.replied_at) {
       const parts: string[] = []
       if (c.quote_amount) parts.push(`Quote: ${c.quote_amount}`)
-      if (c.quote_notes) parts.push(c.quote_notes)
-      if (c.reply_text && c.reply_text !== c.quote_amount && c.reply_text !== c.quote_notes) parts.push(c.reply_text)
+      if (c.quote_notes) parts.push(`Notes: ${c.quote_notes}`)
+      // Skip reply_text if it's just a number (duplicates quote) or matches notes
+      if (c.reply_text && c.reply_text !== c.quote_amount && c.reply_text !== c.quote_notes && !/^\d+(\.\d+)?$/.test(c.reply_text.trim())) {
+        parts.push(c.reply_text)
+      }
       replies.push({
         name: c.name || 'Contractor',
         text: parts.length > 0 ? parts.join(' · ') : 'Replied',

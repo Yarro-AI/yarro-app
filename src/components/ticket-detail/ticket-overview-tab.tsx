@@ -48,7 +48,7 @@ const NEXT_ACTION_MAP: Record<string, {
     message: 'Quote sent to landlord awaiting approval. No action needed yet.',
   },
   awaiting_booking: {
-    message: 'Waiting for the tenant to confirm availability.',
+    message: 'Waiting for the contractor to book a slot.',
   },
   allocated_to_landlord: {
     message: 'This job has been allocated to the landlord to manage.',
