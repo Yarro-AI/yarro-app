@@ -24,8 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
@@ -348,13 +350,44 @@ export default function TenantsPage() {
       ),
     },
     {
-      key: 'role_tag',
-      header: 'Role',
-      sortable: true,
-      render: (t) => (
-        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border capitalize">
-          {t.role_tag || 'tenant'}
-        </span>
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedTenant(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedTenant(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ]
