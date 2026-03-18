@@ -14,7 +14,6 @@ import {
 } from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,9 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users, RefreshCw } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
-import { cn } from '@/lib/utils'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
@@ -482,22 +480,18 @@ export default function TenantsPage() {
       }
       actions={
         <>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchTenants()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
           <InteractiveHoverButton text="Add Tenant" onClick={handleAddClick} />
         </>
       }
     >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden bg-card rounded-xl border border-border">
         <DataTable
           data={filteredTenants}
           columns={columns}
           hideToolbar
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(t) => t.id}
           fillHeight
           emptyMessage={
