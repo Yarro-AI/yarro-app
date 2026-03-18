@@ -118,26 +118,14 @@ function deriveChannel(templateSid: string | null): 'whatsapp' | 'email' | undef
 // ─── Build unified thread from outbound log + inbound replies ───
 function buildThread(
   outbound: OutboundLogEntry[],
-  inboundReplies: { name: string; text: string; timestamp: string; meta?: string }[]
+  inboundReplies: { name: string; text: string; timestamp: string; channel?: 'whatsapp' | 'email' | 'portal' }[]
 ): ThreadMessage[] {
   const messages: ThreadMessage[] = []
 
   for (const entry of outbound) {
-    // Skip raw outbound_reply entries — these are flow responses, not system messages
-    if (entry.message_type === 'outbound_reply') {
-      const parsed = parseFlowReply(entry.body || '')
-      if (parsed) {
-        messages.push({
-          id: entry.id,
-          sender: 'inbound',
-          senderName: entry.recipient_role === 'contractor' ? 'Contractor' : entry.recipient_role === 'manager' ? 'Manager' : 'Landlord',
-          body: parsed,
-          timestamp: entry.sent_at,
-          channel: deriveChannel(entry.template_sid),
-        })
-      }
-      continue
-    }
+    // Skip outbound_reply — these are raw flow responses; inbound replies from
+    // messages JSONB are cleaner and already added below
+    if (entry.message_type === 'outbound_reply') continue
 
     messages.push({
       id: entry.id,
@@ -156,36 +144,66 @@ function buildThread(
       id: `reply-${reply.timestamp}`,
       sender: 'inbound',
       senderName: reply.name,
-      body: reply.meta ? `${reply.text}${reply.meta}` : reply.text,
+      body: reply.text,
       timestamp: reply.timestamp,
+      channel: reply.channel,
     })
   }
 
   return messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
 }
 
+type InboundReply = { name: string; text: string; timestamp: string; channel?: 'whatsapp' | 'email' | 'portal' }
+
 // ─── Extract inbound replies from messages data ───
-function getContractorReplies(messages: MessageData | null): { name: string; text: string; timestamp: string; meta?: string }[] {
+function getContractorReplies(messages: MessageData | null, outboundLog: OutboundLogEntry[], scheduledDate?: string | null): InboundReply[] {
   if (!messages?.contractors) return []
   const contractors = getContractors(messages.contractors)
-  const replies: { name: string; text: string; timestamp: string; meta?: string }[] = []
+  const replies: InboundReply[] = []
+
+  // Detect if contractor channel is email (check if dispatch was email)
+  const dispatchEntry = outboundLog.find(e => e.message_type === 'contractor_dispatch' && e.recipient_role === 'contractor')
+  const contractorChannel = dispatchEntry ? deriveChannel(dispatchEntry.template_sid) : undefined
+
   for (const c of contractors) {
     if (c.replied_at) {
       const parts: string[] = []
       if (c.quote_amount) parts.push(`Quote: ${c.quote_amount}`)
       if (c.quote_notes) parts.push(c.quote_notes)
-      if (c.reply_text && c.reply_text !== c.quote_amount) parts.push(c.reply_text)
+      if (c.reply_text && c.reply_text !== c.quote_amount && c.reply_text !== c.quote_notes) parts.push(c.reply_text)
       replies.push({
         name: c.name || 'Contractor',
         text: parts.length > 0 ? parts.join(' · ') : 'Replied',
         timestamp: c.replied_at,
+        channel: contractorChannel === 'email' ? 'portal' : undefined,
       })
     }
   }
+
+  // Add scheduling submission if contractor booked via portal
+  if (scheduledDate) {
+    // Find the booking confirmation outbound (sent after contractor booked)
+    const bookingConfirm = outboundLog.find(e =>
+      e.recipient_role === 'tenant' && e.message_type === 'tenant_job_booked'
+    )
+    if (bookingConfirm) {
+      // Contractor submitted their booking just before the confirmations went out
+      const bookTime = new Date(bookingConfirm.sent_at)
+      bookTime.setSeconds(bookTime.getSeconds() - 2)
+      const contractorName = contractors[0]?.name || 'Contractor'
+      replies.push({
+        name: contractorName,
+        text: `Booked: ${format(new Date(scheduledDate), 'dd MMM yyyy')}`,
+        timestamp: bookTime.toISOString(),
+        channel: contractorChannel === 'email' ? 'portal' : undefined,
+      })
+    }
+  }
+
   return replies
 }
 
-function getManagerReplies(messages: MessageData | null): { name: string; text: string; timestamp: string; meta?: string }[] {
+function getManagerReplies(messages: MessageData | null): InboundReply[] {
   if (!messages?.manager) return []
   const mgr = messages.manager as Record<string, unknown>
   if (!mgr.replied_at) return []
@@ -193,9 +211,6 @@ function getManagerReplies(messages: MessageData | null): { name: string; text: 
   if (mgr.approval === true) parts.push('Approved')
   else if (mgr.approval === false) parts.push('Declined')
   if (mgr.approval_amount) parts.push(`Markup: ${mgr.approval_amount}`)
-  if (mgr.last_text && typeof mgr.last_text === 'string' && !['approve', 'decline'].includes(mgr.last_text.toLowerCase())) {
-    parts.push(mgr.last_text)
-  }
   return [{
     name: 'Manager',
     text: parts.length > 0 ? parts.join(' · ') : 'Replied',
@@ -203,7 +218,7 @@ function getManagerReplies(messages: MessageData | null): { name: string; text: 
   }]
 }
 
-function getLandlordReplies(messages: MessageData | null): { name: string; text: string; timestamp: string; meta?: string }[] {
+function getLandlordReplies(messages: MessageData | null): InboundReply[] {
   if (!messages?.landlord) return []
   const ll = messages.landlord as Record<string, unknown>
   if (!ll.replied_at) return []
@@ -211,9 +226,6 @@ function getLandlordReplies(messages: MessageData | null): { name: string; text:
   if (ll.approval === true) parts.push('Approved')
   else if (ll.approval === false) parts.push('Declined')
   if (ll.reason && typeof ll.reason === 'string') parts.push(ll.reason)
-  if (ll.last_text && typeof ll.last_text === 'string' && !['approve', 'decline'].includes(ll.last_text.toLowerCase())) {
-    parts.push(ll.last_text)
-  }
   return [{
     name: 'Landlord',
     text: parts.length > 0 ? parts.join(' · ') : 'Replied',
@@ -296,9 +308,10 @@ interface TicketConversationTabProps {
   conversation: ConversationData | null
   outboundLog?: OutboundLogEntry[]
   messages?: MessageData | null
+  scheduledDate?: string | null
 }
 
-export function TicketConversationTab({ conversation, outboundLog = [], messages = null }: TicketConversationTabProps) {
+export function TicketConversationTab({ conversation, outboundLog = [], messages = null, scheduledDate = null }: TicketConversationTabProps) {
   const [subTab, setSubTab] = useState<SubTab>('tenant')
 
   const tenantMessages = useMemo(() => conversation ? getLogEntries(conversation.log) : [], [conversation])
@@ -315,8 +328,8 @@ export function TicketConversationTab({ conversation, outboundLog = [], messages
 
   const contractorThread = useMemo(() => buildThread(
     outboundLog.filter(e => e.recipient_role === 'contractor'),
-    getContractorReplies(messages)
-  ), [outboundLog, messages])
+    getContractorReplies(messages, outboundLog, scheduledDate)
+  ), [outboundLog, messages, scheduledDate])
 
   const landlordThread = useMemo(() => buildThread(
     outboundLog.filter(e => e.recipient_role === 'landlord'),
