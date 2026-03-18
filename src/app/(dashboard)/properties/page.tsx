@@ -26,9 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact } from 'lucide-react'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal } from 'lucide-react'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { PageShell } from '@/components/page-shell'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -423,6 +425,47 @@ export default function PropertiesPage() {
           <span className="text-muted-foreground">—</span>
         )
       },
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedProperty(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedProperty(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ]
 

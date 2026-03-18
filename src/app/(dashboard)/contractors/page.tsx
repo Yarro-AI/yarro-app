@@ -25,9 +25,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, RefreshCw } from 'lucide-react'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
-import { cn } from '@/lib/utils'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Popover,
   PopoverContent,
@@ -398,6 +398,47 @@ export default function ContractorsPage() {
         </span>
       ),
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedContractor(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedContractor(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
   ]
 
   // Multi-select property handler
@@ -625,9 +666,6 @@ export default function ContractorsPage() {
       }
       actions={
         <>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
           <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} />
         </>
       }
@@ -640,7 +678,6 @@ export default function ContractorsPage() {
           columns={columns}
           hideToolbar
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(c) => c.id}
           fillHeight
           emptyMessage={
