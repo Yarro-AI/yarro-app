@@ -1,0 +1,6 @@
+jobid,schedule,command,nodename,active
+4,15 * * * *,SELECT public.c1_landlord_timeout_check(),localhost,true
+6,*/15 * * * *,SELECT public.c1_contractor_timeout_check(),localhost,true
+7,0 * * * *,SELECT public.c1_completion_followup_check(),localhost,true
+8,0 8 * * *,"SELECT net.http_post(url := 'https://qedsceehrrvohsjmbodc.supabase.co/functions/v1/yarro-job-reminder', headers := '{""Content-Type"": ""application/json""}'::jsonb, body := '{}'::jsonb)",localhost,true
+9,*/5 * * * *,SELECT c1_process_delayed_dispatches(),localhost,true
