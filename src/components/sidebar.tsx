@@ -40,6 +40,7 @@ import {
   MessageCircle,
   Contact,
   Plug,
+  ShieldCheck,
 } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 
@@ -53,6 +54,7 @@ interface SidebarCounts {
 const coreNavItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, countKey: null },
   { href: '/properties', label: 'Properties', icon: Building2, countKey: 'properties' as const },
+  { href: '/compliance', label: 'Compliance', icon: ShieldCheck, countKey: null },
   { href: '/landlords', label: 'Landlords', icon: Contact, countKey: 'landlords' as const },
   { href: '/tenants', label: 'Tenants', icon: Users, countKey: 'tenants' as const },
   { href: '/contractors', label: 'Contractors', icon: Wrench, countKey: 'contractors' as const },
