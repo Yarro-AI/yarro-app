@@ -17,7 +17,7 @@ Yarro PM is pivoting from general property management to HMO (Houses in Multiple
 
 ## Build Order
 
-### Phase 1: Compliance Tracking (Week 1)
+### Phase 1: Compliance Tracking (Week 1) — COMPLETE (2026-03-27)
 
 **Database (Supabase SQL Editor):**
 - Create `c1_compliance_certificates` table:

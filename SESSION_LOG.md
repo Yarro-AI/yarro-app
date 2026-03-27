@@ -6,35 +6,29 @@
 
 ---
 
-## Latest: 2026-03-27 — Dev Environment Setup & Migration Repair
+## Latest: 2026-03-27 — Compliance RPC Migration + Phase 1 Sign-Off
 
 ### Summary
-Set up the full development environment from scratch. Installed Claude Code CLI and Supabase CLI. Discovered and repaired broken migration history — 150+ migrations were marked as reverted in the remote `supabase_migrations.schema_migrations` table. Pulled the live database schema as a single baseline migration, regenerated `types/database.ts` from the live schema, and deleted a duplicate `yarro-app/` folder that was nested inside the project root. Confirmed a clean `npm run build` and pushed everything to the `feat/hmo-compliance` branch.
+Migrated all compliance business logic from frontend to Supabase RPCs (backend-first rule). Created 4 RPCs: `compliance_get_certificates`, `compliance_upsert_certificate`, `compliance_delete_certificate`, `compliance_get_summary`. Frontend now calls RPCs instead of direct table access. Verified all Phase 1 deliverables complete and marked Phase 1 as done in hmo-pivot-plan.md.
 
 ### Changes Made
-- Installed Claude Code CLI and Supabase CLI
-- Repaired Supabase migration history (150+ migrations marked as reverted)
-- Created baseline migration from live database schema (`supabase/migrations/`)
-- Regenerated `types/database.ts` from live schema
-- Deleted duplicate `yarro-app/` folder from project root
-- Clean build confirmed (`npm run build` passes)
-- Pushed to `feat/hmo-compliance` branch on `adamekubia/yarro-app`
+- Created migration `20260327131027_compliance_rpcs.sql` with 4 RPCs
+- Updated `property-compliance-section.tsx` — fetch/upsert/delete via RPCs
+- Updated `page.tsx` — dashboard summary via `compliance_get_summary` RPC
+- Updated `certificate-row.tsx` — uses status from RPC response
+- Regenerated `src/types/database.ts`
+- Marked Phase 1 complete in `.claude/docs/hmo-pivot-plan.md`
+- Merged `refactor/compliance-rpcs` into `feat/hmo-compliance`
 
 ### Status
-- [x] `npm install` completed
-- [x] `.env.local` created with Supabase keys
-- [x] Pre-push hook set up
-- [x] `npm run build` passes
-- [x] Supabase CLI linked to project
-- [x] Migration history repaired
-- [x] Types regenerated from live schema
-- [x] Committed and pushed to `feat/hmo-compliance`
+- [x] Build passes
+- [x] Tested locally
+- [x] Committed and pushed
+- [x] Phase 1 signed off
 
 ### Next Session Pickup
-1. Fix compliance components to use database types instead of local interfaces (30 min)
-2. Add compliance status indicators to properties list page (1-2 hours)
-3. Add compliance summary card to main dashboard (2-4 hours)
-4. Confirm Phase 1 is fully production-ready before starting Phase 2 room layer
+1. Phase 2: Room layer — start with database (c1_rooms table, room CRUD RPCs)
+2. Backlog items to consider before Phase 2: compliance detail page, sidebar nav item, property detail page UI fixes
 
 ---
 
