@@ -5,16 +5,11 @@ import { StatusBadge } from '@/components/status-badge'
 import {
   CERTIFICATE_LABELS,
   computeCertificateStatus,
-  type CertificateType,
+  type ComplianceCertificate,
 } from '@/lib/constants'
 
 interface CertificateRowProps {
-  certificate: {
-    id: string
-    certificate_type: CertificateType
-    expiry_date: string | null
-    issued_by: string | null
-  }
+  certificate: Pick<ComplianceCertificate, 'id' | 'certificate_type' | 'expiry_date' | 'issued_by'>
   onDelete?: (id: string) => void
 }
 

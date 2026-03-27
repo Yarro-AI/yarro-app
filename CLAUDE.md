@@ -40,20 +40,27 @@ You are helping **Adam**, the sole developer on the Yarro PM dashboard. Adam own
 - `/clear` if switching tasks
 
 ### Branch Structure
+```
 main (live, always working)
 └── feat/hmo-compliance (full HMO pivot)
-    └── feat/[taskname] (one task at a time)
+    ├── feat/[name]      — new UI or functionality
+    ├── refactor/[name]  — code cleanup, type fixes, no user-visible change
+    └── fix/[name]       — bug fixes
+```
+
+Group related changes on one branch when they share the same type and area.
+Don't mix refactors with features on the same branch.
 
 ### Branch Commands
 ```bash
 # Start a new task
 git checkout feat/hmo-compliance
 git pull
-git checkout -b feat/[taskname]
+git checkout -b feat/[name]  # or refactor/[name] or fix/[name]
 
 # Finish a task — merge back to hmo-compliance
 git checkout feat/hmo-compliance
-git merge feat/[taskname]
+git merge feat/[name]
 git push
 ```
 

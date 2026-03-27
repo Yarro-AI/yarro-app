@@ -30,7 +30,7 @@ Use this structure:
 ---
 ## Task: [name]
 **Date:** YYYY-MM-DD
-**Branch:** feat/[taskname]
+**Branch:** feat/ or refactor/ or fix/[name]
 **Status:** In Progress
 
 ### Goal
@@ -56,15 +56,7 @@ Claude states this — Adam approves before any code is written.
 - Any patterns that must be followed
 
 ### Done When
-Specific checklist:
-- [ ] npm run build passes clean
-- [ ] Feature works visually in browser
-- [ ] Data persists on page refresh
-- [ ] No console errors
-- [ ] Works at 375px mobile width
-- [ ] Works in dark mode
-- [ ] SESSION_LOG.md updated
-- [ ] Committed and pushed to task branch
+- [ ] Done checklist passes (see CLAUDE.md "Before Claiming Done")
 
 ### Notes
 Anything that came up during the session that goes to BACKLOG.md
@@ -74,7 +66,7 @@ Anything that came up during the session that goes to BACKLOG.md
 After Adam approves the plan, create the branch:
 git checkout feat/hmo-compliance
 git pull
-git checkout -b feat/[taskname]
+git checkout -b feat/[name]  # or refactor/[name] or fix/[name]
 
 ### Step 5 — Confirm ready
 Tell Adam: "Task file created, branch created, ready to build.

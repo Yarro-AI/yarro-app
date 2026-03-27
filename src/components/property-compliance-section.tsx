@@ -10,17 +10,7 @@ import {
   type CertificateFormData,
 } from '@/components/certificate-form-dialog'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
-
-interface ComplianceCertificate {
-  id: string
-  certificate_type: CertificateType
-  issued_date: string | null
-  expiry_date: string | null
-  issued_by: string | null
-  certificate_number: string | null
-  notes: string | null
-}
+import { CERTIFICATE_LABELS, type CertificateType, type ComplianceCertificate } from '@/lib/constants'
 
 interface PropertyComplianceSectionProps {
   propertyId: string
@@ -37,7 +27,7 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
   const fetchCertificates = useCallback(async () => {
     const { data, error } = await supabase
       .from('c1_compliance_certificates')
-      .select('id, certificate_type, issued_date, expiry_date, issued_by, certificate_number, notes')
+      .select('*')
       .eq('property_id', propertyId)
       .order('expiry_date', { ascending: true, nullsFirst: true })
 
@@ -45,7 +35,7 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
       toast.error('Failed to load certificates')
       return
     }
-    setCertificates((data as ComplianceCertificate[]) || [])
+    setCertificates(data || [])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable, same pattern as other pages
   }, [propertyId])

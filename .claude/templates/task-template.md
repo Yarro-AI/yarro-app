@@ -1,6 +1,6 @@
 ## Task: [name]
 **Date:** YYYY-MM-DD
-**Branch:** feat/[taskname]
+**Branch:** feat/ or refactor/ or fix/[name]
 **Status:** In Progress
 
 ### Goal

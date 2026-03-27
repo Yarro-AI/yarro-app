@@ -49,6 +49,16 @@ export const SLA_WINDOWS: Record<string, number> = {
 export const TENANT_ROLES = ['tenant', 'lead_tenant', 'other'] as const
 export type TenantRole = (typeof TENANT_ROLES)[number]
 
+// ---------------------------------------------------------------------------
+// Compliance
+// ---------------------------------------------------------------------------
+
+import type { Database } from '@/types/database'
+
+/** Full DB row for a compliance certificate — use this instead of local interfaces */
+export type ComplianceCertificate =
+  Database['public']['Tables']['c1_compliance_certificates']['Row']
+
 // Compliance certificate types — MUST match DB enum `certificate_type` exactly
 export const CERTIFICATE_TYPES = [
   'hmo_license',
