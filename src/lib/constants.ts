@@ -86,6 +86,21 @@ export const CERTIFICATE_LABELS: Record<CertificateType, string> = {
   co_alarms: 'CO Alarms',
 }
 
+// Maps certificate types to relevant contractor categories for the automation dropdown.
+// null = admin task or operator-handled — no contractor dropdown shown.
+// Values must match CONTRACTOR_CATEGORIES (case-insensitive comparison in UI).
+export const CERT_TYPE_CONTRACTOR_CATEGORIES: Record<CertificateType, string[] | null> = {
+  gas_safety: ['Gas', 'Boiler Engineer'],
+  eicr: ['Electrician'],
+  epc: ['Electrician'],         // EPC assessors often in the Electrician category
+  fire_risk: ['Other'],         // Fire risk assessors — no dedicated category yet
+  pat: ['Electrician'],
+  legionella: ['Plumber'],
+  hmo_license: null,            // Admin task — no contractor
+  smoke_alarms: null,           // Operator handles
+  co_alarms: null,              // Operator handles
+}
+
 // Days before expiry to flag as "expiring"
 export const COMPLIANCE_EXPIRING_DAYS = 30
 

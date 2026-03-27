@@ -93,6 +93,16 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     body: `The maintenance job at ${v["1"] || "your property"} has been completed by ${v["3"] || "the contractor"}.`,
   }),
 
+  // ─── Compliance Reminders ───
+
+  // compliance_expiry_operator: 1=cert_type, 2=address, 3=expiry_date, 4=days_remaining, 5=action_text
+  compliance_expiry_operator: (v) => ({
+    subject: `Compliance Alert — ${v["1"] || "Certificate"} expires in ${v["4"] || "?"} days`,
+    heading: "Certificate Expiring Soon",
+    body: `Your ${v["1"] || "certificate"} at ${v["2"] || "your property"} expires on ${v["3"] || "N/A"} (${v["4"] || "?"} days remaining). ${v["5"] || "Log in to arrange renewal."}`,
+    cta: { text: "View in Yarro", url: "https://app.yarro.ai/compliance" },
+  }),
+
   // ─── Reschedule Messages ───
 
   // contractor_reschedule_request: 1=address, 2=issue, 3=proposed_date, 4=reason, 5=contractor_token

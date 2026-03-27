@@ -57,6 +57,8 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
       p_certificate_number: formData.certificate_number,
       p_issued_by: formData.issued_by,
       p_notes: formData.notes,
+      p_reminder_days_before: formData.reminder_days_before,
+      p_contractor_id: formData.contractor_id,
     })
 
     if (error) throw new Error('Failed to add certificate')
@@ -136,6 +138,7 @@ export function PropertyComplianceSection({ propertyId, pmId }: PropertyComplian
         onOpenChange={setDialogOpen}
         onSubmit={handleAdd}
         existingTypes={existingTypes}
+        pmId={pmId}
       />
 
       <ConfirmDeleteDialog

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -20,11 +20,19 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import {
   CERTIFICATE_TYPES,
   CERTIFICATE_LABELS,
+  CERT_TYPE_CONTRACTOR_CATEGORIES,
   type CertificateType,
 } from '@/lib/constants'
+
+interface Contractor {
+  id: string
+  contractor_name: string
+  categories: string[] | null
+}
 
 interface CertificateFormDialogProps {
   open: boolean
@@ -32,6 +40,8 @@ interface CertificateFormDialogProps {
   onSubmit: (data: CertificateFormData) => Promise<void>
   /** Certificate types already on this property (for duplicate detection) */
   existingTypes: CertificateType[]
+  /** PM ID for fetching contractors */
+  pmId: string
 }
 
 export interface CertificateFormData {
@@ -41,6 +51,8 @@ export interface CertificateFormData {
   certificate_number: string | null
   issued_by: string | null
   notes: string | null
+  reminder_days_before: number
+  contractor_id: string | null
 }
 
 export function CertificateFormDialog({
@@ -48,16 +60,65 @@ export function CertificateFormDialog({
   onOpenChange,
   onSubmit,
   existingTypes,
+  pmId,
 }: CertificateFormDialogProps) {
+  const supabase = createClient()
   const [certificateType, setCertificateType] = useState<CertificateType | ''>('')
   const [issuedDate, setIssuedDate] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
   const [certificateNumber, setCertificateNumber] = useState('')
   const [issuedBy, setIssuedBy] = useState('')
   const [notes, setNotes] = useState('')
+  const [reminderDays, setReminderDays] = useState('60')
+  const [contractorId, setContractorId] = useState('')
+  const [contractors, setContractors] = useState<Contractor[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showReplace, setShowReplace] = useState(false)
+
+  // Fetch contractors when cert type changes (filtered by relevant categories)
+  useEffect(() => {
+    if (!certificateType || !pmId) {
+      setContractors([])
+      setContractorId('')
+      return
+    }
+
+    const relevantCategories = CERT_TYPE_CONTRACTOR_CATEGORIES[certificateType as CertificateType]
+    if (!relevantCategories) {
+      setContractors([])
+      setContractorId('')
+      return
+    }
+
+    async function fetchContractors() {
+      const { data } = await supabase
+        .from('c1_contractors')
+        .select('id, contractor_name, categories')
+        .eq('property_manager_id', pmId)
+        .eq('active', true)
+        .order('contractor_name')
+
+      if (!data) return
+
+      // Filter to contractors whose categories overlap with the relevant ones
+      const filtered = data.filter((c) => {
+        if (!c.categories || c.categories.length === 0) return false
+        return c.categories.some((cat: string) =>
+          relevantCategories!.some(
+            (rc) => rc.toLowerCase() === cat.toLowerCase()
+          )
+        )
+      })
+
+      // Show all contractors but put relevant ones first
+      const others = data.filter((c) => !filtered.includes(c))
+      setContractors([...filtered, ...others])
+    }
+
+    fetchContractors()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
+  }, [certificateType, pmId])
 
   const resetForm = () => {
     setCertificateType('')
@@ -66,6 +127,9 @@ export function CertificateFormDialog({
     setCertificateNumber('')
     setIssuedBy('')
     setNotes('')
+    setReminderDays('60')
+    setContractorId('')
+    setContractors([])
     setError(null)
     setShowReplace(false)
   }
@@ -107,6 +171,8 @@ export function CertificateFormDialog({
         certificate_number: certificateNumber || null,
         issued_by: issuedBy || null,
         notes: notes || null,
+        reminder_days_before: Number(reminderDays),
+        contractor_id: contractorId || null,
       })
       handleOpenChange(false)
     } catch (e) {
@@ -119,6 +185,10 @@ export function CertificateFormDialog({
   const duplicateLabel = certificateType
     ? CERTIFICATE_LABELS[certificateType as CertificateType]
     : ''
+
+  const showContractorDropdown = certificateType
+    ? CERT_TYPE_CONTRACTOR_CATEGORIES[certificateType as CertificateType] !== null
+    : false
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -149,6 +219,7 @@ export function CertificateFormDialog({
               onValueChange={(v) => {
                 setCertificateType(v as CertificateType)
                 setShowReplace(false)
+                setContractorId('')
               }}
             >
               <SelectTrigger>
@@ -212,6 +283,48 @@ export function CertificateFormDialog({
               rows={2}
               className="text-sm"
             />
+          </div>
+
+          {/* ─── Automation Section ─── */}
+          <div className="border-t border-border pt-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Automation
+            </p>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-1.5">Remind me before expiry</p>
+              <Select value={reminderDays} onValueChange={setReminderDays}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 days</SelectItem>
+                  <SelectItem value="60">60 days</SelectItem>
+                  <SelectItem value="90">90 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {showContractorDropdown && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1.5">
+                  Auto-dispatch contractor for renewal
+                </p>
+                <Select value={contractorId} onValueChange={setContractorId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="None (notify me only)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None (notify me only)</SelectItem>
+                    {contractors.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.contractor_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </DialogBody>
         <DialogFooter>
