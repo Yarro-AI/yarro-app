@@ -3,6 +3,9 @@
 Items captured during sessions that are not today's task.
 Review each morning when writing the day's PRD.
 
+## Rules
+- If Adam starts a session with "backlog", treat everything that follows as backlog entries. Don't ask for confirmation — just add them.
+
 ## Format
 - [date] [brief description] [priority: high/medium/low]
 
@@ -17,3 +20,9 @@ Review each morning when writing the day's PRD.
 - [2026-03-27] Property detail page UI fixes — fix auto-approval section display bugs, add page shell, clearer section dividers between property details and compliance, make page scrollable [priority: medium]
 - [2026-03-27] Compliance detail page — clickable compliance items open a detail page per certificate, support document upload (Supabase Storage), export functionality [priority: high]
 - [2026-03-27] Properties page compliance column — refine column badges/counters, improve "all compliant" state display [priority: medium]
+- [2026-03-27] CLAUDE.md branch cleanup commands — add branch delete commands after merge and rollback note to Branch Commands section [priority: low]
+- [2026-03-27] Add Compliance page to sidebar — new top-level nav item for compliance overview across all properties [priority: high]
+- [2026-03-27] Global search bar — replace current search with app-wide search across properties, tenants, tickets, compliance items [priority: medium]
+- [2026-03-27] Migrate compliance CRUD to RPCs — move insert/update/delete from property-compliance-section.tsx to Supabase RPCs (backend-first rule) [priority: high]
+- [2026-03-27] Migrate certificate status computation to RPC — replace client-side computeCertificateStatus with DB-level status, return expiring/expired counts from RPC [priority: high]
+- [2026-03-27] Migrate dashboard compliance summary to RPC — replace direct query + client-side aggregation with a single RPC returning expired/expiring/valid counts [priority: high]
