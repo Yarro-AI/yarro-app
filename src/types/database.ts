@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      // MANUALLY ADDED — c1_compliance_certificates
+      // Will be overwritten on next `supabase gen types` — verify after regeneration
+      c1_compliance_certificates: {
+        Row: {
+          id: string
+          property_id: string
+          certificate_type: Database["public"]["Enums"]["certificate_type"]
+          issued_date: string | null
+          expiry_date: string | null
+          certificate_number: string | null
+          issued_by: string | null
+          document_url: string | null
+          status: string
+          notes: string | null
+          property_manager_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          property_id: string
+          certificate_type: Database["public"]["Enums"]["certificate_type"]
+          issued_date?: string | null
+          expiry_date?: string | null
+          certificate_number?: string | null
+          issued_by?: string | null
+          document_url?: string | null
+          status?: string
+          notes?: string | null
+          property_manager_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          property_id?: string
+          certificate_type?: Database["public"]["Enums"]["certificate_type"]
+          issued_date?: string | null
+          expiry_date?: string | null
+          certificate_number?: string | null
+          issued_by?: string | null
+          document_url?: string | null
+          status?: string
+          notes?: string | null
+          property_manager_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_compliance_certificates_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "c1_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_compliance_certificates_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       c1_contractors: {
         Row: {
           _audit_log: Json | null
@@ -897,7 +962,16 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      certificate_type:
+        | "hmo_license"
+        | "gas_safety"
+        | "eicr"
+        | "epc"
+        | "fire_risk"
+        | "pat"
+        | "legionella"
+        | "smoke_alarms"
+        | "co_alarms"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1024,6 +1098,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      certificate_type: [
+        "hmo_license",
+        "gas_safety",
+        "eicr",
+        "epc",
+        "fire_risk",
+        "pat",
+        "legionella",
+        "smoke_alarms",
+        "co_alarms",
+      ],
+    },
   },
 } as const

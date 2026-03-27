@@ -48,3 +48,46 @@ export const SLA_WINDOWS: Record<string, number> = {
 // Tenant roles
 export const TENANT_ROLES = ['tenant', 'lead_tenant', 'other'] as const
 export type TenantRole = (typeof TENANT_ROLES)[number]
+
+// Compliance certificate types — MUST match DB enum `certificate_type` exactly
+export const CERTIFICATE_TYPES = [
+  'hmo_license',
+  'gas_safety',
+  'eicr',
+  'epc',
+  'fire_risk',
+  'pat',
+  'legionella',
+  'smoke_alarms',
+  'co_alarms',
+] as const
+
+export type CertificateType = (typeof CERTIFICATE_TYPES)[number]
+
+export const CERTIFICATE_LABELS: Record<CertificateType, string> = {
+  hmo_license: 'HMO Licence',
+  gas_safety: 'Gas Safety (CP12)',
+  eicr: 'EICR',
+  epc: 'EPC',
+  fire_risk: 'Fire Risk Assessment',
+  pat: 'PAT Testing',
+  legionella: 'Legionella Risk Assessment',
+  smoke_alarms: 'Smoke Alarms',
+  co_alarms: 'CO Alarms',
+}
+
+// Days before expiry to flag as "expiring"
+export const COMPLIANCE_EXPIRING_DAYS = 30
+
+// Compute certificate status from expiry date (avoids stale DB values)
+export function computeCertificateStatus(
+  expiryDate: string | null
+): 'valid' | 'expiring' | 'expired' | 'missing' {
+  if (!expiryDate) return 'missing'
+  const now = new Date()
+  const expiry = new Date(expiryDate)
+  if (expiry < now) return 'expired'
+  const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  if (daysUntilExpiry <= COMPLIANCE_EXPIRING_DAYS) return 'expiring'
+  return 'valid'
+}

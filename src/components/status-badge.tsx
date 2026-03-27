@@ -75,6 +75,12 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   issue_collection:        { border: 'border-primary/40',  text: 'text-primary' },
   availability_collection: { border: 'border-primary/60',  text: 'text-primary' },
 
+  // Compliance certificate statuses
+  valid:    { border: 'border-success/40',  text: 'text-success' },
+  expiring: { border: 'border-warning/40',  text: 'text-warning' },
+  expired:  { border: 'border-danger/40',   text: 'text-danger' },
+  missing:  { border: 'border-border',      text: 'text-muted-foreground' },
+
   // Default
   default: { border: 'border-border', text: 'text-muted-foreground' },
 }
