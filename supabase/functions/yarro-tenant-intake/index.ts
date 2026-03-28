@@ -335,6 +335,7 @@ Deno.serve(async (req: Request) => {
       property: ctx.property,
       property_manager: ctx.property_manager,
       tenant: ctx.tenant,
+      room: ctx.room || null,
     };
     const systemPrompt = buildSystemPrompt(contextForPrompt);
 
@@ -345,6 +346,7 @@ Deno.serve(async (req: Request) => {
       tenant: ctx.tenant,
       property: ctx.property,
       property_manager: ctx.property_manager,
+      room: ctx.room || null,
       conversation: ctx.conversation,
       ai_instruction: ctx.ai_instruction,
       recent_tickets: ctx.recent_tickets,
