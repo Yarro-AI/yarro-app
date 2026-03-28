@@ -1478,12 +1478,14 @@ export type Database = {
           landlord_id: string | null
           landlord_name: string | null
           landlord_phone: string | null
+          occupied_rooms: number | null
           open_tickets: Json | null
           property_id: string | null
           property_manager_id: string | null
           recent_tickets: Json | null
           require_landlord_approval: boolean | null
           tenants: Json | null
+          total_rooms: number | null
         }
         Relationships: [
           {

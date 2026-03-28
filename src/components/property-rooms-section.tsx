@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Plus, BedDouble, MoreHorizontal, Pencil, Trash2, UserMinus } from 'lucide-react'
+import { Plus, BedDouble, MoreHorizontal, Pencil, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import { RoomFormDialog, type RoomFormData } from '@/components/room-form-dialog'
+import { TenantAssignDialog } from '@/components/tenant-assign-dialog'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import {
   DropdownMenu,
@@ -44,6 +45,7 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
   const [editTarget, setEditTarget] = useState<Room | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Room | null>(null)
   const [removeTarget, setRemoveTarget] = useState<Room | null>(null)
+  const [assignTarget, setAssignTarget] = useState<Room | null>(null)
 
   const fetchRooms = useCallback(async () => {
     const { data, error } = await supabase.rpc('get_rooms_for_property', {
@@ -229,6 +231,12 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
                           <Pencil className="h-3.5 w-3.5 mr-2" />
                           Edit
                         </DropdownMenuItem>
+                        {room.is_vacant && (
+                          <DropdownMenuItem onClick={() => setAssignTarget(room)}>
+                            <UserPlus className="h-3.5 w-3.5 mr-2" />
+                            Assign Tenant
+                          </DropdownMenuItem>
+                        )}
                         {!room.is_vacant && (
                           <DropdownMenuItem
                             onClick={() => setRemoveTarget(room)}
@@ -290,6 +298,18 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
         confirmLabel="Remove"
         confirmingLabel="Removing..."
       />
+
+      {assignTarget && (
+        <TenantAssignDialog
+          open={!!assignTarget}
+          onOpenChange={(open) => { if (!open) setAssignTarget(null) }}
+          roomId={assignTarget.id}
+          roomNumber={assignTarget.room_number}
+          propertyId={propertyId}
+          pmId={pmId}
+          onAssigned={fetchRooms}
+        />
+      )}
     </div>
   )
 }

@@ -51,6 +51,8 @@ interface PropertyHub {
   contractors: Json | null
   open_tickets: Json | null
   recent_tickets: Json | null
+  total_rooms: number | null
+  occupied_rooms: number | null
 }
 
 interface LandlordOption {
@@ -439,6 +441,16 @@ export default function PropertiesPage() {
             {count}
           </span>
         )
+      },
+    },
+    {
+      key: 'rooms',
+      header: 'Rooms',
+      render: (p) => {
+        const total = p.total_rooms ?? 0
+        if (total === 0) return <span className="text-muted-foreground">—</span>
+        const occupied = p.occupied_rooms ?? 0
+        return <span className="text-sm">{occupied}/{total}</span>
       },
     },
     {
