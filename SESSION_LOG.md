@@ -6,38 +6,36 @@
 
 ---
 
-## Latest: 2026-03-28 — Compliance Automation (Phase 2, Days 6-7)
+## Latest: 2026-03-28 — Room Layer Complete (Phase 2, Days 1-4)
 
 ### Summary
-Built the full compliance automation feature in parallel with the room layer (separate session). Certificates approaching expiry now trigger automated notifications to the operator and optional contractor dispatch through the existing ticket pipeline. Two paths: Path A (contractor assigned) creates a renewal ticket + dispatches contractor + emails PM; Path B (no contractor) emails PM only. Both paths log to c1_events for audit trail. Tested both paths end-to-end — 3 Path B emails sent successfully, 1 Path A ticket created and contractor dispatched. Idempotency confirmed (second run = 0 sends). Twilio WhatsApp template SID added and deployed.
+Built the full room layer for HMO support. Created c1_rooms table with generated is_vacant column, 5 RPCs (get, upsert, delete, assign_tenant, remove_tenant) with row locking and dual-sync between c1_rooms.current_tenant_id and c1_tenants.room_id. Built rooms section on property detail page (table with vacancy styling, orange badges for expiring tenancies), tenant assignment dialog, rooms column on properties list, read-only room display on tenant detail, and room_number display in ticket overview. Extended v_properties_hub view with room counts. All merged into feat/hmo-compliance and pushed.
 
 ### Changes Made
-- Created migration `20260328100000_compliance_automation.sql`:
-  - 3 new columns on `c1_compliance_certificates`: `reminder_days_before`, `contractor_id`, `reminder_sent_at`
-  - Updated `compliance_upsert_certificate` and `compliance_get_certificates` RPCs (DROP + recreate for return type change)
-  - New RPC `c1_log_compliance_event` (logs to c1_events without requiring a ticket_id)
-  - New RPC `get_compliance_expiring` (finds certs in their reminder window)
-- Created edge function `supabase/functions/yarro-compliance-reminder/index.ts`
-- Added `compliance_expiry_operator` email template to `_shared/email-templates.ts`
-- Added Twilio template SID `HX8f836e6e12955e849bf09b00e9f71295` to `_shared/templates.ts`
-- Added `[functions.yarro-compliance-reminder]` to `supabase/config.toml`
-- Added `CERT_TYPE_CONTRACTOR_CATEGORIES` mapping to `src/lib/constants.ts`
-- Updated `certificate-form-dialog.tsx` — automation section with reminder days dropdown + contractor selector
-- Updated `property-compliance-section.tsx` — passes pmId and new RPC params
+- Created migration `20260328000000_add_rooms_table.sql` — c1_rooms table, RLS, indexes, updated_at trigger, room_id on tenants/tickets
+- Created migration `20260328010000_room_rpcs.sql` — 5 RPCs with ownership checks, row locking, dual-sync
+- Created migration `20260328020000_extend_properties_hub_rooms.sql` — room counts on v_properties_hub
+- Created `src/components/property-rooms-section.tsx` — rooms table with add/edit/delete/assign/remove
+- Created `src/components/room-form-dialog.tsx` — room form with validation
+- Created `src/components/tenant-assign-dialog.tsx` — tenant picker with tenancy dates
+- Modified `src/app/(dashboard)/properties/[id]/page.tsx` — embedded rooms section
+- Modified `src/app/(dashboard)/properties/page.tsx` — rooms column (occupied/total)
+- Modified `src/app/(dashboard)/tenants/[id]/page.tsx` — read-only room display
+- Modified `src/hooks/use-ticket-detail.ts` — room_id + c1_rooms join
+- Modified `src/components/ticket-detail/ticket-overview-tab.tsx` — room row in People section
 - Regenerated `src/types/database.ts`
-- Fixed Radix Select crash (empty string value → "none" sentinel)
+- Merged `feat/compliance-automation` (which included room layer + compliance automation) into `feat/hmo-compliance`
 
 ### Status
 - [x] Build passes
-- [x] Tested locally (both Path A and Path B)
-- [x] Committed and pushed to `feat/compliance-automation`
-- [x] Edge function deployed to Supabase
-- [x] Migration applied to remote
+- [x] Tested locally
+- [x] Committed and pushed to `feat/hmo-compliance`
+- [x] All migrations applied to remote
 
 ### Next Session Pickup
-1. Merge `feat/compliance-automation` into `feat/hmo-compliance`
-2. Room layer is on this branch too (Days 1-3 commits from parallel session) — Day 4 QA + demo data seeding
-3. Day 5: WhatsApp room awareness (extend c1_context_logic)
+1. Seed demo data — 1 property, 5 rooms, 4 tenants assigned, 1 vacant (run in Supabase SQL editor)
+2. Day 5: WhatsApp room awareness — extend c1_context_logic to return ctx.room
+3. Remaining: rent tracking (Days 8-9), QA + demo prep (Day 10)
 4. Days 8-9: Rent tracking (c1_rent_ledger, per-room config, payment logging)
 5. Set up cron schedule for compliance-reminder (daily at 08:00 UTC)
 
