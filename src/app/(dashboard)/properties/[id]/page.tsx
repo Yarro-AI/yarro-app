@@ -25,6 +25,7 @@ import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { PropertyComplianceSection } from '@/components/property-compliance-section'
 import { PropertyRoomsSection } from '@/components/property-rooms-section'
+import { PropertyRentSection } from '@/components/property-rent-section'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -575,6 +576,14 @@ export default function PropertyDetailPage() {
             <>
               <div className="border-t border-border/40 mt-8 flex-shrink-0" />
               <PropertyRoomsSection propertyId={propertyId} pmId={propertyManager.id} />
+            </>
+          )}
+
+          {/* Rent — independent of edit mode */}
+          {propertyManager && (
+            <>
+              <div className="border-t border-border/40 mt-8 flex-shrink-0" />
+              <PropertyRentSection propertyId={propertyId} pmId={propertyManager.id} />
             </>
           )}
 

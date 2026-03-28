@@ -982,6 +982,85 @@ export type Database = {
         }
         Relationships: []
       }
+      c1_rent_ledger: {
+        Row: {
+          amount_due: number
+          amount_paid: number | null
+          created_at: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          property_manager_id: string
+          reminder_1_sent_at: string | null
+          reminder_2_sent_at: string | null
+          reminder_3_sent_at: string | null
+          room_id: string
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount_due: number
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          property_manager_id: string
+          reminder_1_sent_at?: string | null
+          reminder_2_sent_at?: string | null
+          reminder_3_sent_at?: string | null
+          room_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          property_manager_id?: string
+          reminder_1_sent_at?: string | null
+          reminder_2_sent_at?: string | null
+          reminder_3_sent_at?: string | null
+          room_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "c1_rent_ledger_property_manager_id_fkey"
+            columns: ["property_manager_id"]
+            isOneToOne: false
+            referencedRelation: "c1_property_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_rent_ledger_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "c1_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "c1_rent_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "c1_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       c1_rooms: {
         Row: {
           created_at: string | null
@@ -1989,6 +2068,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_rent_ledger_entries: {
+        Args: {
+          p_month: number
+          p_pm_id: string
+          p_property_id: string
+          p_year: number
+        }
+        Returns: number
+      }
       get_compliance_expiring: {
         Args: { p_days_ahead?: number; p_pm_id?: string }
         Returns: {
@@ -2011,6 +2099,30 @@ export type Database = {
         }[]
       }
       get_pm_id: { Args: never; Returns: string }
+      get_rent_summary_for_property: {
+        Args: {
+          p_month: number
+          p_pm_id: string
+          p_property_id: string
+          p_year: number
+        }
+        Returns: {
+          amount_due: number
+          amount_paid: number
+          due_date: string
+          effective_status: string
+          is_vacant: boolean
+          notes: string
+          paid_at: string
+          payment_method: string
+          rent_ledger_id: string
+          room_id: string
+          room_name: string
+          room_number: string
+          tenant_id: string
+          tenant_name: string
+        }[]
+      }
       get_rooms_for_property: {
         Args: { p_pm_id: string; p_property_id: string }
         Returns: {
@@ -2029,6 +2141,16 @@ export type Database = {
           tenancy_start_date: string
           tenant_name: string
         }[]
+      }
+      mark_rent_paid: {
+        Args: {
+          p_amount_paid: number
+          p_notes?: string
+          p_payment_method: string
+          p_pm_id: string
+          p_rent_ledger_id: string
+        }
+        Returns: undefined
       }
       norm_uk_postcode: { Args: { p_in: string }; Returns: string }
       room_assign_tenant: {
