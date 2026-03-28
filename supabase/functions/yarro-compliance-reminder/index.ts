@@ -154,8 +154,8 @@ async function processCert(
       console.warn(`[${FN}] PM has no email for cert ${cert.cert_id}, skipping notification`);
     }
 
-    // Log to c1_events via the compliance-specific RPC (no ticket_id required)
-    const { error: logError } = await supabase.rpc("c1_log_compliance_event", {
+    // Log to c1_events via the generic system event RPC (no ticket_id required)
+    const { error: logError } = await supabase.rpc("c1_log_system_event", {
       p_pm_id: cert.property_manager_id,
       p_event_type: "COMPLIANCE_REMINDER_SENT",
       p_property_label: cert.property_address,

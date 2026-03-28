@@ -51,6 +51,12 @@ export const TEMPLATES = {
   // ─── Compliance Reminders (yarro-compliance-reminder) ───
   compliance_expiry_operator: "HX8f836e6e12955e849bf09b00e9f71295",  // compliance_expiry_operator_contractor
 
+  // ─── Rent Reminders (yarro-rent-reminder) ───
+  // TODO: Create these in Twilio Content API and replace PLACEHOLDER SIDs
+  rent_reminder_before:  "PLACEHOLDER_rent_reminder_before",   // 3 days before due
+  rent_reminder_due:     "PLACEHOLDER_rent_reminder_due",      // on due date
+  rent_reminder_overdue: "PLACEHOLDER_rent_reminder_overdue",  // 3 days overdue
+
   // ─── Followups (yarro-followups) ───
   contractor_reminder: "HXf09513c99a0af31ae036e7e4c1c69676",     // 9a_contractor_reminder
   pm_contractor_timeout: "HXc377553166d7cb61c84cbcb859502d9e",   // 9b_landlord_reminder
