@@ -6,7 +6,43 @@
 
 ---
 
-## Latest: 2026-03-28 — Rent Tracking (Days 8-9)
+## Latest: 2026-03-28 — Rent Reminder Cron + Compliance Cron Cleanup
+
+### Summary
+Confirmed compliance reminder cron was already deployed (migration just untracked in git — committed it). Then built the rent reminder cron: renamed `c1_log_compliance_event` → `c1_log_system_event` for reuse across ticket-less events, created `get_rent_reminders_due()` RPC with 3-window UNION query (3 days before, due date, 3 days overdue), built `yarro-rent-reminder` edge function with placeholder guard for missing Twilio templates, and registered `pg_cron` job at 09:00 UTC. All deployed and merged to `feat/hmo-compliance`.
+
+### Changes Made
+- Committed `supabase/migrations/20260329120000_compliance_reminder_cron.sql` (was applied but untracked)
+- Created `supabase/migrations/20260329140000_rename_log_system_event.sql` — rename generic event logger
+- Created `supabase/migrations/20260329150000_rent_reminder_rpc.sql` — `get_rent_reminders_due()` RPC
+- Created `supabase/migrations/20260329160000_rent_reminder_cron.sql` — pg_cron at 09:00 UTC
+- Created `supabase/functions/yarro-rent-reminder/index.ts` — edge function with placeholder guard
+- Modified `supabase/functions/_shared/templates.ts` — 3 placeholder rent reminder SIDs
+- Modified `supabase/functions/yarro-compliance-reminder/index.ts` — updated to use renamed `c1_log_system_event`
+
+### Status
+- [x] Build passes
+- [x] Tested locally
+- [x] Migrations applied to remote
+- [x] Edge functions deployed (yarro-rent-reminder + yarro-compliance-reminder)
+- [x] Cron jobs verified (compliance 08:00 UTC, rent 09:00 UTC)
+- [x] Committed and pushed to `feat/hmo-compliance`
+
+### Adam's Pending Task
+Create 3 Twilio Content API templates and replace PLACEHOLDER SIDs in `supabase/functions/_shared/templates.ts`:
+- `rent_reminder_before` — 1=name, 2=amount, 3=due_date
+- `rent_reminder_due` — 1=name, 2=amount
+- `rent_reminder_overdue` — 1=name, 2=amount, 3=due_date
+Then redeploy: `supabase functions deploy yarro-rent-reminder`
+
+### Next Session Pickup
+1. Day 10: QA + demo prep — full demo flow rehearsal
+2. Create Twilio rent reminder templates (Adam task)
+3. Final polish before demo deadline (~11 April 2026)
+
+---
+
+## 2026-03-28 — Rent Tracking (Days 8-9)
 
 ### Summary
 Built room-level rent tracking for HMO properties. Created `c1_rent_ledger` table with RLS, `ON DELETE RESTRICT` to protect financial records, and unique constraint on `(room_id, due_date)` for idempotent generation. Built 3 RPCs: `create_rent_ledger_entries` (idempotent via ON CONFLICT DO NOTHING), `get_rent_summary_for_property` (pure read with derived `effective_status` — no write side-effects), and `mark_rent_paid` (ownership check, partial/full detection). Built `PropertyRentSection` component with month navigation, generate button, summary stats, status badges (paid/overdue/pending/partial/vacant), and "Mark Paid" action. Built `RentPaymentDialog` with pre-filled amount, payment method select, and notes. Wired into property detail page after Rooms section.
