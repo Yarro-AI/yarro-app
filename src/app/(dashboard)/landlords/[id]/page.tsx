@@ -7,41 +7,22 @@ import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
-import { PriorityDot } from '@/components/priority-dot'
-import { Button } from '@/components/ui/button'
+import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
+import type { TicketRow } from '@/components/profile'
 import { Input } from '@/components/ui/input'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import Link from 'next/link'
-import { ArrowLeft, Pencil, Save, X, Trash2, Loader2, Phone as PhoneIcon, Mail, Building2, MessageCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 // --- Types ---
 
 interface Landlord { id: string; full_name: string; phone: string | null; email: string | null; created_at: string; contact_method: string }
 interface LandlordEditable { id: string; full_name: string; phone: string | null; email: string | null; contact_method: string }
 interface PropertyRow { id: string; address: string }
-interface TicketRow {
-  id: string; issue_title: string | null; issue_description: string | null
-  category: string | null; priority: string | null; status: string
-  next_action_reason: string | null; date_logged: string; property_id: string; archived: boolean | null
-}
 
 // --- Helpers ---
 
 const toEditable = (l: Landlord): LandlordEditable => ({ id: l.id, full_name: l.full_name || '', phone: l.phone, email: l.email, contact_method: l.contact_method || 'whatsapp' })
-
-const displayStageMap: Record<string, string> = {
-  pending_review: 'Needs Review', handoff_review: 'Handoff', manager_approval: 'Awaiting Manager', no_contractors: 'No Contractors',
-  landlord_declined: 'Landlord Declined', landlord_no_response: 'Landlord No Response', job_not_completed: 'Not Completed',
-  awaiting_contractor: 'Awaiting Contractor', awaiting_landlord: 'Awaiting Landlord', awaiting_booking: 'Awaiting Booking',
-  scheduled: 'Scheduled', completed: 'Completed', dismissed: 'Dismissed',
-}
-const getDisplayStage = (reason: string | null, status: string, archived?: boolean | null) => {
-  if (archived) return 'Archived'
-  if (status === 'closed') return 'Completed'
-  if (reason && displayStageMap[reason]) return displayStageMap[reason]
-  return 'Open'
-}
 
 // --- Component ---
 
@@ -60,7 +41,6 @@ export default function LandlordDetailPage() {
   const [loading, setLoading] = useState(true)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
 
   const fetchLandlord = useCallback(async () => {
     if (!landlordId) return
@@ -126,196 +106,98 @@ export default function LandlordDetailPage() {
     toast.success('Landlord deleted'); router.push('/landlords')
   }
 
-  const openTickets = tickets.filter((t) => t.status !== 'closed' && !t.archived)
-  const closedTickets = tickets.filter((t) => t.status === 'closed')
+  const getInitials = (name: string) => name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 
   if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
   if (!landlord) return <div className="flex items-center justify-center h-full"><p className="text-muted-foreground">Landlord not found</p></div>
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4">
-        <button onClick={() => router.push('/landlords')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight truncate">{landlord.full_name}</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {isEditing ? (
-            <>
-              <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}><X className="h-4 w-4 mr-1" /> Cancel</Button>
-              <Button size="sm" onClick={saveChanges} disabled={isSaving}>{isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save</Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" onClick={startEditing}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
-              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialogOpen(true)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
-            </>
-          )}
-        </div>
-      </div>
-      {editError && <div className="px-8 py-2 bg-destructive/10 text-destructive text-sm">{editError}</div>}
+      <ProfilePageHeader
+        backHref="/landlords"
+        title={landlord.full_name}
+        avatarInitials={getInitials(landlord.full_name)}
+        subtitle={`${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'} managed`}
+        badges={[{ label: 'Landlord', variant: 'muted' as const }]}
+        isEditing={isEditing}
+        isSaving={isSaving}
+        editError={editError}
+        onEdit={startEditing}
+        onSave={saveChanges}
+        onCancel={cancelEditing}
+        onDelete={() => setDeleteDialogOpen(true)}
+      />
 
-      {/* Two-column content */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Left: Details */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
-          {isEditing && editedData ? (
-            <>
-              <div className="mb-5">
-                <label className="text-xs text-muted-foreground mb-1.5 block">Full Name</label>
-                <Input value={editedData.full_name} onChange={(e) => updateField('full_name', e.target.value)} placeholder="John Smith" className={validationErrors.full_name ? 'border-destructive' : ''} />
-                {validationErrors.full_name && <p className="text-xs text-destructive mt-1">{validationErrors.full_name}</p>}
-              </div>
-              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <PhoneIcon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                    <Input value={editedData.phone || ''} onChange={(e) => updateField('phone', e.target.value || null)} placeholder="07123 456789" className={`h-8 ${validationErrors.phone ? 'border-destructive' : ''}`} />
+      <div className="flex-1 min-h-0 overflow-y-auto px-8 pb-6">
+        {/* Two-column card grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left: Contact */}
+          <ProfileCard title="Contact details">
+            {isEditing && editedData ? (
+              <div className="space-y-4 py-2">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Full Name</label>
+                  <Input value={editedData.full_name} onChange={(e) => updateField('full_name', e.target.value)} placeholder="John Smith" className={validationErrors.full_name ? 'border-destructive' : ''} />
+                  {validationErrors.full_name && <p className="text-xs text-destructive mt-1">{validationErrors.full_name}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1.5 block">Phone</label>
+                    <Input value={editedData.phone || ''} onChange={(e) => updateField('phone', e.target.value || null)} placeholder="07123 456789" className={validationErrors.phone ? 'border-destructive' : ''} />
                     {validationErrors.phone && <p className="text-xs text-destructive mt-1">{validationErrors.phone}</p>}
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Email</p>
-                    <Input value={editedData.email || ''} onChange={(e) => updateField('email', e.target.value || null)} placeholder="john@example.com" className={`h-8 ${validationErrors.email ? 'border-destructive' : ''}`} />
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
+                    <Input value={editedData.email || ''} onChange={(e) => updateField('email', e.target.value || null)} placeholder="john@example.com" className={validationErrors.email ? 'border-destructive' : ''} />
                     {validationErrors.email && <p className="text-xs text-destructive mt-1">{validationErrors.email}</p>}
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Building2 className="h-4 w-4 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Properties</p>
-                    <p className="text-[15px] font-medium mt-0.5">{properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <MessageCircle className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Contact Method</p>
-                    <div className="flex rounded-md border border-input overflow-hidden w-fit">
-                      <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-success text-success-foreground' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
-                      <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Email</button>
-                    </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Contact Method</label>
+                  <div className="flex rounded-md border border-input overflow-hidden w-fit">
+                    <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-success text-success-foreground' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+                    <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Email</button>
                   </div>
                 </div>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <PhoneIcon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="text-[15px] font-medium mt-0.5">{landlord.phone ? formatPhoneDisplay(landlord.phone) : <span className="text-muted-foreground/50 font-normal">None</span>}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="text-[15px] font-medium mt-0.5">{landlord.email || <span className="text-muted-foreground/50 font-normal">None</span>}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Building2 className="h-4 w-4 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Properties</p>
-                    <p className="text-[15px] font-medium mt-0.5">{properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <MessageCircle className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Contact Method</p>
-                    <p className="text-[15px] font-medium mt-0.5">{landlord.contact_method === 'email' ? 'Email' : 'WhatsApp'}</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Properties */}
-          <div className="mt-8">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
-              Properties
-              {properties.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{properties.length}</span>}
-            </h3>
-            {properties.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No properties linked</p>
             ) : (
-              <div className="space-y-0.5">
+              <>
+                <KeyValueRow label="Phone">
+                  {landlord.phone ? formatPhoneDisplay(landlord.phone) : <span className="text-muted-foreground/50 font-normal italic">Not set</span>}
+                </KeyValueRow>
+                <KeyValueRow label="Email">
+                  {landlord.email || <span className="text-muted-foreground/50 font-normal italic">Not set</span>}
+                </KeyValueRow>
+                <KeyValueRow label="Contact method">
+                  {landlord.contact_method === 'email' ? 'Email' : 'WhatsApp'}
+                </KeyValueRow>
+              </>
+            )}
+          </ProfileCard>
+
+          {/* Right: Properties */}
+          <ProfileCard title="Properties" count={properties.length}>
+            {properties.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-3 italic">No properties linked</p>
+            ) : (
+              <div className="divide-y divide-border/50">
                 {properties.map((p) => (
-                  <Link key={p.id} href={`/properties/${p.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                    <span className="text-[15px] truncate pl-11">{p.address}</span>
-                    <span className="text-sm text-muted-foreground pl-11">{tenantCounts[p.id] || 0} tenant{(tenantCounts[p.id] || 0) !== 1 ? 's' : ''}</span>
+                  <Link key={p.id} href={`/properties/${p.id}`} className="flex items-center justify-between py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
+                    <span className="text-[13px] font-medium truncate">{p.address}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-4">{tenantCounts[p.id] || 0} tenant{(tenantCounts[p.id] || 0) !== 1 ? 's' : ''}</span>
                   </Link>
                 ))}
               </div>
             )}
-          </div>
+          </ProfileCard>
         </div>
 
-        {/* Right: Tickets */}
-        <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
-          <div className="px-6 py-5 flex-shrink-0">
-            <h3 className="text-sm font-semibold">Tickets</h3>
-            {(openTickets.length > 0 || closedTickets.length > 0) && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {[openTickets.length > 0 && `${openTickets.length} open`, closedTickets.length > 0 && `${closedTickets.length} closed`].filter(Boolean).join(' · ')}
-              </p>
-            )}
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-            {tickets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tickets</p>
-            ) : (
-              <div className="divide-y divide-border/50">
-                {tickets.map((t) => (
-                  <button key={t.id} onClick={() => setSelectedTicketId(t.id)} className={`w-full text-left py-3 hover:bg-muted/30 -mx-3 px-3 transition-colors first:pt-0 ${t.archived ? 'opacity-40' : ''}`}>
-                    <div className="flex items-start gap-2">
-                      {t.priority && <PriorityDot priority={t.priority} className="mt-1.5 flex-shrink-0" />}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{t.issue_title || t.issue_description || 'Maintenance request'}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {getDisplayStage(t.next_action_reason, t.status, t.archived)}
-                          {' · '}
-                          {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                          {propertyAddressMap[t.property_id] && <> · {propertyAddressMap[t.property_id]}</>}
-                          {t.category && <> · {t.category}</>}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Reported tickets — full width */}
+        <div className="mt-4">
+          <TicketCard tickets={tickets} propertyAddressMap={propertyAddressMap} onTicketUpdated={() => fetchRelated()} />
         </div>
       </div>
 
-      <TicketDetailModal ticketId={selectedTicketId} open={!!selectedTicketId} onClose={() => setSelectedTicketId(null)} />
       <ConfirmDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Landlord" description="Are you sure you want to delete this landlord? This action cannot be undone." itemName={landlord.full_name} onConfirm={handleDelete} />
     </div>
   )
