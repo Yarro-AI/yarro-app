@@ -12,10 +12,11 @@ import {
   MessageSquare,
   Phone,
   User,
+  Users,
   Search,
   ShieldCheck,
   Banknote,
-  Wrench,
+  Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -141,9 +142,13 @@ export default function DashboardPage() {
   const [complianceSummary, setComplianceSummary] = useState<{
     expired: number; expiring: number; valid: number; total: number
   }>({ expired: 0, expiring: 0, valid: 0, total: 0 })
-  const [rentSummary, setRentSummary] = useState<{
-    paid: number; outstanding: number; overdue: number; partial: number; total: number
-  }>({ paid: 0, outstanding: 0, overdue: 0, partial: 0, total: 0 })
+  const [occupancySummary, setOccupancySummary] = useState<{
+    total_rooms: number; occupied: number; vacant: number; ending_soon: number
+  }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
+  const [incomeSummary, setIncomeSummary] = useState<{
+    expected_amount: number; collected_amount: number; outstanding_amount: number; overdue_amount: number
+  }>({ expected_amount: 0, collected_amount: 0, outstanding_amount: 0, overdue_amount: 0 })
+  const [aiActionsCount, setAiActionsCount] = useState(0)
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -151,7 +156,7 @@ export default function DashboardPage() {
     setLoading(true)
 
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, rentRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, incomeRes, aiActionsRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -205,8 +210,12 @@ export default function DashboardPage() {
       } as never),
       // Compliance summary — RPC returns counts by status
       supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
-      // Rent dashboard summary — portfolio-wide current month
-      supabase.rpc('get_rent_dashboard_summary', { p_pm_id: propertyManager.id }),
+      // Occupancy — portfolio-wide room vacancy
+      supabase.rpc('get_occupancy_summary' as never, { p_pm_id: propertyManager.id } as never),
+      // Rent income — £ amounts for current month
+      supabase.rpc('get_rent_income_summary' as never, { p_pm_id: propertyManager.id } as never),
+      // AI actions — system/AI events this month
+      supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
     ])
 
     // Process compliance summary — RPC returns { expired, expiring, valid, missing, total }
@@ -218,15 +227,27 @@ export default function DashboardPage() {
       total: summaryData?.total ?? 0,
     })
 
-    // Process rent summary — portfolio-wide current month
-    const rentData = rentRes?.data as Record<string, number> | null
-    setRentSummary({
-      paid: rentData?.paid ?? 0,
-      outstanding: rentData?.outstanding ?? 0,
-      overdue: rentData?.overdue ?? 0,
-      partial: rentData?.partial ?? 0,
-      total: rentData?.total ?? 0,
+    // Process occupancy summary — portfolio-wide room vacancy
+    const occData = occupancyRes?.data as Record<string, number> | null
+    setOccupancySummary({
+      total_rooms: occData?.total_rooms ?? 0,
+      occupied: occData?.occupied ?? 0,
+      vacant: occData?.vacant ?? 0,
+      ending_soon: occData?.ending_soon ?? 0,
     })
+
+    // Process rent income summary — £ amounts for current month
+    const incData = incomeRes?.data as Record<string, number> | null
+    setIncomeSummary({
+      expected_amount: incData?.expected_amount ?? 0,
+      collected_amount: incData?.collected_amount ?? 0,
+      outstanding_amount: incData?.outstanding_amount ?? 0,
+      overdue_amount: incData?.overdue_amount ?? 0,
+    })
+
+    // Process AI actions count
+    const aiData = aiActionsRes?.data as Record<string, number> | null
+    setAiActionsCount(aiData?.count ?? 0)
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
@@ -441,32 +462,35 @@ export default function DashboardPage() {
         {/* Stat row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
           <StatCard
-            label="Needs attention"
-            value={actionable.length}
-            subtitle={actionable.length > 0 ? `${actionable.length} item${actionable.length !== 1 ? 's' : ''} requiring action` : 'All clear'}
-            accentColor={actionable.length > 0 ? 'danger' : 'success'}
-            icon={AlertTriangle}
-          />
-          <StatCard
-            label="Jobs in progress"
-            value={inProgressTickets.length}
-            subtitle={`${inProgressTickets.length} active`}
-            accentColor={inProgressTickets.length > 0 ? 'warning' : 'muted'}
-            icon={Wrench}
+            label="Occupancy"
+            value={occupancySummary.total_rooms > 0 ? `${Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100)}%` : '—'}
+            subtitle={occupancySummary.vacant > 0 ? `${occupancySummary.vacant} vacant` : occupancySummary.ending_soon > 0 ? `${occupancySummary.ending_soon} ending soon` : occupancySummary.total_rooms > 0 ? 'Fully let' : 'No rooms'}
+            accentColor={(() => {
+              const rate = occupancySummary.total_rooms > 0 ? Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100) : 0
+              return rate < 60 ? 'danger' : rate < 90 ? 'warning' : 'success'
+            })()}
+            icon={Users}
           />
           <StatCard
             label="Compliance"
-            value={complianceSummary.total > 0 ? `${complianceSummary.valid}/${complianceSummary.total}` : '—'}
+            value={complianceSummary.total > 0 ? `${Math.round((complianceSummary.valid / complianceSummary.total) * 100)}%` : '—'}
             subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring > 0 ? `${complianceSummary.expiring} expiring` : 'All valid'}
             accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.expiring > 0 ? 'warning' : 'success'}
             icon={ShieldCheck}
           />
           <StatCard
-            label="Rent"
-            value={rentSummary.total > 0 ? `${rentSummary.paid}/${rentSummary.total}` : '—'}
-            subtitle={rentSummary.overdue > 0 ? `${rentSummary.overdue} overdue` : rentSummary.outstanding > 0 ? `${rentSummary.outstanding} outstanding` : 'All paid'}
-            accentColor={rentSummary.overdue > 0 ? 'danger' : rentSummary.outstanding > 0 ? 'warning' : 'success'}
+            label="Monthly income"
+            value={incomeSummary.expected_amount > 0 ? `£${incomeSummary.collected_amount.toLocaleString('en-GB')}` : '—'}
+            subtitle={incomeSummary.overdue_amount > 0 ? `£${incomeSummary.overdue_amount.toLocaleString('en-GB')} overdue` : incomeSummary.outstanding_amount > 0 ? `£${incomeSummary.outstanding_amount.toLocaleString('en-GB')} of £${incomeSummary.expected_amount.toLocaleString('en-GB')} outstanding` : incomeSummary.expected_amount > 0 ? 'All collected' : 'No rent due'}
+            accentColor={incomeSummary.overdue_amount > 0 ? 'danger' : incomeSummary.outstanding_amount > 0 ? 'warning' : 'success'}
             icon={Banknote}
+          />
+          <StatCard
+            label="AI actions"
+            value={aiActionsCount}
+            subtitle={aiActionsCount > 0 ? 'this month' : 'No activity yet'}
+            accentColor="primary"
+            icon={Zap}
           />
         </div>
 
