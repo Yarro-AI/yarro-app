@@ -445,24 +445,28 @@ export default function DashboardPage() {
             value={actionable.length}
             subtitle={actionable.length > 0 ? `${actionable.length} item${actionable.length !== 1 ? 's' : ''} requiring action` : 'All clear'}
             accentColor={actionable.length > 0 ? 'danger' : 'success'}
+            icon={AlertTriangle}
           />
           <StatCard
             label="Jobs in progress"
             value={inProgressTickets.length}
             subtitle={`${inProgressTickets.length} active`}
             accentColor={inProgressTickets.length > 0 ? 'warning' : 'muted'}
+            icon={Wrench}
           />
           <StatCard
             label="Compliance"
             value={complianceSummary.total > 0 ? `${complianceSummary.valid}/${complianceSummary.total}` : '—'}
             subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring > 0 ? `${complianceSummary.expiring} expiring` : 'All valid'}
             accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.expiring > 0 ? 'warning' : 'success'}
+            icon={ShieldCheck}
           />
           <StatCard
             label="Rent"
             value={rentSummary.total > 0 ? `${rentSummary.paid}/${rentSummary.total}` : '—'}
             subtitle={rentSummary.overdue > 0 ? `${rentSummary.overdue} overdue` : rentSummary.outstanding > 0 ? `${rentSummary.outstanding} outstanding` : 'All paid'}
             accentColor={rentSummary.overdue > 0 ? 'danger' : rentSummary.outstanding > 0 ? 'warning' : 'success'}
+            icon={Banknote}
           />
         </div>
 

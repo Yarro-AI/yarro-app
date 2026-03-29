@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -28,6 +28,7 @@ import {
 import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal, ShieldCheck } from 'lucide-react'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
@@ -112,6 +113,15 @@ export default function PropertiesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredProperties = useMemo(() => {
+    if (!search) return properties
+    const lower = search.toLowerCase()
+    return properties.filter(p =>
+      p.address?.toLowerCase().includes(lower) ||
+      p.landlord_name?.toLowerCase().includes(lower)
+    )
+  }, [properties, search])
   const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
   // Map of property_id → worst compliance status
   const [complianceByProperty, setComplianceByProperty] = useState<
@@ -621,13 +631,21 @@ export default function PropertiesPage() {
   return (
     <PageShell
       title="Properties"
-      count={properties.length}
+      count={filteredProperties.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search properties..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
     >
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={properties}
+          data={filteredProperties}
           columns={columns}
           onRowClick={handleRowClick}
           getRowId={(p) => p.property_id || ''}

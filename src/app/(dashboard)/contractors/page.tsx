@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Popover,
@@ -92,6 +93,16 @@ export default function ContractorsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredContractors = useMemo(() => {
+    if (!search) return contractors
+    const lower = search.toLowerCase()
+    return contractors.filter(c =>
+      c.contractor_name?.toLowerCase().includes(lower) ||
+      c.category?.toLowerCase().includes(lower) ||
+      c.contractor_email?.toLowerCase().includes(lower)
+    )
+  }, [contractors, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -660,13 +671,21 @@ export default function ContractorsPage() {
   return (
     <PageShell
       title="Contractors"
-      count={contractors.length}
+      count={filteredContractors.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search contractors..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
     >
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={contractors}
+          data={filteredContractors}
           columns={columns}
           onRowClick={handleRowClick}
           getRowId={(c) => c.id}

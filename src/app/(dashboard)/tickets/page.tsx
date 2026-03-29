@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Ticket, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
@@ -92,6 +93,7 @@ export default function TicketsPage() {
   const [reviewTicketId, setReviewTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleFilter[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowFilter[]>([])
   const [selectedType, setSelectedType] = useState<TypeFilter[]>([])
@@ -599,13 +601,14 @@ export default function TicketsPage() {
   const nonHandoff = tickets.filter(t => !isOpenHandoff(t))
 
   // Active filter state
-  const hasActiveFilters = selectedLifecycle.length > 0 || selectedWorkflow.length > 0 || selectedType.length > 0
-  const activeFilterCount = selectedLifecycle.length + selectedWorkflow.length + selectedType.length
+  const hasActiveFilters = selectedLifecycle.length > 0 || selectedWorkflow.length > 0 || selectedType.length > 0 || search.trim() !== ''
+  const activeFilterCount = selectedLifecycle.length + selectedWorkflow.length + selectedType.length + (search.trim() ? 1 : 0)
 
   const clearFilters = () => {
     setSelectedLifecycle([])
     setSelectedWorkflow([])
     setSelectedType([])
+    setSearch('')
   }
 
   // Visible rows — single memoized pipeline; handoffs + pending_review filtered out (they live in banners)
@@ -651,8 +654,18 @@ export default function TicketsPage() {
       )
     }
 
+    // 4. Search
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(t =>
+        t.issue_description?.toLowerCase().includes(q) ||
+        t.address?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q)
+      )
+    }
+
     return result
-  }, [tickets, selectedLifecycle, selectedWorkflow, selectedType])
+  }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
 
   return (
     <PageShell
@@ -771,6 +784,12 @@ export default function TicketsPage() {
             </PopoverContent>
           </Popover>
           <DateFilter value={dateRange} onChange={setDateRange} />
+          <CommandSearchInput
+            placeholder="Search tickets..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
+          />
         </>
       }
     >

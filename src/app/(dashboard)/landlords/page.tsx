@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -65,6 +66,16 @@ export default function LandlordsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredLandlords = useMemo(() => {
+    if (!search) return landlords
+    const lower = search.toLowerCase()
+    return landlords.filter(l =>
+      l.full_name?.toLowerCase().includes(lower) ||
+      l.phone?.toLowerCase().includes(lower) ||
+      l.email?.toLowerCase().includes(lower)
+    )
+  }, [landlords, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -407,13 +418,21 @@ export default function LandlordsPage() {
   return (
     <PageShell
       title="Landlords"
-      count={landlords.length}
+      count={filteredLandlords.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search landlords..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
     >
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={landlords}
+          data={filteredLandlords}
           columns={columns}
           onRowClick={handleRowClick}
           getRowId={(l) => l.id}

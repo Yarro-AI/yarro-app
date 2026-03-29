@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -25,6 +25,7 @@ import {
 import Link from 'next/link'
 import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal } from 'lucide-react'
 import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
@@ -82,6 +83,17 @@ export default function TenantsPage() {
   const [properties, setProperties] = useState<PropertyOption[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredTenants = useMemo(() => {
+    if (!search) return tenants
+    const lower = search.toLowerCase()
+    return tenants.filter(t =>
+      t.full_name?.toLowerCase().includes(lower) ||
+      t.phone?.toLowerCase().includes(lower) ||
+      t.email?.toLowerCase().includes(lower) ||
+      t.address?.toLowerCase().includes(lower)
+    )
+  }, [tenants, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -495,13 +507,21 @@ export default function TenantsPage() {
   return (
     <PageShell
       title="Tenants"
-      count={tenants.length}
+      count={filteredTenants.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search tenants..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
     >
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={tenants}
+          data={filteredTenants}
           columns={columns}
           onRowClick={handleRowClick}
           getRowId={(t) => t.id}

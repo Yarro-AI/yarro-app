@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { PageShell } from '@/components/page-shell'
@@ -8,6 +8,7 @@ import { DataTable, Column } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
 import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
 import { ShieldCheck } from 'lucide-react'
+import { CommandSearchInput } from '@/components/command-search-input'
 import Link from 'next/link'
 
 interface ComplianceRow {
@@ -37,6 +38,17 @@ export default function CompliancePage() {
   const [certificates, setCertificates] = useState<ComplianceRow[]>([])
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState({ expired: 0, expiring: 0, valid: 0, total: 0 })
+  const [search, setSearch] = useState('')
+  const filteredCertificates = useMemo(() => {
+    if (!search) return certificates
+    const lower = search.toLowerCase()
+    return certificates.filter(c =>
+      (CERTIFICATE_LABELS[c.certificate_type] || c.certificate_type).toLowerCase().includes(lower) ||
+      c.property_address?.toLowerCase().includes(lower) ||
+      c.issued_by?.toLowerCase().includes(lower) ||
+      c.status?.toLowerCase().includes(lower)
+    )
+  }, [certificates, search])
 
   const fetchData = useCallback(async () => {
     if (!propertyManager) return
@@ -145,35 +157,18 @@ export default function CompliancePage() {
   return (
     <PageShell
       title="Compliance"
-      count={certificates.length}
-      subtitle={`${summary.total} certificates across all properties`}
-      headerExtra={
-        summary.total > 0 ? (
-          <div className="flex items-center gap-4 py-3">
-            {summary.expired > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-danger" />
-                <span className="text-sm text-muted-foreground">{summary.expired} expired</span>
-              </div>
-            )}
-            {summary.expiring > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-warning" />
-                <span className="text-sm text-muted-foreground">{summary.expiring} expiring</span>
-              </div>
-            )}
-            {summary.valid > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-success" />
-                <span className="text-sm text-muted-foreground">{summary.valid} valid</span>
-              </div>
-            )}
-          </div>
-        ) : undefined
+      count={filteredCertificates.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search certificates..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
       }
     >
       <DataTable
-        data={certificates}
+        data={filteredCertificates}
         columns={columns}
         getRowId={(row) => row.id}
         onRowClick={(row) => {

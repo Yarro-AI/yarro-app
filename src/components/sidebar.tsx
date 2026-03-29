@@ -60,6 +60,7 @@ interface NavChild {
   label: string
   countKey?: keyof SidebarCounts
   badge?: boolean
+  comingSoon?: boolean
 }
 
 interface NavGroup {
@@ -98,9 +99,9 @@ const navGroups: NavGroup[] = [
     icon: Banknote,
     defaultOpen: false,
     children: [
-      { href: '/properties?tab=rent', label: 'Rent' },
-      { href: '/properties?tab=invoices', label: 'Invoices' },
-      { href: '/properties?tab=expenses', label: 'Expense tracker' },
+      { href: '/rent', label: 'Rent', comingSoon: true },
+      { href: '/invoices', label: 'Invoices', comingSoon: true },
+      { href: '/expenses', label: 'Expense Tracker', comingSoon: true },
     ],
   },
   {
@@ -109,8 +110,8 @@ const navGroups: NavGroup[] = [
     defaultOpen: false,
     children: [
       { href: '/compliance', label: 'Certificates', badge: true },
-      { href: '/compliance?tab=audit-trail', label: 'Audit Trail' },
-      { href: '/compliance?tab=tenancies', label: 'Tenancies' },
+      { href: '/audit-trail', label: 'Audit Trail' },
+      { href: '/tenancies', label: 'Tenancies', comingSoon: true },
     ],
   },
   {
@@ -157,9 +158,12 @@ export function Sidebar() {
   })
   const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>(() => {
     const stored = getStoredGroupState()
+    // Only allow one group open at a time — use stored state or first defaultOpen
+    const openLabel = navGroups.find(g => stored[g.label])?.label
+      ?? navGroups.find(g => g.defaultOpen !== false)?.label
     const initial: Record<string, boolean> = {}
     navGroups.forEach(g => {
-      initial[g.label] = stored[g.label] ?? (g.defaultOpen !== false)
+      initial[g.label] = g.label === openLabel
     })
     return initial
   })
@@ -176,7 +180,12 @@ export function Sidebar() {
 
   const toggleGroup = (label: string) => {
     setGroupOpen(prev => {
-      const next = { ...prev, [label]: !prev[label] }
+      const isOpening = !prev[label]
+      // Accordion: close all others when opening one
+      const next: Record<string, boolean> = {}
+      navGroups.forEach(g => {
+        next[g.label] = g.label === label ? isOpening : false
+      })
       storeGroupState(next)
       return next
     })
@@ -424,6 +433,11 @@ export function Sidebar() {
                           {child.badge && (
                             <span className="text-[10px] font-bold bg-[rgba(220,38,38,0.22)] text-[#FCA5A5] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 mr-2">
                               !
+                            </span>
+                          )}
+                          {child.comingSoon && (
+                            <span className="text-[9px] font-medium text-sidebar-foreground/40 uppercase tracking-wider mr-2">
+                              Soon
                             </span>
                           )}
                         </Link>
