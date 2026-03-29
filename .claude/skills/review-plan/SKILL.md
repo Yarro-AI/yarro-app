@@ -38,6 +38,7 @@ This is the only step that touches the codebase. For everything the plan referen
 1. **Does it exist?** Quick glob/grep — confirm file paths, function names, table references are real
 2. **Does it match?** If the plan says "modify the `fetchCerts` function on line 45" — is that function actually there, at roughly that location, doing what the plan thinks?
 3. **Are there callers?** If the plan changes a function/RPC signature, grep for other code that calls it. The plan must handle these or it'll break things silently
+4. **Does it touch a protected RPC?** If any step writes `CREATE OR REPLACE FUNCTION` for a function listed in `supabase/core-rpcs/README.md`, flag it as a **BLOCKER**. The plan must include: backup of current definition, Adam's explicit approval, and the safe modification protocol from `supabase/core-rpcs/README.md`.
 
 Don't verify things the plan is **creating** — only things it **depends on**. If something doesn't exist and the plan doesn't create it, that's a blocker.
 

@@ -1,4 +1,17 @@
 -- =============================================================
+-- CONTAINS LIVE VERSIONS OF CRITICAL RPCs — DO NOT MODIFY
+-- =============================================================
+-- This migration redefines:
+--   c1_context_logic  (lines ~15-975)  — WhatsApp state machine
+--   c1_create_ticket  (lines ~981-end) — Ticket creation
+--
+-- These are the CURRENT production definitions, superseding
+-- the versions in 20260327041845_remote_schema.sql.
+--
+-- DO NOT MODIFY without Adam's explicit approval.
+-- See supabase/core-rpcs/ticket-lifecycle.md for callers.
+-- =============================================================
+--
 -- WhatsApp Room Awareness
 -- Extends c1_context_logic to return room data for the tenant
 -- Extends c1_create_ticket to populate room_id on tickets

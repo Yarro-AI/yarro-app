@@ -1,3 +1,24 @@
+-- ============================================================
+-- CORE MIGRATION — DO NOT MODIFY THIS FILE
+-- ============================================================
+-- This file contains 72 production SQL functions, table
+-- definitions, RLS policies, and triggers.
+--
+-- PROTECTED FUNCTIONS: See supabase/core-rpcs/README.md
+-- for the full list of untouchable RPCs.
+--
+-- To extend or fix a function defined here:
+-- 1. Create a NEW migration file
+-- 2. Copy the current function definition into it
+-- 3. Make your changes there
+-- 4. NEVER edit this file directly
+--
+-- Some functions in this file have been superseded by later
+-- migrations (e.g., c1_context_logic was replaced in
+-- 20260329000000_whatsapp_room_awareness.sql).
+-- Check supabase/core-rpcs/ for the current-version map.
+-- ============================================================
+
 create extension if not exists "pg_cron" with schema "pg_catalog";
 
 drop extension if exists "pg_net";

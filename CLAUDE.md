@@ -114,6 +114,29 @@ These files are complex and have non-obvious behavior. Read thoroughly before mo
 | `src/hooks/use-ticket-detail.ts` | Large hook (600+ lines) tightly coupled to DB schema. Fetches 5-7 queries in parallel |
 | Database RPCs (`c1_context_logic`, `c1_create_ticket`, etc.) | Core business logic in PostgreSQL. Backed up in `.backups/supabase-export-2026-03-26/` |
 
+### Protected RPCs — Hard Stop
+
+There are 61 SQL functions that are **untouchable without Adam's explicit approval**.
+They drive WhatsApp conversations, ticket creation, contractor dispatch, portal
+authentication, cron jobs, and RLS policies.
+
+**Before writing any new migration that uses `CREATE OR REPLACE FUNCTION`:**
+1. Check `supabase/core-rpcs/README.md` for the full alphabetical list
+2. If the function name appears there, **STOP and ask Adam**
+3. Read the category file for that function to understand callers and dependencies
+
+The full catalog lives at `supabase/core-rpcs/`. The deep reference
+(dependency graph, trigger map, cron schedule) is at `.claude/docs/protected-rpcs.md`.
+
+**Why this matters:** A `CREATE OR REPLACE` in a new migration silently
+overwrites the previous version. There is no undo in production.
+Functions like `c1_message_next_action` (9+ callers), `c1_msg_merge_contractor`
+(11 callers), and `get_pm_id` (~33 RLS policies) will cascade failures
+across the entire system if modified incorrectly.
+
+**Key gotcha:** `c1_context_logic` and `c1_create_ticket` live in
+`20260329000000_whatsapp_room_awareness.sql`, NOT in the main migration.
+
 ---
 
 ## Git Workflow
@@ -240,4 +263,6 @@ One paragraph of what happened.
 | `.claude/docs/git-workflow.md` | Git operations reference |
 | `.claude/tasks/BACKLOG.md` | Captured ideas for future sessions |
 | `.claude/skills/morning-prd/SKILL.md` | Morning PRD skill definition |
+| `supabase/core-rpcs/README.md` | Before writing ANY new migration |
+| `.claude/docs/protected-rpcs.md` | Before planning changes to SQL functions |
 
