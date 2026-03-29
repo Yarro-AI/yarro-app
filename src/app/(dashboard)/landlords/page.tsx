@@ -247,6 +247,14 @@ export default function LandlordsPage() {
     setDrawerOpen(true)
   }
 
+  // Auto-open create from global header ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleAddClick()
+      window.history.replaceState({}, '', '/landlords')
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleCloseCreateDrawer = () => {
     cancelCreating()
     setValidationErrors({})

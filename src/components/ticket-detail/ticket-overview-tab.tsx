@@ -148,7 +148,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             <p className="text-sm font-semibold text-foreground mb-3">Out-of-Hours</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                <Phone className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
                 <span className="text-sm font-medium">
                   {basic.ooh_outcome === 'resolved' ? 'Handled by OOH contact'
                   : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
@@ -191,7 +191,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             <p className="text-sm font-semibold text-foreground mb-3">Landlord Allocated</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                <Building2 className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
                 <span className="text-sm font-medium">
                   {basic.landlord_outcome === 'resolved' ? 'Resolved by landlord'
                   : basic.landlord_outcome === 'need_help' ? 'Landlord needs help'
@@ -454,7 +454,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             <p className="text-sm font-semibold text-foreground mb-3">Reschedule Request</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CalendarClock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                <CalendarClock className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
                 <span className="text-sm font-medium">
                   {basic.reschedule_status === 'pending' ? 'Awaiting contractor response'
                   : basic.reschedule_status === 'approved' ? 'Approved by contractor'

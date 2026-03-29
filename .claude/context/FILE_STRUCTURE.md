@@ -175,7 +175,7 @@ yarro-pm/
 │   ├── styles/
 │   │   └── spacing.ts                         ✅ Spacing scale constants
 │   │
-│   ├── middleware.ts                           🔴 RED — auth session management
+│   ├── proxy.ts                               🔴 RED — auth session management
 │   │
 │   └── types/
 │       └── database.ts                        🔴 RED — auto-generated Supabase types
@@ -211,4 +211,4 @@ yarro-pm/
 |------|-------|------|
 | ✅ GREEN | `src/app/(dashboard)/`, `src/components/` (non-auth), `src/lib/utils.ts`, `src/lib/normalize.ts`, `src/lib/validate.ts`, `src/styles/`, `public/` | Edit freely |
 | ⚠️ YELLOW | `src/app/globals.css`, `src/app/(dashboard)/layout.tsx`, `src/components/sidebar.tsx`, `src/hooks/`, `src/lib/constants.ts`, `src/contexts/date-range-context.tsx`, `package.json` | Flag to Faraaz first |
-| 🔴 RED | `supabase/`, `.github/`, `src/middleware.ts`, `src/contexts/pm-context.tsx`, `src/lib/supabase/`, `src/types/database.ts`, `.env.local`, `supabase/config.toml` | Never include in prompts, never modify |
+| 🔴 RED | `supabase/`, `.github/`, `src/proxy.ts`, `src/contexts/pm-context.tsx`, `src/lib/supabase/`, `src/types/database.ts`, `.env.local`, `supabase/config.toml` | Never include in prompts, never modify |

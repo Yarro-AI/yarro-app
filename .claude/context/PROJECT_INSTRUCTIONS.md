@@ -185,7 +185,7 @@ shadcn/ui components: `Button`, `Input`, `Textarea`, `Select`, `Dialog`, `Sheet`
 ### RED — Never include in prompts, never modify
 - `supabase/functions/` — Edge Functions (Deno, Twilio, OpenAI)
 - `.github/workflows/` — CI/CD pipeline
-- `src/middleware.ts` — auth session management
+- `src/proxy.ts` — auth session management
 - `src/contexts/pm-context.tsx` — auth state provider with race-condition fixes
 - `src/lib/supabase/` — Supabase client config
 - `src/types/database.ts` — auto-generated types

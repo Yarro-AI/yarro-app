@@ -285,6 +285,14 @@ export default function TenantsPage() {
     setDrawerOpen(true)
   }
 
+  // Auto-open create from global header ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleAddClick()
+      window.history.replaceState({}, '', '/tenants')
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleCloseCreateDrawer = () => {
     cancelCreating()
     setValidationErrors({})

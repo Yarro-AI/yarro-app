@@ -104,7 +104,7 @@ src/
 │   ├── validate.ts           # Input validation helpers
 │   ├── utils.ts              # cn() and general utilities
 │   └── constants.ts          # App-wide constants
-└── middleware.ts              # Auth session refresh (DO NOT MODIFY)
+└── proxy.ts                  # Auth session refresh (DO NOT MODIFY)
 ```
 
 ---

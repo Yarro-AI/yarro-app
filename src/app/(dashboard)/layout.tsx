@@ -11,6 +11,7 @@ import { DateRangeProvider } from '@/contexts/date-range-context'
 import { createClient } from '@/lib/supabase/client'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { TicketDrawerProvider } from '@/components/ticket-drawer-provider'
+import { DashboardHeader } from '@/components/dashboard-header'
 
 export default function DashboardLayout({
   children,
@@ -113,6 +114,8 @@ export default function DashboardLayout({
             </SheetContent>
           </Sheet>
         </div>
+        {/* Global search + create header */}
+        <DashboardHeader />
         <main className="flex-1 overflow-auto">
           <DateRangeProvider>
             <ErrorBoundary>

@@ -715,7 +715,7 @@ export default function TicketsPage() {
         const reviewTickets = tickets.filter((t) => isPendingReview(t))
         if (reviewTickets.length === 0) return null
         return (
-          <div className="mb-6 rounded-xl border border-violet-200 dark:border-violet-500/30 bg-violet-50/50 dark:bg-violet-500/5 p-4">
+          <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/50 p-4">
             <div className="flex items-center gap-2 mb-3">
               <ClipboardList className="h-5 w-5 text-violet-500" />
               <p className="text-sm font-medium">

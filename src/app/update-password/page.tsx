@@ -66,15 +66,7 @@ export default function UpdatePasswordPage() {
             alt="Yarro"
             width={120}
             height={40}
-            className="mx-auto dark:hidden"
-            priority
-          />
-          <Image
-            src="/logo-white.png"
-            alt="Yarro"
-            width={120}
-            height={40}
-            className="mx-auto hidden dark:block"
+            className="mx-auto"
             priority
           />
         </div>
@@ -134,7 +126,7 @@ export default function UpdatePasswordPage() {
               </div>
 
               {error && (
-                <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+                <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
                   {error}
                 </div>
               )}

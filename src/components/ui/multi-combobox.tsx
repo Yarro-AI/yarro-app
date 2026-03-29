@@ -166,7 +166,7 @@ export function MultiCombobox({
                           className={cn(
                             'text-xs',
                             option.badgeVariant === 'success' && 'bg-green-100 text-green-700 border-green-200',
-                            option.badgeVariant === 'warning' && 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                            option.badgeVariant === 'warning' && 'bg-amber-100 text-amber-700 border-amber-200'
                           )}
                         >
                           {option.badge}

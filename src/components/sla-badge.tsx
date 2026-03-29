@@ -66,10 +66,10 @@ function getSlaStatus(slaDueAt: string, resolvedAt?: string | null, priority?: s
 }
 
 const statusStyles: Record<SlaStatus, string> = {
-  green: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-  amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  red: 'bg-red-500/10 text-red-700 dark:text-red-400 font-semibold',
-  breached: 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold',
+  green: 'bg-emerald-500/10 text-emerald-700',
+  amber: 'bg-amber-500/10 text-amber-700',
+  red: 'bg-red-500/10 text-red-700 font-semibold',
+  breached: 'bg-red-500/15 text-red-600 font-bold',
   resolved: 'bg-muted text-muted-foreground',
 }
 

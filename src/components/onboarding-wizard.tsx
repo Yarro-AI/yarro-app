@@ -749,7 +749,7 @@ export function OnboardingWizard() {
         {state.step === 'complete' && (
           <div className="text-center space-y-4 py-6">
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
-              <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle className="h-8 w-8 text-emerald-600" />
             </div>
             <h2 className="text-lg font-medium text-card-foreground">Onboarding Complete</h2>
             <div className="flex justify-center gap-6">

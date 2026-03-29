@@ -603,22 +603,22 @@ export function TicketForm({
     <>
       {/* Handoff indicator */}
       {isHandoff && formData.priority === 'Emergency' && (
-        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded-lg flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+        <div className="p-3 bg-red-50 border border-red-300 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
-            <p className="font-bold text-red-800 dark:text-red-300 uppercase tracking-wide">EMERGENCY</p>
-            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
+            <p className="font-bold text-red-800 uppercase tracking-wide">EMERGENCY</p>
+            <p className="text-xs text-red-700 mt-0.5">
               This conversation was flagged as an emergency. Review urgently and dispatch immediately.
             </p>
           </div>
         </div>
       )}
       {isHandoff && formData.priority !== 'Emergency' && (
-        <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800 rounded-lg flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+        <div className="p-3 bg-red-50 border border-red-300 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-red-800 dark:text-red-300">Manual Review Required</p>
-            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
+            <p className="font-medium text-red-800">Manual Review Required</p>
+            <p className="text-xs text-red-700 mt-0.5">
               This conversation was handed off because it couldn&apos;t be fully automated.
               Please verify tenant details, review the issue description, and check any photos before dispatching.
             </p>
@@ -847,12 +847,12 @@ export function TicketForm({
             .filter(c => c && !(c.categories?.includes(formData.category) || c.category === formData.category)) as Contractor[]
           if (mismatchedContractors.length === 0) return null
           return (
-            <div className="col-span-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+            <div className="col-span-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
-                  <p className="font-medium text-amber-800 dark:text-amber-300">Category mismatch</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                  <p className="font-medium text-amber-800">Category mismatch</p>
+                  <p className="text-xs text-amber-700 mt-1">
                     Job category is <span className="font-medium">&quot;{formData.category}&quot;</span> but{' '}
                     {mismatchedContractors.length === 1 ? (
                       <>
@@ -871,7 +871,7 @@ export function TicketForm({
                       </>
                     )}.
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-xs text-amber-600 mt-1">
                     Check this is intentional before proceeding.
                   </p>
                 </div>
@@ -933,7 +933,7 @@ export function TicketForm({
         <Button
           size="sm"
           variant="outline"
-          className="border-purple-400 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 gap-1.5"
+          className="border-purple-400 text-purple-700 hover:bg-purple-100 gap-1.5"
           disabled={allocatingLandlord || submitting}
           onClick={async () => {
             setAllocatingLandlord(true)

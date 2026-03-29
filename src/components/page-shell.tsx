@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { typography } from '@/lib/typography'
+import { spacing } from '@/styles/spacing'
 
 interface PageShellProps {
   title: string
@@ -36,7 +37,7 @@ export function PageShell({
       )}
     >
       {topBar ? (
-        <div className="flex-shrink-0 flex flex-col px-8">
+        <div className={cn('flex-shrink-0 flex flex-col', spacing.pagePaddingX)}>
           <div className="flex items-center h-16">
             <div className="min-w-0">
               <h1 className={typography.pageTitle}>{title}</h1>
@@ -55,7 +56,7 @@ export function PageShell({
         </div>
       ) : (
         <div className={cn(
-          'flex-shrink-0 flex items-center justify-between gap-4 px-8 h-16 mt-2',
+          'flex-shrink-0 flex items-center justify-between gap-4 h-16 mt-2', spacing.pagePaddingX,
           headerBorder ? 'border-b border-foreground/10' : ''
         )}>
           <div className="min-w-0">
@@ -73,9 +74,9 @@ export function PageShell({
         !noPadding && 'pb-8'
       )}>
         {headerExtra && (
-          <div className="flex-shrink-0 px-8">{headerExtra}</div>
+          <div className={cn('flex-shrink-0', spacing.pagePaddingX)}>{headerExtra}</div>
         )}
-        <div className={cn('flex-1 min-h-0', !noPadding && 'px-8', scrollable ? 'overflow-y-auto' : 'flex flex-col overflow-hidden')}>
+        <div className={cn('flex-1 min-h-0', !noPadding && spacing.pagePaddingX, scrollable ? 'overflow-y-auto' : 'flex flex-col overflow-hidden')}>
           {children}
         </div>
       </div>

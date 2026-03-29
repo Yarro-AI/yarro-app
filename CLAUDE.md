@@ -109,7 +109,7 @@ These files are complex and have non-obvious behavior. Read thoroughly before mo
 | `supabase/functions/yarro-tenant-intake/` | WhatsApp intake state machine — `c1_context_logic` RPC drives conversation flow |
 | `supabase/functions/yarro-tenant-intake/prompts.ts` | 1,550 lines of AI prompts. Backend code parses exact emoji + phrases. See `.claude/docs/hmo-pivot-plan.md` Section 10 for the list of load-bearing phrases |
 | `src/contexts/pm-context.tsx` | Auth state provider — has race-condition fixes for Supabase GitHub issue #35754. Two-layer pattern (authUser + PM record) is intentional |
-| `src/middleware.ts` + `src/lib/supabase/` | Auth session management — cookie refresh on every request. `getSession()` vs `getUser()` choice is deliberate |
+| `src/proxy.ts` + `src/lib/supabase/` | Auth session management — cookie refresh on every request. `getSession()` vs `getUser()` choice is deliberate |
 | `src/types/database.ts` | Auto-generated from Supabase. Manual edits get overwritten on next type generation |
 | `src/hooks/use-ticket-detail.ts` | Large hook (600+ lines) tightly coupled to DB schema. Fetches 5-7 queries in parallel |
 | Database RPCs (`c1_context_logic`, `c1_create_ticket`, etc.) | Core business logic in PostgreSQL. Backed up in `.backups/supabase-export-2026-03-26/` |

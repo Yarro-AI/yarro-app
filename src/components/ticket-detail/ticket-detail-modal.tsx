@@ -224,12 +224,12 @@ export function TicketDetailModal({
             <div className="flex-1 min-h-0 flex flex-col animate-in fade-in-0 duration-200">
               {/* Handoff warning */}
               {isHandoff && (
-                <div className="mx-6 p-3 mt-2 mb-1 bg-red-500/10 dark:bg-red-500/15 rounded-lg border border-red-300 dark:border-red-500/30 flex-shrink-0">
+                <div className="mx-6 p-3 mt-2 mb-1 bg-red-500/10 rounded-lg border border-red-300 flex-shrink-0">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <p className="font-medium text-red-700 dark:text-red-300">Handoff — Needs Manual Review</p>
-                      <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">
+                      <p className="font-medium text-red-700">Handoff — Needs Manual Review</p>
+                      <p className="text-xs text-red-600/80 mt-1">
                         The AI couldn&apos;t complete this ticket automatically. Review the conversation and dispatch manually.
                       </p>
                     </div>
@@ -239,12 +239,12 @@ export function TicketDetailModal({
 
               {/* Double-quote warning */}
               {previouslyApprovedContractor && basic.contractor_id && (
-                <div className="mx-6 p-3 mt-2 mb-1 bg-red-500/10 dark:bg-red-500/15 rounded-lg border border-red-300 dark:border-red-500/30 flex-shrink-0">
+                <div className="mx-6 p-3 mt-2 mb-1 bg-red-500/10 rounded-lg border border-red-300 flex-shrink-0">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <p className="font-medium text-red-700 dark:text-red-300">Previous contractor already approved</p>
-                      <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">
+                      <p className="font-medium text-red-700">Previous contractor already approved</p>
+                      <p className="text-xs text-red-600/80 mt-1">
                         <span className="font-medium">{previouslyApprovedContractor}</span> was previously approved.
                         Cancel the previous arrangement before proceeding with a new contractor.
                       </p>
