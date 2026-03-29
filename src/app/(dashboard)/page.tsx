@@ -15,6 +15,7 @@ import {
   Search,
   ShieldCheck,
   Banknote,
+  Wrench,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -387,12 +388,11 @@ export default function DashboardPage() {
 
   const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const firstName = propertyManager?.name?.split(' ')[0] || ''
   const taskCount = actionable.length
   const greetingLabel = taskCount > 0
-    ? `${greeting}. You've got ${taskCount} task${taskCount !== 1 ? 's' : ''} today.`
-    : `${greeting}. You're all clear.`
+    ? `Hi, ${firstName}. You've got ${taskCount} task${taskCount !== 1 ? 's' : ''} today.`
+    : `Hi, ${firstName}. You're all clear.`
 
   // Autocomplete results for global search in top bar
   const searchResults = searchTerm.trim()
@@ -431,12 +431,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header — greeting + create button */}
-      <div className="flex items-center justify-between px-6 py-4 flex-shrink-0">
+      {/* Header — greeting */}
+      <div className="px-6 py-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold text-foreground">{greetingLabel}</h1>
-        <Button variant="default" size="default" asChild>
-          <Link href="/tickets?create=true">Create ticket</Link>
-        </Button>
       </div>
 
       {/* Scrollable content */}

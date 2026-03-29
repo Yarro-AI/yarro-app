@@ -104,12 +104,13 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Documents',
+    label: 'Compliance',
     icon: ShieldCheck,
     defaultOpen: false,
     children: [
-      { href: '/compliance', label: 'Compliance', badge: true },
-      { href: '/compliance?tab=documents', label: 'Documents' },
+      { href: '/compliance', label: 'Certificates', badge: true },
+      { href: '/compliance?tab=audit-trail', label: 'Audit Trail' },
+      { href: '/compliance?tab=tenancies', label: 'Tenancies' },
     ],
   },
   {
