@@ -5,6 +5,11 @@ import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
 import { CheckCircle2, Loader2, Phone, CalendarClock, Camera, MapPin, AlertTriangle, ChevronLeft, ChevronRight, Upload, X, PoundSterling } from 'lucide-react'
 
+function isVideoUrl(url: string): boolean {
+  const lower = url.toLowerCase()
+  return /\.(mp4|mov|webm|avi|mkv|3gp)/.test(lower) || lower.includes('/video/')
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -536,14 +541,18 @@ export default function ContractorPortalPage() {
               <div className="border-t border-gray-100 p-5">
                 <div className="flex items-center gap-1.5 mb-3">
                   <Camera className="size-3.5 text-gray-400" />
-                  <span className="text-xs font-medium text-gray-500">Photos</span>
+                  <span className="text-xs font-medium text-gray-500">Photos & Videos</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {quoteCtx.images.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                      <img src={url} alt={`Issue photo ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-gray-200" />
-                    </a>
-                  ))}
+                  {quoteCtx.images.map((url, i) =>
+                    isVideoUrl(url) ? (
+                      <video key={i} src={url} controls playsInline className="w-full h-32 object-cover rounded-lg border border-gray-200" />
+                    ) : (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                        <img src={url} alt={`Issue photo ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-gray-200" />
+                      </a>
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -746,14 +755,18 @@ export default function ContractorPortalPage() {
             <div className="border-t border-gray-100 p-5">
               <div className="flex items-center gap-1.5 mb-3">
                 <Camera className="size-3.5 text-gray-400" />
-                <span className="text-xs font-medium text-gray-500">Photos</span>
+                <span className="text-xs font-medium text-gray-500">Photos & Videos</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {ticket!.images.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                    <img src={url} alt={`Issue photo ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-gray-200" />
-                  </a>
-                ))}
+                {ticket!.images.map((url, i) =>
+                  isVideoUrl(url) ? (
+                    <video key={i} src={url} controls playsInline className="w-full h-32 object-cover rounded-lg border border-gray-200" />
+                  ) : (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                      <img src={url} alt={`Issue photo ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-gray-200" />
+                    </a>
+                  )
+                )}
               </div>
             </div>
           )}

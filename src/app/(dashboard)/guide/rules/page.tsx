@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import {
-  SlidersHorizontal,
   Save,
   Check,
   Clock,
@@ -24,6 +23,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PageShell } from '@/components/page-shell'
 import { normalizePhone } from '@/lib/normalize'
 
 // ─── Shared options (all values in minutes) ───
@@ -76,7 +76,7 @@ interface DraftSettings {
 }
 
 const LEAD_TIME_OPTIONS = [
-  { value: '1', label: '1 hour' },
+  { value: '1', label: 'As soon as possible (1hr)' },
   { value: '2', label: '2 hours' },
   { value: '3', label: '3 hours' },
   { value: '4', label: '4 hours' },
@@ -453,14 +453,7 @@ export default function RulesPage() {
   )
 
   return (
-    <div className="h-full flex flex-col p-6 px-8">
-      <div className="mb-6 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Rules & Preferences</h1>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">Configure how Yarro handles dispatching, approvals, and follow-ups.</p>
-      </div>
+    <PageShell title="Rules & Preferences" subtitle="Configure how Yarro handles dispatching, approvals, and follow-ups.">
 
       <div className="flex-1 overflow-y-auto pb-4 space-y-6">
 
@@ -639,7 +632,7 @@ export default function RulesPage() {
                       <span className="text-sm font-medium">{contact.name}</span>
                       <span className="text-xs text-muted-foreground">{contact.phone}</span>
                       {contact.contractor_id && (
-                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
                           Contractor
                         </span>
                       )}
@@ -819,7 +812,7 @@ export default function RulesPage() {
                 value={draft.min_booking_lead_hours}
                 onValueChange={(v) => updateDraft({ min_booking_lead_hours: v })}
               >
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -867,6 +860,6 @@ export default function RulesPage() {
           )}
         </Button>
       </div>
-    </div>
+    </PageShell>
   )
 }

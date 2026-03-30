@@ -48,10 +48,9 @@ async function handleContractorSms(
     "1": manager.business_name || "Your property manager",
     "2": contractor.property_address || "Address not available",
     "3": contractor.issue_description || "Maintenance issue reported",
-    "4": mediaSummary,
-    "5": contractor.priority || "Standard",
-    "6": accessInfo,
-    "7": portalToken,
+    "4": contractor.priority || "Standard",
+    "5": accessInfo,
+    "6": portalToken,
   };
 
   // Send + log + alert via sendAndLog
@@ -59,6 +58,7 @@ async function handleContractorSms(
     ticketId: ticket.id,
     recipientPhone: contractor.phone,
     recipientRole: "contractor",
+    recipientId: contractor.id,
     messageType: "contractor_dispatch",
     templateSid: TEMPLATES.contractor_quote,
     variables,
@@ -258,6 +258,7 @@ async function handleLandlordSms(
     ticketId: ticket.id,
     recipientPhone: prepData.landlord_phone,
     recipientRole: "landlord",
+    recipientId: prepData.landlord_id,
     messageType: "landlord_quote",
     templateSid: TEMPLATES.landlord_quote,
     variables: {
@@ -315,6 +316,7 @@ async function handleLandlordAllocate(
     ticketId: ticket.id,
     recipientPhone: landlord.phone,
     recipientRole: "landlord",
+    recipientId: landlord.id,
     messageType: "landlord_allocate",
     templateSid: TEMPLATES.allocate_landlord,
     variables: {

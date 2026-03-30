@@ -36,6 +36,7 @@ export interface TicketContext {
   manager_phone: string
   manager_email: string
   business_name: string
+  landlord_id: string | null
   landlord_name: string
   landlord_email: string
   landlord_phone: string
@@ -103,9 +104,11 @@ export interface TicketBasic {
   reschedule_reason: string | null
   reschedule_status: string | null
   reschedule_decided_at: string | null
+  room_id: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
+  room_number?: string
 }
 
 export interface ConversationData {
@@ -414,14 +417,15 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
             id, issue_description, status, job_stage, category, priority,
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
-            property_id, tenant_id, contractor_id, conversation_id,
+            property_id, tenant_id, contractor_id, conversation_id, room_id,
             archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
             ooh_dispatched, ooh_outcome, ooh_notes, ooh_cost, ooh_dispatched_at, ooh_outcome_at, ooh_submissions,
             landlord_allocated, landlord_allocated_at, landlord_outcome, landlord_notes, landlord_cost, landlord_outcome_at, landlord_submissions,
             reschedule_requested, reschedule_date, reschedule_reason, reschedule_status, reschedule_decided_at,
             c1_properties(address),
             c1_tenants(full_name),
-            c1_contractors(contractor_name)
+            c1_contractors(contractor_name),
+            c1_rooms(room_number)
           `)
           .eq('id', id)
           .single(),
@@ -436,6 +440,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         address: (basicRes.data.c1_properties as unknown as { address: string } | null)?.address,
         tenant_name: (basicRes.data.c1_tenants as unknown as { full_name: string } | null)?.full_name,
         contractor_name: (basicRes.data.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
+        room_number: (basicRes.data.c1_rooms as unknown as { room_number: string } | null)?.room_number,
       } : null
 
       setContext(ctx)

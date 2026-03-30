@@ -151,10 +151,10 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
           className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors w-full justify-between ${
             hasAreas
               ? 'border-border hover:border-primary/50 hover:bg-primary/5'
-              : 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+              : 'border-amber-300 bg-amber-50'
           }`}
         >
-          <span className={hasAreas ? 'text-emerald-600 dark:text-emerald-400 font-medium truncate' : 'text-amber-600 dark:text-amber-400'}>
+          <span className={hasAreas ? 'text-emerald-600 font-medium truncate' : 'text-amber-600'}>
             {hasAreas ? areas.join(', ') : 'None'}
           </span>
           <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -374,7 +374,7 @@ export function StepContractors({ contractors, availableCities, onChange }: Step
             </div>
 
             {selectedCities.length === 0 && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
                 No cities selected — this contractor won&apos;t be auto-assigned to any properties.
               </p>
             )}

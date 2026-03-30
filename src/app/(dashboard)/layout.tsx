@@ -10,6 +10,8 @@ import { usePM } from '@/contexts/pm-context'
 import { DateRangeProvider } from '@/contexts/date-range-context'
 import { createClient } from '@/lib/supabase/client'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { TicketDrawerProvider } from '@/components/ticket-drawer-provider'
+import { DashboardHeader } from '@/components/dashboard-header'
 
 export default function DashboardLayout({
   children,
@@ -94,7 +96,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-background">
+    <div className="flex h-screen bg-muted">
       <div className="hidden lg:flex">
         <Sidebar />
       </div>
@@ -112,9 +114,12 @@ export default function DashboardLayout({
             </SheetContent>
           </Sheet>
         </div>
+        {/* Global search + create header */}
+        <DashboardHeader />
         <main className="flex-1 overflow-auto">
           <DateRangeProvider>
             <ErrorBoundary>
+              <TicketDrawerProvider />
               {children}
             </ErrorBoundary>
           </DateRangeProvider>

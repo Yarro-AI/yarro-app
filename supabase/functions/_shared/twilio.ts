@@ -145,6 +145,8 @@ export interface SendAndLogParams {
   channel?: "whatsapp" | "email";
   /** Required when channel is "email" */
   recipientEmail?: string;
+  /** Optional: contractor/landlord ID for accurate channel lookup */
+  recipientId?: string;
 }
 
 export async function sendAndLog(
@@ -160,16 +162,23 @@ export async function sendAndLog(
   if (!params.channel && (params.recipientRole === "contractor" || params.recipientRole === "landlord")) {
     try {
       const table = params.recipientRole === "contractor" ? "c1_contractors" : "c1_landlords";
-      const phoneCol = params.recipientRole === "contractor" ? "contractor_phone" : "phone";
       const emailCol = params.recipientRole === "contractor" ? "contractor_email" : "email";
-      // Look specifically for an email-preference entry (multiple entries may share the same phone)
-      const { data } = await supabase
+
+      let query = supabase
         .from(table)
         .select(`contact_method, ${emailCol}`)
-        .eq(phoneCol, params.recipientPhone)
         .eq("contact_method", "email")
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      // Use ID when available (accurate), fall back to phone lookup
+      if (params.recipientId) {
+        query = query.eq("id", params.recipientId);
+      } else {
+        const phoneCol = params.recipientRole === "contractor" ? "contractor_phone" : "phone";
+        query = query.eq(phoneCol, params.recipientPhone);
+      }
+
+      const { data } = await query.maybeSingle();
       if (data && data[emailCol]) {
         channel = "email";
         recipientEmail = data[emailCol];

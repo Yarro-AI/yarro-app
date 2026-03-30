@@ -37,7 +37,7 @@ export function CommandSearchInput({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all',
+        'flex items-center gap-2 h-9 px-3 rounded-lg border bg-muted transition-all',
         focused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border',
         className
       )}

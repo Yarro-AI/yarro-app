@@ -10,23 +10,24 @@ import { DataTable, Column } from '@/components/data-table'
 import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogBody,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
-import { CommandSearchInput } from '@/components/command-search-input'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
+import { CommandSearchInput } from '@/components/command-search-input'
+import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Ticket, RefreshCw, SlidersHorizontal, Pause, Play, ClipboardList } from 'lucide-react'
+import { Ticket, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { SlaBadge } from '@/components/sla-badge'
 
 interface TicketRow {
@@ -384,6 +385,35 @@ export default function TicketsPage() {
     await fetchTickets()
   }
 
+  const handleArchiveRow = async (ticket: TicketRow) => {
+    const archivedAt = new Date().toISOString()
+
+    const { error: ticketError } = await supabase
+      .from('c1_tickets')
+      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
+      .eq('id', ticket.id)
+
+    if (ticketError) {
+      toast.error('Failed to archive ticket')
+      return
+    }
+
+    await supabase
+      .from('c1_messages')
+      .update({ archived: true, archived_at: archivedAt })
+      .eq('ticket_id', ticket.id)
+
+    if (ticket.conversation_id) {
+      await supabase
+        .from('c1_conversations')
+        .update({ archived: true, archived_at: archivedAt })
+        .eq('id', ticket.conversation_id)
+    }
+
+    toast.success('Ticket archived')
+    await fetchTickets()
+  }
+
   const handleDismissTicket = async () => {
     const dismissId = handoffTicketId || reviewTicketId
     if (!dismissId || !selectedTicketBasic) return
@@ -440,8 +470,8 @@ export default function TicketsPage() {
       sortable: true,
       render: (ticket) => (
         <div className="min-w-0 max-w-[400px]">
-          <p className="font-medium truncate">{ticket.issue_description || 'No description'}</p>
-          <p className="text-xs text-muted-foreground truncate">{ticket.address}</p>
+          <p className="text-sm font-medium truncate">{ticket.address || 'No address'}</p>
+          <p className="text-xs text-muted-foreground truncate">{ticket.issue_description || 'No description'}</p>
         </div>
       ),
     },
@@ -514,32 +544,52 @@ export default function TicketsPage() {
       width: '48px',
       render: (ticket) => {
         const isOpen = ticket.status === 'open' && !ticket.archived
-        const isHandoff = ticket.handoff && isOpen
-        if (isHandoff) {
-          return (
-            <InteractiveHoverButton
-              text="Review"
-              className="w-20 text-xs h-7"
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedTicketBasic(ticket)
-                setHandoffTicketId(ticket.id)
-                setCreateDrawerOpen(true)
-              }}
-            />
-          )
-        }
-        if (!isOpen) return null
         return (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 ml-auto"
-            title={ticket.on_hold ? 'Resume' : 'Hold'}
-            onClick={(e) => { e.stopPropagation(); handleToggleHold(ticket) }}
-          >
-            {ticket.on_hold ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/tickets?id=${ticket.id}`)
+                }}
+              >
+                View
+              </DropdownMenuItem>
+              {isOpen && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleHold(ticket)
+                    }}
+                  >
+                    {ticket.on_hold ? 'Resume' : 'Hold'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-danger focus:text-danger"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleArchiveRow(ticket)
+                    }}
+                  >
+                    Archive
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       },
     },
@@ -618,35 +668,131 @@ export default function TicketsPage() {
   }, [tickets, selectedLifecycle, selectedWorkflow, selectedType, search])
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Ticket className="h-5 w-5" />
-            Tickets
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage maintenance tickets across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => fetchTickets()}
-            disabled={loading}
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton
-            text="Create"
-            className="w-24 text-xs h-7"
-            onClick={() => setCreateDrawerOpen(true)}
+    <PageShell
+      title="Tickets"
+      count={visibleRows.length}
+      actions={
+        <>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  'h-9 px-3 rounded-md border text-sm flex items-center gap-2 transition-colors',
+                  hasActiveFilters
+                    ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
+                    : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-border'
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="text-xs tabular-nums opacity-70">{activeFilterCount}</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-4">
+
+              {/* Lifecycle */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Lifecycle</p>
+                {(['open', 'closed', 'archived'] as const).map(lc => (
+                  <label key={lc} className="flex items-center gap-2 py-1 cursor-pointer text-sm capitalize">
+                    <input
+                      type="checkbox"
+                      checked={selectedLifecycle.includes(lc)}
+                      onChange={() => {
+                        const isAdding = !selectedLifecycle.includes(lc)
+                        if (isAdding && (lc === 'closed' || lc === 'archived') && selectedWorkflow.length > 0) {
+                          setSelectedWorkflow([])
+                        }
+                        setSelectedLifecycle(prev =>
+                          prev.includes(lc) ? prev.filter(x => x !== lc) : [...prev, lc]
+                        )
+                      }}
+                      className="rounded border-border"
+                    />
+                    {lc.charAt(0).toUpperCase() + lc.slice(1)}
+                  </label>
+                ))}
+              </div>
+
+              {/* Workflow — only when Open lifecycle is selected */}
+              {selectedLifecycle.includes('open') && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow</p>
+                  {([
+                    { key: 'needsMgr',  label: 'Needs action' },
+                    { key: 'waiting',   label: 'Waiting'      },
+                    { key: 'scheduled', label: 'Scheduled'    },
+                  ] as { key: WorkflowFilter; label: string }[]).map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedWorkflow.includes(key)}
+                        onChange={() => {
+                          const isAdding = !selectedWorkflow.includes(key)
+                          if (isAdding) {
+                            setSelectedLifecycle(prev => {
+                              const withOpen = prev.includes('open') ? prev : [...prev, 'open']
+                              return withOpen.filter(lc => lc === 'open')
+                            })
+                          }
+                          setSelectedWorkflow(prev =>
+                            prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
+                          )
+                        }}
+                        className="rounded border-border"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {/* Type */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Type</p>
+                {([
+                  { key: 'auto',   label: 'WhatsApp (auto)' },
+                  { key: 'manual', label: 'Manual'          },
+                ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedType.includes(key)}
+                      onChange={() =>
+                        setSelectedType(prev =>
+                          prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
+                        )
+                      }
+                      className="rounded border-border"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Clear filters
+                </button>
+              )}
+
+            </PopoverContent>
+          </Popover>
+          <DateFilter value={dateRange} onChange={setDateRange} />
+          <CommandSearchInput
+            placeholder="Search tickets..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
           />
-        </div>
-      </div>
+        </>
+      }
+    >
 
       {/* Handoff Alert Banner */}
       <HandoffAlertBanner
@@ -666,7 +812,7 @@ export default function TicketsPage() {
         const reviewTickets = tickets.filter((t) => isPendingReview(t))
         if (reviewTickets.length === 0) return null
         return (
-          <div className="mb-6 rounded-xl border border-violet-200 dark:border-violet-500/30 bg-violet-50/50 dark:bg-violet-500/5 p-4">
+          <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/50 p-4">
             <div className="flex items-center gap-2 mb-3">
               <ClipboardList className="h-5 w-5 text-violet-500" />
               <p className="text-sm font-medium">
@@ -691,7 +837,7 @@ export default function TicketsPage() {
                   </div>
                   <InteractiveHoverButton
                     text="Triage"
-                    className="w-24 text-xs h-8"
+                    size="sm"
                     onClick={() => {
                       setSelectedTicketBasic(ticket)
                       setReviewTicketId(ticket.id)
@@ -705,135 +851,12 @@ export default function TicketsPage() {
         )
       })()}
 
-      {/* Filters + Date + Search */}
-      <div className="flex-shrink-0 flex items-center gap-3 mb-3">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                'h-9 px-3 rounded-md border text-sm flex items-center gap-2 transition-colors',
-                hasActiveFilters
-                  ? 'border-[#1677FF] text-[#1677FF] bg-[#1677FF]/[0.06]'
-                  : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-border'
-              )}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="text-xs tabular-nums opacity-70">{activeFilterCount}</span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-72 p-4 space-y-4">
-
-            {/* Lifecycle */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Lifecycle</p>
-              {(['open', 'closed', 'archived'] as const).map(lc => (
-                <label key={lc} className="flex items-center gap-2 py-1 cursor-pointer text-sm capitalize">
-                  <input
-                    type="checkbox"
-                    checked={selectedLifecycle.includes(lc)}
-                    onChange={() => {
-                      const isAdding = !selectedLifecycle.includes(lc)
-                      if (isAdding && (lc === 'closed' || lc === 'archived') && selectedWorkflow.length > 0) {
-                        setSelectedWorkflow([])
-                      }
-                      setSelectedLifecycle(prev =>
-                        prev.includes(lc) ? prev.filter(x => x !== lc) : [...prev, lc]
-                      )
-                    }}
-                    className="rounded border-border"
-                  />
-                  {lc.charAt(0).toUpperCase() + lc.slice(1)}
-                </label>
-              ))}
-            </div>
-
-            {/* Workflow — only when Open lifecycle is selected */}
-            {selectedLifecycle.includes('open') && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Workflow</p>
-                {([
-                  { key: 'needsMgr',  label: 'Needs action' },
-                  { key: 'waiting',   label: 'Waiting'      },
-                  { key: 'scheduled', label: 'Scheduled'    },
-                ] as { key: WorkflowFilter; label: string }[]).map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedWorkflow.includes(key)}
-                      onChange={() => {
-                        const isAdding = !selectedWorkflow.includes(key)
-                        if (isAdding) {
-                          setSelectedLifecycle(prev => {
-                            const withOpen = prev.includes('open') ? prev : [...prev, 'open']
-                            return withOpen.filter(lc => lc === 'open')
-                          })
-                        }
-                        setSelectedWorkflow(prev =>
-                          prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
-                        )
-                      }}
-                      className="rounded border-border"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {/* Type */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Type</p>
-              {([
-                { key: 'auto',   label: 'Auto'   },
-                { key: 'manual', label: 'Manual' },
-              ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedType.includes(key)}
-                    onChange={() => setSelectedType(prev =>
-                      prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
-                    )}
-                    className="rounded border-border"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
-              >
-                Clear filters
-              </button>
-            )}
-
-          </PopoverContent>
-        </Popover>
-
-        <DateFilter value={dateRange} onChange={setDateRange} />
-
-        <CommandSearchInput
-          placeholder="Search tickets..."
-          value={search}
-          onChange={setSearch}
-          className="flex-1 min-w-[160px]"
-        />
-      </div>
-
       {/* Scrollable data region — single table */}
-      <div className="flex-1 overflow-auto min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
           data={visibleRows}
           columns={columns}
-          searchKeys={[]}
-          hideToolbar
-          disableBodyScroll
+          fillHeight
           getRowId={t => t.id}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
@@ -865,40 +888,30 @@ export default function TicketsPage() {
         }}
       />
 
-      {/* Create / Complete / Review Ticket Modal */}
-      <Dialog open={createDrawerOpen} onOpenChange={(open) => { if (!open) handleCloseCreateDrawer() }}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle>
-              {reviewTicketId ? 'Review & Dispatch' : handoffTicketId ? 'Complete Ticket' : 'New Ticket'}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <TicketForm
-              initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
-                property_id: selectedTicketBasic.property_id || '',
-                tenant_id: selectedTicketBasic.tenant_id || '',
-                issue_description: selectedTicketBasic.issue_description || '',
-                category: selectedTicketBasic.category || '',
-                priority: selectedTicketBasic.priority || 'Medium',
-                contractor_id: selectedTicketBasic.contractor_id || null,
-                availability: selectedTicketBasic.availability || '',
-                access: selectedTicketBasic.access || '',
-                images: (selectedTicketBasic as { images?: string[] }).images || [],
-                conversation_id: selectedTicketBasic.conversation_id || undefined,
-              } : undefined}
-              isHandoff={!!handoffTicketId}
-              isReview={!!reviewTicketId}
-              ticketId={reviewTicketId || handoffTicketId || null}
-              onSubmit={handleCreateTicket}
-              onCancel={handleCloseCreateDrawer}
-              onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
-              onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
-              submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
-            />
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+      {/* Create / Complete / Review Ticket Drawer */}
+      <TicketForm
+        open={createDrawerOpen}
+        onClose={handleCloseCreateDrawer}
+        initialData={(handoffTicketId || reviewTicketId) && selectedTicketBasic ? {
+          property_id: selectedTicketBasic.property_id || '',
+          tenant_id: selectedTicketBasic.tenant_id || '',
+          issue_description: selectedTicketBasic.issue_description || '',
+          category: selectedTicketBasic.category || '',
+          priority: selectedTicketBasic.priority || 'Medium',
+          contractor_id: selectedTicketBasic.contractor_id || null,
+          availability: selectedTicketBasic.availability || '',
+          access: selectedTicketBasic.access || '',
+          images: (selectedTicketBasic as { images?: string[] }).images || [],
+          conversation_id: selectedTicketBasic.conversation_id || undefined,
+        } : undefined}
+        isHandoff={!!handoffTicketId}
+        isReview={!!reviewTicketId}
+        ticketId={reviewTicketId || handoffTicketId || null}
+        onSubmit={handleCreateTicket}
+        onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
+        onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
+        submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
+      />
 
       {/* Archive Confirmation Dialog */}
       <ConfirmDeleteDialog
@@ -912,6 +925,6 @@ export default function TicketsPage() {
         confirmingLabel="Archiving..."
       />
 
-    </div>
+    </PageShell>
   )
 }

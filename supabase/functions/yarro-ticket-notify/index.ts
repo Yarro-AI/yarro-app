@@ -150,6 +150,7 @@ async function handleMorningDispatch(
         ticketId,
         recipientPhone: ctx.landlord_phone,
         recipientRole: "landlord",
+        recipientId: ctx.landlord_id,
         messageType: "ll_ticket_created",
         templateSid: TEMPLATES.ll_ticket,
         variables: {
@@ -491,6 +492,7 @@ async function handleIntake(
           ticketId,
           recipientPhone: ctx.landlord_phone,
           recipientRole: "landlord",
+          recipientId: ctx.landlord_id,
           messageType: "ll_ticket_created",
           templateSid: TEMPLATES.ll_ticket,
           variables: {
@@ -577,6 +579,7 @@ async function handleManualLandlord(
     ticketId,
     recipientPhone: ctx.landlord_phone,
     recipientRole: "landlord",
+    recipientId: ctx.landlord_id,
     messageType: "ll_ticket_created",
     templateSid: TEMPLATES.ll_ticket,
     variables: {

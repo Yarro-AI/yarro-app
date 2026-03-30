@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -11,14 +11,20 @@ import {
   DetailSection,
   DetailGrid,
   DetailDivider,
+  DetailField,
 } from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import { Badge } from '@/components/ui/badge'
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Contact, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Building2, Contact, MoreHorizontal } from 'lucide-react'
+import { EditableField } from '@/components/editable-field'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
 import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
@@ -31,6 +37,7 @@ interface Landlord {
   created_at: string
   property_count: number
   properties: { id: string; address: string }[]
+  contact_method: string
 }
 
 interface LandlordEditable {
@@ -38,6 +45,7 @@ interface LandlordEditable {
   full_name: string
   phone: string
   email: string | null
+  contact_method: string
 }
 
 const defaultLandlordData: LandlordEditable = {
@@ -45,6 +53,7 @@ const defaultLandlordData: LandlordEditable = {
   full_name: '',
   phone: '',
   email: null,
+  contact_method: 'whatsapp',
 }
 
 export default function LandlordsPage() {
@@ -57,6 +66,16 @@ export default function LandlordsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredLandlords = useMemo(() => {
+    if (!search) return landlords
+    const lower = search.toLowerCase()
+    return landlords.filter(l =>
+      l.full_name?.toLowerCase().includes(lower) ||
+      l.phone?.toLowerCase().includes(lower) ||
+      l.email?.toLowerCase().includes(lower)
+    )
+  }, [landlords, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -68,6 +87,7 @@ export default function LandlordsPage() {
       full_name: l.full_name || '',
       phone: l.phone || '',
       email: l.email,
+      contact_method: l.contact_method || 'whatsapp',
     }
   }
 
@@ -98,6 +118,7 @@ export default function LandlordsPage() {
       .from('c1_landlords')
       .update({
         ...normalized,
+        contact_method: data.contact_method,
         _audit_log: newLog,
       })
       .eq('id', data.id)
@@ -216,7 +237,6 @@ export default function LandlordsPage() {
     }
     setValidationErrors({})
     setDrawerOpen(false)
-    router.push('/landlords')
     setSelectedLandlord(null)
   }
 
@@ -226,6 +246,14 @@ export default function LandlordsPage() {
     startCreating()
     setDrawerOpen(true)
   }
+
+  // Auto-open create from global header ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleAddClick()
+      window.history.replaceState({}, '', '/landlords')
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCloseCreateDrawer = () => {
     cancelCreating()
@@ -259,28 +287,84 @@ export default function LandlordsPage() {
       key: 'full_name',
       header: 'Name',
       sortable: true,
-      render: (l) => <span className="font-medium">{l.full_name || 'Unknown'}</span>,
+      render: (row) => <span className="font-medium text-foreground">{row.full_name}</span>,
+      getValue: (row) => row.full_name,
     },
     {
       key: 'phone',
       header: 'Phone',
-      sortable: true,
-      render: (l) => (
-        <span className="font-mono text-sm">{formatPhoneDisplay(l.phone) || '-'}</span>
-      ),
+      render: (row) => <span className="font-mono text-sm">{formatPhoneDisplay(row.phone) || '—'}</span>,
     },
     {
       key: 'email',
       header: 'Email',
+      render: (row) => <span className="text-muted-foreground">{row.email ?? '—'}</span>,
+    },
+    {
+      key: 'contact_method',
+      header: 'Contact Method',
       sortable: true,
-      render: (l) => l.email || '-',
+      render: (row) => {
+        if (row.contact_method === 'whatsapp') return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success border border-success/20">
+            WhatsApp
+          </span>
+        )
+        if (row.contact_method === 'email') return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+            Email
+          </span>
+        )
+        return <span className="text-muted-foreground">—</span>
+      },
+      getValue: (row) => row.contact_method,
     },
     {
       key: 'property_count',
       header: 'Properties',
       sortable: true,
-      render: (l) => (
-        <Badge variant="outline">{l.property_count}</Badge>
+      render: (row) => <span className="text-muted-foreground">{row.property_count}</span>,
+      getValue: (row) => row.property_count,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedLandlord(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedLandlord(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ]
@@ -290,88 +374,67 @@ export default function LandlordsPage() {
     update: (field: keyof LandlordEditable, value: unknown) => void
   ) => (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">
-          Full Name <span className="text-destructive">*</span>
-        </label>
-        <Input
-          value={data.full_name}
-          onChange={(e) => update('full_name', e.target.value)}
-          placeholder="John Smith"
-          className={`h-9 ${validationErrors.full_name ? 'border-destructive' : ''}`}
-        />
-        {validationErrors.full_name && (
-          <p className="text-xs text-destructive">{validationErrors.full_name}</p>
-        )}
-      </div>
-
+      <EditableField
+        type="text"
+        label="Full Name"
+        value={data.full_name}
+        onChange={(v) => update('full_name', v)}
+        isEditing={true}
+        required
+      />
       <DetailSection title="Contact">
         <DetailGrid columns={2}>
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">
-              Phone <span className="text-destructive">*</span>
-            </label>
-            <Input
-              type="tel"
-              value={data.phone}
-              onChange={(e) => update('phone', e.target.value)}
-              placeholder="07700 900123"
-              className={`h-9 ${validationErrors.phone ? 'border-destructive' : ''}`}
-            />
-            {validationErrors.phone ? (
-              <p className="text-xs text-destructive">{validationErrors.phone}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">UK mobile format</p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Email</label>
-            <Input
-              type="email"
-              value={data.email || ''}
-              onChange={(e) => update('email', e.target.value || null)}
-              placeholder="landlord@email.com"
-              className={`h-9 ${validationErrors.email ? 'border-destructive' : ''}`}
-            />
-            {validationErrors.email && (
-              <p className="text-xs text-destructive">{validationErrors.email}</p>
-            )}
-          </div>
+          <EditableField
+            type="phone"
+            label="Phone"
+            value={data.phone ?? ''}
+            onChange={(v) => update('phone', v)}
+            isEditing={true}
+            required
+          />
+          <EditableField
+            type="email"
+            label="Email"
+            value={data.email ?? ''}
+            onChange={(v) => update('email', v || null)}
+            isEditing={true}
+          />
         </DetailGrid>
       </DetailSection>
+      <EditableField
+        type="select"
+        label="Contact Method"
+        value={data.contact_method}
+        onChange={(v) => update('contact_method', v)}
+        isEditing={true}
+        options={[
+          { value: 'whatsapp', label: 'WhatsApp' },
+          { value: 'email', label: 'Email' },
+        ]}
+      />
     </div>
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Contact className="h-5 w-5" />
-            Landlords
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage landlord contacts across your properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchLandlords()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton text="Add Landlord" onClick={handleAddClick} className="w-36 text-sm h-10" />
-        </div>
-      </div>
+    <PageShell
+      title="Landlords"
+      count={filteredLandlords.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search landlords..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
+    >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={landlords}
+          data={filteredLandlords}
           columns={columns}
-          searchPlaceholder="Search landlords..."
-          searchKeys={['full_name', 'phone', 'email']}
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(l) => l.id}
           fillHeight
           emptyMessage={
@@ -416,35 +479,33 @@ export default function LandlordsPage() {
             <div className="space-y-4">
               {/* Contact */}
               <DetailSection title="Contact">
-                <div className="space-y-2">
-                  {selectedLandlord.phone && (
-                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Phone</p>
-                        <p className="font-mono text-sm">{formatPhoneDisplay(selectedLandlord.phone)}</p>
-                      </div>
-                    </div>
+                <DetailGrid columns={2}>
+                  <DetailField label="Phone">
+                    {selectedLandlord.phone ? formatPhoneDisplay(selectedLandlord.phone) : '—'}
+                  </DetailField>
+                  <DetailField label="Email">
+                    {selectedLandlord.email ?? '—'}
+                  </DetailField>
+                </DetailGrid>
+                <DetailField label="Contact Method">
+                  {selectedLandlord.contact_method === 'whatsapp' ? (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success border border-success/20">
+                      WhatsApp
+                    </span>
+                  ) : selectedLandlord.contact_method === 'email' ? (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      Email
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
                   )}
-                  {selectedLandlord.email && (
-                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="text-sm">{selectedLandlord.email}</p>
-                      </div>
-                    </div>
-                  )}
-                  {!selectedLandlord.phone && !selectedLandlord.email && (
-                    <p className="text-xs text-muted-foreground">No contact info</p>
-                  )}
-                </div>
+                </DetailField>
               </DetailSection>
 
               <DetailDivider />
 
               {/* Properties */}
-              <DetailSection title={`Properties (${selectedLandlord.property_count})`}>
+              <DetailSection title={`Properties (${selectedLandlord.properties.length})`}>
                 {selectedLandlord.properties.length > 0 ? (
                   <div className="space-y-2">
                     {selectedLandlord.properties.map((p) => (
@@ -500,6 +561,6 @@ export default function LandlordsPage() {
         itemName={selectedLandlord?.full_name || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }

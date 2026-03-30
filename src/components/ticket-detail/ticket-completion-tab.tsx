@@ -29,7 +29,7 @@ function DetailCell({ label, value, mono, highlight }: {
       <p className={cn(
         'text-[15px]',
         mono && 'font-mono',
-        highlight ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-medium text-foreground',
+        highlight ? 'font-semibold text-emerald-600' : 'font-medium text-foreground',
       )}>
         {value}
       </p>
@@ -47,8 +47,8 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
         <span className={cn(
           'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border bg-transparent',
           completion.completed
-            ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400'
-            : 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400'
+            ? 'border-green-400 text-green-600'
+            : 'border-red-400 text-red-600'
         )}>
           {completion.completed ? (
             <CheckCircle className="h-3 w-3" />
@@ -74,7 +74,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
         <div className="space-y-4">
           <DetailCell label="Quote" value={formatCurrency(completion.quote_amount)} mono />
-          <DetailCell label="Markup" value={formatCurrency(completion.markup_amount)} mono />
+          <DetailCell label="Markup" value={formatCurrency(Math.abs(completion.markup_amount || 0))} mono />
           <DetailCell label="Total" value={formatCurrency(completion.total_amount)} mono highlight />
         </div>
         <div className="space-y-4">
@@ -103,7 +103,7 @@ export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {
           <DashedLine />
           <div>
             <p className="text-[10px] font-medium text-destructive/70 uppercase tracking-wider mb-2 px-1">Reason</p>
-            <div className="bg-red-500/5 dark:bg-red-400/10 rounded-xl p-4">
+            <div className="bg-red-500/5 rounded-xl p-4">
               <p className="text-sm text-destructive leading-relaxed">{completion.reason}</p>
             </div>
           </div>

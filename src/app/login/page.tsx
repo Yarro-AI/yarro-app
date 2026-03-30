@@ -121,15 +121,7 @@ export default function LoginPage() {
               alt="Yarro"
               width={120}
               height={40}
-              className="mx-auto dark:hidden"
-              priority
-            />
-            <Image
-              src="/logo-white.png"
-              alt="Yarro"
-              width={120}
-              height={40}
-              className="mx-auto hidden dark:block"
+              className="mx-auto"
               priority
             />
           </div>
@@ -186,7 +178,7 @@ export default function LoginPage() {
                 </div>
 
                 {error && (
-                  <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+                  <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
                     {error}
                   </div>
                 )}
@@ -195,7 +187,7 @@ export default function LoginPage() {
                   type="submit"
                   text={loading ? 'Signing in...' : 'Sign in'}
                   disabled={loading}
-                  className="w-full h-11 font-medium"
+                  className="w-full font-medium"
                 />
               </form>
             </>
@@ -216,7 +208,7 @@ export default function LoginPage() {
               </div>
 
               {resetSent ? (
-                <div className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-4 py-3 rounded-lg">
+                <div className="text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg">
                   Check your email for a password reset link. It may take a minute to arrive.
                 </div>
               ) : (
@@ -237,7 +229,7 @@ export default function LoginPage() {
                   </div>
 
                   {error && (
-                    <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+                    <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
                       {error}
                     </div>
                   )}
@@ -246,7 +238,7 @@ export default function LoginPage() {
                     type="submit"
                     text={loading ? 'Sending...' : 'Send reset link'}
                     disabled={loading}
-                    className="w-full h-11 font-medium"
+                    className="w-full font-medium"
                   />
                 </form>
               )}

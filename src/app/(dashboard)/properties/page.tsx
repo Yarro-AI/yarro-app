@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -15,7 +15,6 @@ import {
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
@@ -26,8 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Phone, Mail, Wrench, Ticket, Contact, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Building2, Phone, Mail, Wrench, Ticket, Contact, MoreHorizontal, ShieldCheck } from 'lucide-react'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
+import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
@@ -48,6 +50,8 @@ interface PropertyHub {
   contractors: Json | null
   open_tickets: Json | null
   recent_tickets: Json | null
+  total_rooms: number | null
+  occupied_rooms: number | null
 }
 
 interface LandlordOption {
@@ -101,13 +105,27 @@ export default function PropertiesPage() {
   const { propertyManager } = usePM()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const openTicket = useOpenTicket()
   const [properties, setProperties] = useState<PropertyHub[]>([])
   const [selectedProperty, setSelectedProperty] = useState<PropertyHub | null>(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredProperties = useMemo(() => {
+    if (!search) return properties
+    const lower = search.toLowerCase()
+    return properties.filter(p =>
+      p.address?.toLowerCase().includes(lower) ||
+      p.landlord_name?.toLowerCase().includes(lower)
+    )
+  }, [properties, search])
   const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
+  // Map of property_id → worst compliance status
+  const [complianceByProperty, setComplianceByProperty] = useState<
+    Map<string, 'valid' | 'expiring' | 'expired' | 'missing'>
+  >(new Map())
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -247,10 +265,40 @@ export default function PropertiesPage() {
     if (data) setLandlordOptions(data)
   }
 
+  const fetchComplianceStatuses = async () => {
+    const { data } = await supabase.rpc('compliance_get_all_statuses', {
+      p_pm_id: propertyManager!.id,
+    })
+
+    if (!data) return
+
+    // Group by property_id and find the worst status per property
+    const severityRank: Record<string, number> = {
+      expired: 5, missing: 4, expiring_soon: 3, review: 2,
+      renewal_scheduled: 1, valid: 0,
+    }
+    const statusMap = new Map<string, 'valid' | 'expiring' | 'expired' | 'missing'>()
+
+    for (const row of data as unknown as Array<{ property_id: string; display_status: string }>) {
+      const displayToLegacy: Record<string, 'valid' | 'expiring' | 'expired' | 'missing'> = {
+        valid: 'valid', expiring_soon: 'expiring', expired: 'expired',
+        missing: 'missing', review: 'expiring', renewal_scheduled: 'valid',
+      }
+      const mapped = displayToLegacy[row.display_status] || 'missing'
+      const current = statusMap.get(row.property_id)
+      const currentRank = current ? (severityRank[current] ?? 0) : -1
+      if ((severityRank[row.display_status] ?? 0) > currentRank) {
+        statusMap.set(row.property_id, mapped)
+      }
+    }
+    setComplianceByProperty(statusMap)
+  }
+
   useEffect(() => {
     if (!propertyManager) return
     fetchProperties()
     fetchLandlords()
+    fetchComplianceStatuses()
   }, [propertyManager])
 
   useEffect(() => {
@@ -303,6 +351,14 @@ export default function PropertiesPage() {
     startCreating()
     setDrawerOpen(true)
   }
+
+  // Auto-open create from global header ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleAddClick()
+      window.history.replaceState({}, '', '/properties')
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCloseCreateDrawer = () => {
     cancelCreating()
@@ -391,9 +447,24 @@ export default function PropertiesPage() {
     {
       key: 'tenants',
       header: 'Tenants',
-      render: (p) => (
-        <Badge variant="outline">{getTenants(p.tenants).length}</Badge>
-      ),
+      render: (p) => {
+        const count = getTenants(p.tenants).length
+        return (
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            {count}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'rooms',
+      header: 'Rooms',
+      render: (p) => {
+        const total = p.total_rooms ?? 0
+        if (total === 0) return <span className="text-muted-foreground">—</span>
+        const occupied = p.occupied_rooms ?? 0
+        return <span className="text-sm">{occupied}/{total}</span>
+      },
     },
     {
       key: 'open_tickets',
@@ -401,11 +472,71 @@ export default function PropertiesPage() {
       render: (p) => {
         const count = getTickets(p.open_tickets).length
         return count > 0 ? (
-          <Badge className="bg-primary">{count}</Badge>
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            {count}
+          </span>
         ) : (
-          <span className="text-muted-foreground">-</span>
+          <span className="text-muted-foreground">—</span>
         )
       },
+    },
+    {
+      key: 'compliance',
+      header: 'Compliance',
+      render: (p) => {
+        if (!p.property_id) return null
+        const status = complianceByProperty.get(p.property_id)
+        if (!status) {
+          return (
+            <span className="text-xs text-muted-foreground/50 flex items-center gap-1">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              —
+            </span>
+          )
+        }
+        return <StatusBadge status={status} />
+      },
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedProperty(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedProperty(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ]
 
@@ -503,35 +634,25 @@ export default function PropertiesPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Properties
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your property portfolio
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchProperties()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton text="Add Property" onClick={handleAddClick} className="w-36 text-sm h-10" />
-        </div>
-      </div>
+    <PageShell
+      title="Properties"
+      count={filteredProperties.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search properties..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
+    >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={properties}
+          data={filteredProperties}
           columns={columns}
-          searchPlaceholder="Search properties..."
-          searchKeys={['address', 'landlord_name']}
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(p) => p.property_id || ''}
           emptyMessage="No properties found"
           loading={loading}
@@ -626,11 +747,10 @@ export default function PropertiesPage() {
                 ) : (
                   <div className="space-y-1.5">
                     {getTickets(selectedProperty.open_tickets).map((ticket) => (
-                      <Link
+                      <button
                         key={ticket.id}
-                        href={`/tickets?id=${ticket.id}`}
-                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        onClick={handleCloseDrawer}
+                        onClick={() => { openTicket(ticket.id); handleCloseDrawer() }}
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors w-full text-left cursor-pointer"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <Ticket className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
@@ -639,7 +759,7 @@ export default function PropertiesPage() {
                           </span>
                         </div>
                         <StatusBadge status={ticket.job_stage} />
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -740,6 +860,6 @@ export default function PropertiesPage() {
         itemName={selectedProperty?.address || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }

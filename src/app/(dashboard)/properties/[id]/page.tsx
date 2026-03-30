@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
-import { PriorityDot } from '@/components/priority-dot'
+import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
+import type { TicketRow } from '@/components/profile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -20,24 +21,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
-import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
+import { PropertyComplianceSection } from '@/components/property-compliance-section'
+import { PropertyRoomsSection } from '@/components/property-rooms-section'
+import { PropertyRentSection } from '@/components/property-rent-section'
 import Link from 'next/link'
 import {
-  ArrowLeft,
-  Pencil,
-  Save,
-  X,
-  Trash2,
   Loader2,
-  Banknote,
-  Crown,
-  Phone,
-  KeyRound,
   Check,
-  ChevronDown,
   Plus,
+  X,
+  Building2,
+  Users,
+  ShieldCheck,
+  BedDouble,
+  Banknote,
+  TicketIcon,
 } from 'lucide-react'
 
 // --- Types ---
@@ -45,6 +46,7 @@ import {
 interface PropertyDetail {
   id: string
   address: string
+  property_type: string | null
   landlord_id: string | null
   landlord_name: string | null
   landlord_phone: string | null
@@ -65,6 +67,7 @@ interface LandlordOption {
 interface PropertyEditable {
   id: string
   address: string
+  property_type: string
   landlord_id: string | null
   auto_approve_limit: number | null
   require_landlord_approval: boolean
@@ -89,24 +92,12 @@ interface ContractorRow {
   property_ids: string[] | null
 }
 
-interface TicketRow {
-  id: string
-  issue_title: string | null
-  issue_description: string | null
-  category: string | null
-  priority: string | null
-  status: string
-  next_action_reason: string | null
-  date_logged: string
-  scheduled_date: string | null
-  archived: boolean | null
-}
-
 // --- Helpers ---
 
 const toEditable = (p: PropertyDetail): PropertyEditable => ({
   id: p.id,
   address: p.address || '',
+  property_type: p.property_type || 'hmo',
   landlord_id: p.landlord_id,
   auto_approve_limit: p.auto_approve_limit,
   require_landlord_approval: p.require_landlord_approval ?? true,
@@ -115,41 +106,41 @@ const toEditable = (p: PropertyDetail): PropertyEditable => ({
 })
 
 const formatCurrency = (amount: number | null) => {
-  if (amount === null || amount === undefined) return '—'
-  return `£${amount.toFixed(0)}`
+  if (amount === null || amount === undefined) return '\u2014'
+  return `\u00a3${amount.toFixed(0)}`
 }
 
-const displayStageMap: Record<string, string> = {
-  pending_review: 'Needs Review',
-  handoff_review: 'Handoff',
-  manager_approval: 'Awaiting Manager',
-  no_contractors: 'No Contractors',
-  landlord_declined: 'Landlord Declined',
-  landlord_no_response: 'Landlord No Response',
-  job_not_completed: 'Not Completed',
-  awaiting_contractor: 'Awaiting Contractor',
-  awaiting_landlord: 'Awaiting Landlord',
-  awaiting_booking: 'Awaiting Booking',
-  scheduled: 'Scheduled',
-  completed: 'Completed',
-  dismissed: 'Dismissed',
-}
+const VALID_TABS = ['overview', 'people', 'compliance', 'rooms', 'rent', 'tickets'] as const
+type TabValue = (typeof VALID_TABS)[number]
 
-const getDisplayStage = (reason: string | null, status: string, archived?: boolean | null) => {
-  if (archived) return 'Archived'
-  if (status?.toLowerCase() === 'closed') return 'Completed'
-  if (reason && displayStageMap[reason]) return displayStageMap[reason]
-  return 'Open'
-}
+const TAB_CONFIG: { value: TabValue; label: string; icon: React.ElementType }[] = [
+  { value: 'overview', label: 'Overview', icon: Building2 },
+  { value: 'people', label: 'People', icon: Users },
+  { value: 'compliance', label: 'Compliance', icon: ShieldCheck },
+  { value: 'rooms', label: 'Rooms', icon: BedDouble },
+  { value: 'rent', label: 'Rent', icon: Banknote },
+  { value: 'tickets', label: 'Tickets', icon: TicketIcon },
+]
 
-// --- Component ---
+// --- Inner component (uses useSearchParams) ---
 
-export default function PropertyDetailPage() {
+function PropertyDetailInner() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const propertyId = params.id as string
   const { propertyManager } = usePM()
   const supabase = createClient()
+
+  // Tab state from URL
+  const tabParam = searchParams.get('tab') as TabValue | null
+  const activeTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview'
+
+  const setActiveTab = (tab: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', tab)
+    router.replace(url.pathname + url.search, { scroll: false })
+  }
 
   const [property, setProperty] = useState<PropertyDetail | null>(null)
   const [tenants, setTenants] = useState<TenantRow[]>([])
@@ -157,17 +148,17 @@ export default function PropertyDetailPage() {
   const [contractors, setContractors] = useState<ContractorRow[]>([])
   const [allContractors, setAllContractors] = useState<ContractorRow[]>([])
   const [tickets, setTickets] = useState<TicketRow[]>([])
+  const [rooms, setRooms] = useState<{ id: string; current_tenant_id: string | null; is_vacant: boolean | null; monthly_rent: number | null }[]>([])
   const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
   const [loading, setLoading] = useState(true)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
 
   const fetchProperty = useCallback(async () => {
     if (!propertyId) return
     const { data, error } = await supabase
       .from('c1_properties')
-      .select('id, address, landlord_id, landlord_name, landlord_phone, landlord_email, auto_approve_limit, require_landlord_approval, access_instructions, emergency_access_contact')
+      .select('id, address, property_type, landlord_id, landlord_name, landlord_phone, landlord_email, auto_approve_limit, require_landlord_approval, access_instructions, emergency_access_contact')
       .eq('id', propertyId)
       .single()
     if (error || !data) {
@@ -180,22 +171,24 @@ export default function PropertyDetailPage() {
 
   const fetchRelated = useCallback(async () => {
     if (!propertyId || !propertyManager) return
-    const [tenantsRes, allTenantsRes, contractorsRes, ticketsRes, landlordsRes] = await Promise.all([
+    const [tenantsRes, allTenantsRes, contractorsRes, ticketsRes, landlordsRes, roomsRes] = await Promise.all([
       supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_id', propertyId).order('full_name'),
       supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_manager_id', propertyManager.id).order('full_name'),
       supabase.from('c1_contractors').select('id, contractor_name, category, categories, contractor_phone, property_ids').eq('property_manager_id', propertyManager.id).eq('active', true),
-      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, scheduled_date, archived').eq('property_id', propertyId).order('date_logged', { ascending: false }).limit(50),
+      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('property_id', propertyId).order('date_logged', { ascending: false }).limit(50),
       supabase.from('c1_landlords').select('id, full_name, phone, email').eq('property_manager_id', propertyManager.id).order('full_name'),
+      supabase.from('c1_rooms').select('id, current_tenant_id, is_vacant, monthly_rent').eq('property_id', propertyId),
     ])
     if (tenantsRes.data) setTenants(tenantsRes.data as TenantRow[])
     if (allTenantsRes.data) setAllTenants(allTenantsRes.data as TenantRow[])
     if (contractorsRes.data) {
       setAllContractors(contractorsRes.data as ContractorRow[])
-      const assigned = contractorsRes.data.filter((c: any) => Array.isArray(c.property_ids) && c.property_ids.includes(propertyId))
+      const assigned = contractorsRes.data.filter((c: ContractorRow) => Array.isArray(c.property_ids) && c.property_ids.includes(propertyId))
       setContractors(assigned as ContractorRow[])
     }
     if (ticketsRes.data) setTickets(ticketsRes.data as TicketRow[])
     if (landlordsRes.data) setLandlordOptions(landlordsRes.data as LandlordOption[])
+    if (roomsRes.data) setRooms(roomsRes.data)
   }, [propertyId, propertyManager, supabase])
 
   useEffect(() => {
@@ -215,9 +208,17 @@ export default function PropertyDetailPage() {
     const normalized = normalizeRecord('properties', { address: data.address, auto_approve_limit: data.auto_approve_limit, require_landlord_approval: data.require_landlord_approval, access_instructions: data.access_instructions, emergency_access_contact: data.emergency_access_contact })
     const { error } = await supabase.from('c1_properties').update({ ...normalized, landlord_id: data.landlord_id, landlord_name: selectedLl?.full_name || null, landlord_phone: selectedLl?.phone || null, landlord_email: selectedLl?.email || null, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
+    // If property type changed, sync compliance requirements via RPC
+    if (property && data.property_type !== (property.property_type || 'hmo') && propertyManager) {
+      await supabase.rpc('compliance_set_property_type', {
+        p_property_id: data.id,
+        p_pm_id: propertyManager.id,
+        p_property_type: data.property_type,
+      })
+    }
     toast.success('Property updated')
     await fetchProperty()
-  }, [supabase, landlordOptions, fetchProperty])
+  }, [supabase, landlordOptions, fetchProperty, property, propertyManager])
 
   const { isEditing, editedData, isSaving, error: editError, startEditing, cancelEditing, updateField, saveChanges, resetData } = useEditMode<PropertyEditable>({
     initialData: property ? toEditable(property) : null,
@@ -262,8 +263,16 @@ export default function PropertyDetailPage() {
     await fetchRelated()
   }
 
-  const openTickets = tickets.filter((t) => t.status?.toLowerCase() !== 'closed' && !t.archived)
-  const completedTickets = tickets.filter((t) => t.status?.toLowerCase() === 'closed')
+  const handleTabChange = (tab: string) => {
+    if (isEditing) {
+      toast.error('Save or cancel your changes before switching tabs')
+      return
+    }
+    setActiveTab(tab)
+  }
+
+  // Determine if Edit button should show (only for overview + people tabs)
+  const showEditControls = activeTab === 'overview' || activeTab === 'people'
 
   if (loading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -274,107 +283,163 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center gap-4 px-8 pt-6 pb-4">
-        <button onClick={() => router.push('/properties')} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight truncate">{property.address}</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {isEditing ? (
-            <>
-              <Button variant="outline" size="sm" onClick={cancelEditing} disabled={isSaving}><X className="h-4 w-4 mr-1" /> Cancel</Button>
-              <Button size="sm" onClick={saveChanges} disabled={isSaving}>
-                {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" onClick={startEditing}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
-              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialogOpen(true)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
-            </>
-          )}
-        </div>
-      </div>
-      {editError && <div className="px-8 py-2 bg-destructive/10 text-destructive text-sm">{editError}</div>}
+      <ProfilePageHeader
+        backHref="/properties"
+        title={property.address}
+        isEditing={isEditing}
+        isSaving={isSaving}
+        editError={editError}
+        onEdit={startEditing}
+        onSave={saveChanges}
+        onCancel={cancelEditing}
+        onDelete={() => setDeleteDialogOpen(true)}
+      />
 
-      {/* Two-column content */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Left: Details */}
-        <div className="flex-1 overflow-hidden px-8 py-6 flex flex-col">
-          {isEditing && editedData ? (
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="mb-5 flex-shrink-0">
-                <label className="text-xs text-muted-foreground mb-1.5 block">Address</label>
-                <Input value={editedData.address} onChange={(e) => updateField('address', e.target.value)} placeholder="123 Main Street, Manchester, M1 1AA" className={validationErrors.address ? 'border-destructive' : ''} />
-                {validationErrors.address && <p className="text-xs text-destructive mt-1">{validationErrors.address}</p>}
-              </div>
-              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5 flex-shrink-0">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm text-muted-foreground">Require Landlord Approval</p>
-                      <Switch checked={editedData.require_landlord_approval} onCheckedChange={(v) => updateField('require_landlord_approval', v)} />
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 min-h-0 flex flex-col">
+        {/* Horizontal tab bar with icons + underline */}
+        <TabsList className="flex overflow-x-auto bg-transparent border-b rounded-none px-8 py-0 h-auto gap-0 w-full shrink-0">
+          {TAB_CONFIG.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="gap-1.5 px-3.5 py-2.5 rounded-none border-b-2 border-transparent shadow-none data-[state=active]:border-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent text-[13px] text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium shrink-0 -mb-[0.5px]"
+            >
+              <Icon className="h-[13px] w-[13px]" />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {/* Tab content */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="mt-0">
+            <div className="max-w-3xl space-y-6">
+              {/* Stat strip */}
+              {(() => {
+                const totalRooms = rooms.length
+                const occupiedRooms = rooms.filter((r) => !r.is_vacant).length
+                const vacantRooms = totalRooms - occupiedRooms
+                const occupancyPct = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0
+                const monthlyRent = rooms.reduce((sum, r) => sum + (r.monthly_rent || 0), 0)
+                const openTickets = tickets.filter((t) => t.status !== 'closed' && !t.archived)
+                const urgentTickets = openTickets.filter((t) => t.priority === 'urgent')
+                return (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-muted/50 rounded-xl p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Rooms</p>
+                      <p className="text-[22px] font-medium">{totalRooms}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{occupiedRooms} occupied</p>
                     </div>
-                    <div className={cn(!editedData.require_landlord_approval && 'opacity-40 pointer-events-none')}>
-                      <p className="text-xs text-muted-foreground mb-1">Auto-Approve Limit</p>
-                      <Input type="number" value={editedData.auto_approve_limit ?? ''} onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" className={`h-8 ${validationErrors.auto_approve_limit ? 'border-destructive' : ''}`} />
-                      {validationErrors.auto_approve_limit && <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>}
+                    <div className="bg-muted/50 rounded-xl p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Occupancy</p>
+                      <p className="text-[22px] font-medium">{occupancyPct}%</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{vacantRooms} vacant</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-xl p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Monthly rent</p>
+                      <p className="text-[22px] font-medium">{monthlyRent > 0 ? `\u00a3${monthlyRent.toLocaleString()}` : '\u2014'}</p>
+                      {monthlyRent > 0 && <p className="text-[11px] text-muted-foreground mt-0.5">expected</p>}
+                    </div>
+                    <div className="bg-muted/50 rounded-xl p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Open tickets</p>
+                      <p className="text-[22px] font-medium">{openTickets.length}</p>
+                      {urgentTickets.length > 0 && <p className="text-[11px] text-destructive mt-0.5">{urgentTickets.length} urgent</p>}
                     </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Landlord</p>
-                    <Select value={editedData.landlord_id || 'none'} onValueChange={(v) => updateField('landlord_id', v === 'none' ? null : v)}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Select landlord..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No landlord</SelectItem>
-                        {landlordOptions.map((l) => <SelectItem key={l.id} value={l.id}>{l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Emergency Contact</p>
-                    <Input value={editedData.emergency_access_contact || ''} onChange={(e) => updateField('emergency_access_contact', e.target.value || null)} placeholder="Name / Phone" className="h-8" />
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1">Access Instructions</p>
-                    <Textarea value={editedData.access_instructions || ''} onChange={(e) => updateField('access_instructions', e.target.value || null)} placeholder="Gate code, key safe, entry instructions..." rows={2} className="text-sm" />
-                  </div>
-                </div>
-              </div>
+                )
+              })()}
 
-              <div className="border-t border-border/40 mt-8 flex-shrink-0" />
+              <ProfileCard title="Property details">
+                {isEditing && editedData ? (
+                  <div className="space-y-4 py-2">
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1.5 block">Address</label>
+                      <Input value={editedData.address} onChange={(e) => updateField('address', e.target.value)} placeholder="123 Main Street, Manchester, M1 1AA" className={validationErrors.address ? 'border-destructive' : ''} />
+                      {validationErrors.address && <p className="text-xs text-destructive mt-1">{validationErrors.address}</p>}
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1.5 block">Property Type</label>
+                      <Select value={editedData.property_type} onValueChange={(v) => updateField('property_type', v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hmo">HMO</SelectItem>
+                          <SelectItem value="single_let">Single Let</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1.5 block">Landlord</label>
+                      <Select value={editedData.landlord_id || 'none'} onValueChange={(v) => updateField('landlord_id', v === 'none' ? null : v)}>
+                        <SelectTrigger><SelectValue placeholder="Select landlord..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No landlord</SelectItem>
+                          {landlordOptions.map((l) => <SelectItem key={l.id} value={l.id}>{l.full_name}{l.phone ? ` (${formatPhoneDisplay(l.phone)})` : ''}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-sm text-muted-foreground">Require Landlord Approval</label>
+                          <Switch checked={editedData.require_landlord_approval} onCheckedChange={(v) => updateField('require_landlord_approval', v)} />
+                        </div>
+                        <div className={cn(!editedData.require_landlord_approval && 'opacity-40 pointer-events-none')}>
+                          <label className="text-xs text-muted-foreground mb-1 block">Auto-Approve Limit</label>
+                          <Input type="number" value={editedData.auto_approve_limit ?? ''} onChange={(e) => updateField('auto_approve_limit', e.target.value ? parseFloat(e.target.value) : null)} placeholder="500" className={validationErrors.auto_approve_limit ? 'border-destructive' : ''} />
+                          {validationErrors.auto_approve_limit && <p className="text-xs text-destructive mt-1">{validationErrors.auto_approve_limit}</p>}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-1.5 block">Emergency Contact</label>
+                        <Input value={editedData.emergency_access_contact || ''} onChange={(e) => updateField('emergency_access_contact', e.target.value || null)} placeholder="Name / Phone" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1.5 block">Access Instructions</label>
+                      <Textarea value={editedData.access_instructions || ''} onChange={(e) => updateField('access_instructions', e.target.value || null)} placeholder="Gate code, key safe, entry instructions..." rows={2} className="text-sm" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <KeyValueRow label="Property Type">
+                      {property.property_type === 'single_let' ? 'Single Let' : 'HMO'}
+                    </KeyValueRow>
+                    <KeyValueRow label="Landlord Approval">
+                      {property.require_landlord_approval
+                        ? `Required (auto under ${formatCurrency(property.auto_approve_limit)})`
+                        : 'Not required'}
+                    </KeyValueRow>
+                    <KeyValueRow label="Landlord">
+                      {property.landlord_id ? (
+                        <Link href={`/landlords/${property.landlord_id}`} className="text-primary hover:underline">{property.landlord_name}</Link>
+                      ) : (
+                        <span className="text-muted-foreground/50 font-normal">Not assigned</span>
+                      )}
+                    </KeyValueRow>
+                    <KeyValueRow label="Emergency Contact">
+                      {property.emergency_access_contact ? formatPhoneDisplay(property.emergency_access_contact) : <span className="text-muted-foreground/50 font-normal">None</span>}
+                    </KeyValueRow>
+                    <KeyValueRow label="Access Instructions">
+                      {property.access_instructions || <span className="text-muted-foreground/50 font-normal">None</span>}
+                    </KeyValueRow>
+                  </>
+                )}
+              </ProfileCard>
+            </div>
+          </TabsContent>
 
-              {/* Tenants — editable, same row layout as view */}
-              <div className="mt-6 flex-shrink-0 max-h-[200px] flex flex-col">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
-                  Tenants
-                  {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
+          {/* People Tab */}
+          <TabsContent value="people" className="mt-0">
+            <div className="max-w-3xl space-y-6">
+              {/* Tenants */}
+              <ProfileCard
+                title="Tenants"
+                count={tenants.length}
+                action={isEditing ? (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="ml-auto h-6 w-6 rounded-md border border-input bg-background hover:bg-accent/50 flex items-center justify-center transition-colors">
-                        <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
+                      <Button variant="outline" size="sm"><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-72 p-1.5 max-h-64 overflow-y-auto" align="end">
                       {(() => {
@@ -390,39 +455,55 @@ export default function PropertyDetailPage() {
                       })()}
                     </PopoverContent>
                   </Popover>
-                </h3>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                  {tenants.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No tenants assigned</p>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {tenants.map((t) => (
-                        <div key={t.id} className="grid grid-cols-[3fr_2fr_auto] gap-x-8 items-center py-2.5 -mx-3 px-3 rounded-lg group hover:bg-muted/30 transition-colors">
-                          <span className="text-[15px] truncate pl-11">{t.full_name}</span>
-                          <span className="text-sm text-muted-foreground truncate pl-11">
-                            {(t.role_tag || 'tenant').replace(/_/g, ' ')}
-                            {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
-                          </span>
-                          <button type="button" onClick={() => handleTenantRemove(t.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                ) : undefined}
+              >
+                {tenants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-3">No tenants assigned</p>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {tenants.map((t) => (
+                      isEditing ? (
+                        <div key={t.id} className="flex items-center gap-3 py-2.5">
+                          <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <Users className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-medium truncate">{t.full_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(t.role_tag || 'tenant').replace(/_/g, ' ')}
+                            </p>
+                          </div>
+                          <button type="button" onClick={() => handleTenantRemove(t.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                      ) : (
+                        <div key={t.id} className="flex items-center gap-3 py-2.5">
+                          <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <Users className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-medium truncate">{t.full_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(t.role_tag || 'tenant').replace(/_/g, ' ')}
+                            </p>
+                          </div>
+                          <Link href={`/tenants/${t.id}`} className="text-xs text-primary hover:underline shrink-0">View</Link>
+                        </div>
+                      )
+                    ))}
+                  </div>
+                )}
+              </ProfileCard>
 
-              {/* Contractors — editable, same row layout as view */}
-              <div className="mt-8 flex-1 min-h-0 flex flex-col">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
-                  Contractors
-                  {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
+              {/* Contractors */}
+              <ProfileCard
+                title="Contractors"
+                count={contractors.length}
+                action={isEditing ? (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="ml-auto h-6 w-6 rounded-md border border-input bg-background hover:bg-accent/50 flex items-center justify-center transition-colors">
-                        <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
+                      <Button variant="outline" size="sm"><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="end">
                       {allContractors.map((c) => {
@@ -437,177 +518,106 @@ export default function PropertyDetailPage() {
                       })}
                     </PopoverContent>
                   </Popover>
-                </h3>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                  {contractors.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No contractors assigned</p>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {contractors.map((c) => (
-                        <div key={c.id} className="grid grid-cols-[3fr_2fr_auto] gap-x-8 items-center py-2.5 -mx-3 px-3 rounded-lg group hover:bg-muted/30 transition-colors">
-                          <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
-                          <span className="text-sm text-muted-foreground truncate pl-11">
-                            {(c.categories || (c.category ? [c.category] : [])).join(', ')}
-                            {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
-                          </span>
-                          <button type="button" onClick={() => handleContractorToggle(c.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                ) : undefined}
+              >
+                {contractors.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-3">No contractors assigned</p>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {contractors.map((c) => (
+                      isEditing ? (
+                        <div key={c.id} className="flex items-center justify-between py-3 gap-4">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{c.contractor_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(c.categories || (c.category ? [c.category] : [])).join(', ')}
+                              {c.contractor_phone && ` \u00b7 ${formatPhoneDisplay(c.contractor_phone)}`}
+                            </p>
+                          </div>
+                          <button type="button" onClick={() => handleContractorToggle(c.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col flex-1 min-h-0">
-              {/* Meta info — 2-column aligned layout, 60/40 split */}
-              <div className="grid grid-cols-[3fr_2fr] gap-x-8 gap-y-5 flex-shrink-0">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Link key={c.id} href={`/contractors/${c.id}`} className="flex items-center justify-between py-3 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors gap-4">
+                          <span className="text-sm font-medium truncate">{c.contractor_name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {(c.categories || (c.category ? [c.category] : [])).join(', ')}
+                            {c.contractor_phone && ` \u00b7 ${formatPhoneDisplay(c.contractor_phone)}`}
+                          </span>
+                        </Link>
+                      )
+                    ))}
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Landlord Approval</p>
-                    <p className="text-[15px] font-medium mt-0.5">
+                )}
+              </ProfileCard>
+              {/* Landlord detail card */}
+              <ProfileCard title="Landlord">
+                {property.landlord_id ? (
+                  <>
+                    <KeyValueRow label="Name">
+                      <Link href={`/landlords/${property.landlord_id}`} className="text-primary hover:underline">{property.landlord_name}</Link>
+                    </KeyValueRow>
+                    <KeyValueRow label="Phone">
+                      {property.landlord_phone ? formatPhoneDisplay(property.landlord_phone) : <span className="text-muted-foreground/50 font-normal italic">Not set</span>}
+                    </KeyValueRow>
+                    <KeyValueRow label="Email">
+                      {property.landlord_email || <span className="text-muted-foreground/50 font-normal italic">Not set</span>}
+                    </KeyValueRow>
+                    <KeyValueRow label="Approval threshold">
                       {property.require_landlord_approval
-                        ? `Required (auto under ${formatCurrency(property.auto_approve_limit)})`
+                        ? `Auto under ${formatCurrency(property.auto_approve_limit)}`
                         : 'Not required'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Landlord</p>
-                    {property.landlord_id ? (
-                      <Link href={`/landlords/${property.landlord_id}`} className="text-[15px] font-medium mt-0.5 hover:underline block">{property.landlord_name}</Link>
-                    ) : (
-                      <p className="text-[15px] text-muted-foreground/50 mt-0.5">Not assigned</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Emergency Contact</p>
-                    <p className="text-[15px] font-medium mt-0.5">{property.emergency_access_contact ? formatPhoneDisplay(property.emergency_access_contact) : <span className="text-muted-foreground/50 font-normal">None</span>}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Access Instructions</p>
-                    <p className="text-[15px] mt-0.5">{property.access_instructions || <span className="text-muted-foreground/50 font-normal">None</span>}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-border/40 mt-8 flex-shrink-0" />
-
-              <div className="mt-6 flex-shrink-0">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
-                  Tenants
-                  {tenants.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{tenants.length}</span>}
-                </h3>
-                {tenants.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tenants assigned</p>
+                    </KeyValueRow>
+                  </>
                 ) : (
-                  <div className="space-y-0.5">
-                    {tenants.map((t) => (
-                      <Link key={t.id} href={`/tenants/${t.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate pl-11">{t.full_name}</span>
-                        <span className="text-sm text-muted-foreground truncate pl-11">
-                          {(t.role_tag || 'tenant').replace(/_/g, ' ')}
-                          {t.phone && ` · ${formatPhoneDisplay(t.phone)}`}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
+                  <p className="text-sm text-muted-foreground py-3 italic">No landlord assigned</p>
                 )}
-              </div>
-
-              {/* Contractors */}
-              <div className="mt-8 flex-1 min-h-0 flex flex-col">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3 flex-shrink-0">
-                  Contractors
-                  {contractors.length > 0 && <span className="text-xs font-normal normal-case tracking-normal bg-muted px-1.5 py-0.5 rounded">{contractors.length}</span>}
-                </h3>
-                {contractors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No contractors assigned</p>
-                ) : (
-                  <div className="space-y-0.5 overflow-y-auto overflow-x-hidden min-h-0">
-                    {contractors.map((c) => (
-                      <Link key={c.id} href={`/contractors/${c.id}`} className="grid grid-cols-[3fr_2fr] gap-x-8 items-center py-2.5 hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors">
-                        <span className="text-[15px] truncate pl-11">{c.contractor_name}</span>
-                        <span className="text-sm text-muted-foreground truncate pl-11">
-                          {(c.categories || (c.category ? [c.category] : [])).join(', ')}
-                          {c.contractor_phone && ` · ${formatPhoneDisplay(c.contractor_phone)}`}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </ProfileCard>
             </div>
-          )}
+          </TabsContent>
 
-        </div>
-
-        {/* Right: Tickets */}
-        <div className="w-[400px] flex-shrink-0 border-l flex flex-col">
-          <div className="px-6 py-5 flex-shrink-0">
-            <h3 className="text-sm font-semibold">Tickets</h3>
-            {(openTickets.length > 0 || completedTickets.length > 0) && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {[openTickets.length > 0 && `${openTickets.length} open`, completedTickets.length > 0 && `${completedTickets.length} completed`].filter(Boolean).join(' · ')}
-              </p>
+          {/* Compliance Tab */}
+          <TabsContent value="compliance" className="mt-0">
+            {propertyManager && (
+              <PropertyComplianceSection propertyId={propertyId} pmId={propertyManager.id} />
             )}
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-            {tickets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tickets</p>
-            ) : (
-              <div className="divide-y divide-border/50">
-                {tickets.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setSelectedTicketId(t.id)}
-                    className={cn(
-                      "w-full text-left py-3 hover:bg-muted/30 -mx-3 px-3 transition-colors first:pt-0",
-                      t.archived && "opacity-40"
-                    )}
-                  >
-                    <div className="flex items-start gap-2">
-                      {t.priority && <PriorityDot priority={t.priority} className="mt-1.5 flex-shrink-0" />}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{t.issue_title || t.issue_description || 'Maintenance request'}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {getDisplayStage(t.next_action_reason, t.status, t.archived)}
-                          {' · '}
-                          {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                          {t.category && <> · {t.category}</>}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          </TabsContent>
 
-      <TicketDetailModal ticketId={selectedTicketId} open={!!selectedTicketId} onClose={() => setSelectedTicketId(null)} />
+          {/* Rooms Tab */}
+          <TabsContent value="rooms" className="mt-0">
+            {propertyManager && (
+              <PropertyRoomsSection propertyId={propertyId} pmId={propertyManager.id} />
+            )}
+          </TabsContent>
+
+          {/* Rent Tab */}
+          <TabsContent value="rent" className="mt-0">
+            {propertyManager && (
+              <PropertyRentSection propertyId={propertyId} pmId={propertyManager.id} />
+            )}
+          </TabsContent>
+
+          {/* Tickets Tab */}
+          <TabsContent value="tickets" className="mt-0">
+            <div className="max-w-3xl">
+              <TicketCard tickets={tickets} onTicketUpdated={() => fetchRelated()} />
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
+
       <ConfirmDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Property" description="Are you sure you want to delete this property? This action cannot be undone." itemName={property.address} onConfirm={handleDelete} />
     </div>
+  )
+}
+
+// --- Page wrapper with Suspense (required for useSearchParams) ---
+
+export default function PropertyDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+      <PropertyDetailInner />
+    </Suspense>
   )
 }

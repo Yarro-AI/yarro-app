@@ -1,324 +1,533 @@
 'use client'
 
 import { format, formatDistanceToNow } from 'date-fns'
-import { Users, Wrench, MapPin, Crown, Phone, Building2, CalendarClock } from 'lucide-react'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play, BedDouble } from 'lucide-react'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
-import { formatCurrency, getContractors, getRecipient } from '@/hooks/use-ticket-detail'
-import { SlaBadge } from '@/components/sla-badge'
-import { SLA_WINDOWS } from '@/lib/constants'
+import Link from 'next/link'
+import { formatCurrency } from '@/hooks/use-ticket-detail'
+import { formatPhoneDisplay } from '@/lib/normalize'
+import { StatusBadge } from '@/components/status-badge'
+
+const NEXT_ACTION_MAP: Record<string, {
+  message: string
+  button?: { label: string; action: 'tab' | 'navigate'; destination: string }
+}> = {
+  no_contractors: {
+    message: 'All listed contractors have been contacted. Add a new contractor or handle manually.',
+    button: { label: 'Add Contractor', action: 'navigate', destination: '/contractors?create=true' },
+  },
+  landlord_declined: {
+    message: 'The landlord has declined the quote. Contact them to discuss alternatives.',
+    button: { label: 'View Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  landlord_no_response: {
+    message: "The landlord hasn't responded. Follow up directly.",
+    button: { label: 'View Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  landlord_needs_help: {
+    message: 'The landlord needs assistance managing this job. Take over coordination.',
+    button: { label: 'View Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  job_not_completed: {
+    message: 'The contractor marked the job as incomplete. Review and redispatch.',
+    button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
+  },
+  manager_approval: {
+    message: 'A quote is waiting for your approval. Review and approve or decline.',
+    button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
+  },
+  ooh_unresolved: {
+    message: 'The out-of-hours contact did not resolve the issue. Escalate or redispatch.',
+    button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
+  },
+  awaiting_contractor: {
+    message: 'Waiting for a contractor to accept the job. No action needed yet.',
+  },
+  awaiting_landlord: {
+    message: 'Quote sent to landlord awaiting approval. No action needed yet.',
+  },
+  awaiting_booking: {
+    message: 'Waiting for the contractor to book a slot.',
+  },
+  allocated_to_landlord: {
+    message: 'This job has been allocated to the landlord to manage.',
+  },
+  scheduled: {
+    message: 'Job is scheduled. No action needed.',
+  },
+  ooh_dispatched: {
+    message: 'Out-of-hours contact has been notified. Awaiting response.',
+  },
+  pending_review: {
+    message: 'Review the AI conversation and create a ticket.',
+  },
+  handoff_review: {
+    message: 'Review this handoff and triage into a ticket.',
+  },
+}
 
 interface TicketOverviewTabProps {
   context: TicketContext
   basic: TicketBasic
   messages?: MessageData | null
+  onTabChange?: (tab: string) => void
 }
 
-function formatDate(date: string | null) {
-  if (!date) return null
-  return format(new Date(date), 'dd MMM yyyy')
-}
-
-function DashedLine() {
-  return <div className="w-full border-t border-dashed border-border/40" aria-hidden="true" />
-}
-
-/** Detail cell — label above value, stacked vertically */
-function DetailCell({ label, value, mono, highlight, waiting }: {
-  label: string
-  value: string | null | undefined
-  mono?: boolean
-  highlight?: boolean
-  waiting?: boolean
-}) {
-  const display = value || (waiting ? 'Awaiting' : null)
-  if (!display && !waiting) return null
-
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">{label}</p>
-      <p className={cn(
-        'text-[15px]',
-        !value && waiting && 'text-muted-foreground/40 italic text-sm',
-        value && mono && 'font-mono',
-        value && highlight && 'font-semibold text-emerald-600 dark:text-emerald-400',
-        value && !highlight && 'font-medium text-foreground',
-      )}>
-        {display}
-      </p>
-    </div>
-  )
-}
-
-export function TicketOverviewTab({ context, basic, messages }: TicketOverviewTabProps) {
+export function TicketOverviewTab({ context, basic, onTabChange }: TicketOverviewTabProps) {
+  const router = useRouter()
   const images = basic.images || []
-
-  const contractorNotes = (() => {
-    if (!messages?.contractors) return null
-    const contractors = getContractors(messages.contractors)
-    const approved = contractors.find(c => c.manager_decision === 'approved')
-    if (approved?.quote_notes) return approved.quote_notes
-    if (basic.contractor_id) {
-      const matched = contractors.find(c => c.id === basic.contractor_id)
-      if (matched?.quote_notes) return matched.quote_notes
-    }
-    return null
-  })()
-
-  const markup = (() => {
-    if (basic.contractor_quote && basic.final_amount) return formatCurrency(basic.final_amount - basic.contractor_quote)
-    const mgr = getRecipient(messages?.manager ?? null)
-    if (basic.contractor_quote && mgr?.approval_amount) return formatCurrency(Number(mgr.approval_amount) - basic.contractor_quote)
-    return null
-  })()
+  const markup = basic.final_amount && basic.contractor_quote
+    ? Math.abs(basic.final_amount - basic.contractor_quote)
+    : null
 
   return (
-    <div className="space-y-5">
-      {/* Issue Description */}
-      <div className="bg-muted/30 rounded-xl p-4">
-        <p className="text-sm leading-relaxed">
-          {context.issue_description || 'No description provided'}
+    <div>
+      {/* ── Section 1: Situation ── */}
+      <div className="px-6 py-6">
+        {/* Status + Priority + Category badges — inline */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {basic.next_action_reason ? (
+            <StatusBadge status={basic.next_action_reason} size="md" />
+          ) : basic.status ? (
+            <StatusBadge status={basic.status} size="md" />
+          ) : null}
+          {basic.priority && (
+            <StatusBadge status={basic.priority} size="md" />
+          )}
+          {context.category && (
+            <StatusBadge status={context.category} size="md" />
+          )}
+        </div>
+
+        {/* Next Action block */}
+        {basic.next_action_reason && NEXT_ACTION_MAP[basic.next_action_reason] && (() => {
+          const entry = NEXT_ACTION_MAP[basic.next_action_reason!]
+          const handleButtonClick = () => {
+            if (!entry.button) return
+            if (entry.button.action === 'tab') {
+              onTabChange?.(entry.button.destination)
+            } else {
+              const url = entry.button.destination
+                .replace('{landlord_id}', context.landlord_id || '')
+                .replace('{tenant_id}', basic.tenant_id || '')
+                .replace('{contractor_id}', basic.contractor_id || '')
+              router.push(url)
+            }
+          }
+          return (
+            <div className="mb-3 rounded-lg border border-border px-3 py-3">
+              <p className="text-sm text-muted-foreground leading-snug">{entry.message}</p>
+              {entry.button && (
+                <button
+                  onClick={handleButtonClick}
+                  className="mt-2 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
+                >
+                  {entry.button.label} →
+                </button>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* Metadata — date only */}
+        <p className="text-xs text-muted-foreground">
+          {basic.date_logged
+            ? `Logged ${format(new Date(basic.date_logged), 'd MMM yyyy')}`
+            : context.date_logged
+            ? `Logged ${format(new Date(context.date_logged), 'd MMM yyyy')}`
+            : null}
         </p>
       </div>
 
-      {/* SLA */}
-      {basic.sla_due_at && (
-        <div className="flex items-center gap-3 px-1">
-          <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">SLA</p>
-          <SlaBadge
-            slaDueAt={basic.sla_due_at}
-            resolvedAt={basic.resolved_at}
-            priority={basic.priority}
-            dateLogged={basic.date_logged}
-            archived={basic.archived}
-            ticketStatus={basic.status}
-          />
-          {basic.priority && SLA_WINDOWS[basic.priority] && (
-            <span className="text-xs text-muted-foreground">
-              ({basic.priority} — {SLA_WINDOWS[basic.priority] < 1440
-                ? `${SLA_WINDOWS[basic.priority] / 60}h window`
-                : `${SLA_WINDOWS[basic.priority] / 1440}d window`})
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* OOH Outcome */}
+      {/* ── OOH Outcome (conditional) ── */}
       {basic.ooh_dispatched && (
         <>
-          <DashedLine />
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Out-of-Hours</p>
-            <div className="flex items-center gap-2 px-1">
-              <Phone className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-              <span className="text-sm font-medium">
-                {basic.ooh_outcome === 'resolved' ? 'Handled by OOH contact'
-                : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
-                : basic.ooh_outcome === 'in_progress' ? 'In progress'
-                : 'Dispatched — awaiting response'}
-              </span>
+          <div className="border-t border-border/40" />
+          <div className="px-6 py-4">
+            <p className="text-sm font-semibold text-foreground mb-3">Out-of-Hours</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  {basic.ooh_outcome === 'resolved' ? 'Handled by OOH contact'
+                  : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
+                  : basic.ooh_outcome === 'in_progress' ? 'In progress'
+                  : 'Dispatched — awaiting response'}
+                </span>
+              </div>
+              {basic.ooh_dispatched_at && (
+                <p className="text-xs text-muted-foreground">
+                  Dispatched {formatDistanceToNow(new Date(basic.ooh_dispatched_at), { addSuffix: true })}
+                </p>
+              )}
+              {basic.ooh_outcome_at && (
+                <p className="text-xs text-muted-foreground">
+                  Responded {formatDistanceToNow(new Date(basic.ooh_outcome_at), { addSuffix: true })}
+                </p>
+              )}
+              {basic.ooh_notes && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-xs text-muted-foreground flex-shrink-0">Notes</span>
+                  <span className="text-sm text-foreground text-right">{basic.ooh_notes}</span>
+                </div>
+              )}
+              {basic.ooh_cost != null && basic.ooh_cost > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Cost</span>
+                  <span className="text-sm font-medium text-foreground font-mono">{formatCurrency(basic.ooh_cost)}</span>
+                </div>
+              )}
             </div>
-            {basic.ooh_dispatched_at && (
-              <p className="text-xs text-muted-foreground px-1">
-                Dispatched {formatDistanceToNow(new Date(basic.ooh_dispatched_at), { addSuffix: true })}
-              </p>
-            )}
-            {basic.ooh_outcome_at && (
-              <p className="text-xs text-muted-foreground px-1">
-                Responded {formatDistanceToNow(new Date(basic.ooh_outcome_at), { addSuffix: true })}
-              </p>
-            )}
-            {basic.ooh_notes && (
-              <p className="text-sm px-1">{basic.ooh_notes}</p>
-            )}
-            {basic.ooh_cost != null && basic.ooh_cost > 0 && (
-              <p className="text-sm px-1 font-medium">&pound;{basic.ooh_cost.toFixed(2)}</p>
-            )}
           </div>
         </>
       )}
 
-      {/* Landlord Allocated Outcome */}
+      {/* ── Landlord Allocated Outcome (conditional) ── */}
       {basic.landlord_allocated && (
         <>
-          <DashedLine />
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Landlord Allocated</p>
-            <div className="flex items-center gap-2 px-1">
-              <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-              <span className="text-sm font-medium">
-                {basic.landlord_outcome === 'resolved' ? 'Resolved by landlord'
-                : basic.landlord_outcome === 'need_help' ? 'Landlord needs help'
-                : basic.landlord_outcome === 'in_progress' ? 'In progress'
-                : 'Allocated — awaiting response'}
-              </span>
+          <div className="border-t border-border/40" />
+          <div className="px-6 py-4">
+            <p className="text-sm font-semibold text-foreground mb-3">Landlord Allocated</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  {basic.landlord_outcome === 'resolved' ? 'Resolved by landlord'
+                  : basic.landlord_outcome === 'need_help' ? 'Landlord needs help'
+                  : basic.landlord_outcome === 'in_progress' ? 'In progress'
+                  : 'Allocated — awaiting response'}
+                </span>
+              </div>
+              {basic.landlord_allocated_at && (
+                <p className="text-xs text-muted-foreground">
+                  Allocated {formatDistanceToNow(new Date(basic.landlord_allocated_at), { addSuffix: true })}
+                </p>
+              )}
+              {basic.landlord_outcome_at && (
+                <p className="text-xs text-muted-foreground">
+                  Responded {formatDistanceToNow(new Date(basic.landlord_outcome_at), { addSuffix: true })}
+                </p>
+              )}
+              {basic.landlord_notes && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-xs text-muted-foreground flex-shrink-0">Response note</span>
+                  <span className="text-sm text-foreground text-right">{basic.landlord_notes}</span>
+                </div>
+              )}
+              {basic.landlord_cost != null && basic.landlord_cost > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Landlord cost</span>
+                  <span className="text-sm font-medium text-foreground font-mono">{formatCurrency(basic.landlord_cost)}</span>
+                </div>
+              )}
             </div>
-            {basic.landlord_allocated_at && (
-              <p className="text-xs text-muted-foreground px-1">
-                Allocated {formatDistanceToNow(new Date(basic.landlord_allocated_at), { addSuffix: true })}
-              </p>
-            )}
-            {basic.landlord_outcome_at && (
-              <p className="text-xs text-muted-foreground px-1">
-                Responded {formatDistanceToNow(new Date(basic.landlord_outcome_at), { addSuffix: true })}
-              </p>
-            )}
-            {basic.landlord_notes && (
-              <p className="text-sm px-1">{basic.landlord_notes}</p>
-            )}
-            {basic.landlord_cost != null && basic.landlord_cost > 0 && (
-              <p className="text-sm px-1 font-medium">&pound;{basic.landlord_cost.toFixed(2)}</p>
-            )}
           </div>
         </>
       )}
 
-      <DashedLine />
-
-      {/* Two-column layout: Left = known details, Right = progressing/financial */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-        {/* LEFT — details we always have */}
-        <div className="space-y-4">
-          <DetailCell label="Category" value={context.category} />
-          <DetailCell label="Priority" value={basic.priority} />
-          <DetailCell label="Date Logged" value={formatDate(context.date_logged)} />
-          <DetailCell label="Reporter" value={context.reporter_role ? context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1) : null} />
-          <DetailCell label="Availability" value={context.availability} />
-          <DetailCell label="Access" value={context.access} />
+      {/* ── Section 2: People ── */}
+      <div className="border-t border-border/40" />
+      <div className="px-6 py-6">
+        <div className="flex items-baseline gap-2 mb-4">
+          <p className="text-sm font-semibold text-foreground">People</p>
+          {context.reporter_role && context.reporter_role !== 'tenant' && (
+            <p className="text-xs text-muted-foreground/60">
+              · Reported by {context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1)}
+            </p>
+          )}
         </div>
+        <div className="space-y-1">
+          {/* Tenant */}
+          {context.tenant_name && (
+            basic.tenant_id ? (
+              <Link
+                href={`/tenants/${basic.tenant_id}`}
+                className="flex items-center justify-between hover:bg-muted/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Users className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{context.tenant_name}</p>
+                    <p className="text-xs text-muted-foreground">Tenant</p>
+                  </div>
+                </div>
+                {context.tenant_phone && (
+                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.tenant_phone)}</span>
+                )}
+              </Link>
+            ) : (
+              <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Users className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{context.tenant_name}</p>
+                    <p className="text-xs text-muted-foreground">Tenant</p>
+                  </div>
+                </div>
+                {context.tenant_phone && (
+                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.tenant_phone)}</span>
+                )}
+              </div>
+            )
+          )}
 
-        {/* RIGHT — progressing / financial (always visible so we know what's pending) */}
-        <div className="space-y-4">
-          <DetailCell label="Quote" value={basic.contractor_quote ? formatCurrency(basic.contractor_quote) : null} mono waiting />
-          {contractorNotes && <DetailCell label="Quote Notes" value={contractorNotes} />}
-          <DetailCell label="Markup" value={markup} mono waiting />
-          <DetailCell label="Final Amount" value={basic.final_amount ? formatCurrency(basic.final_amount) : null} mono highlight waiting />
-          <DetailCell label="Scheduled Date" value={formatDate(basic.scheduled_date)} highlight waiting />
+          {/* Room */}
+          {basic.room_number && (
+            <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <BedDouble className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{basic.room_number}</p>
+                  <p className="text-xs text-muted-foreground">Room</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Landlord */}
+          {context.landlord_name && (
+            context.landlord_id ? (
+              <Link
+                href={`/landlords/${context.landlord_id}`}
+                className="flex items-center justify-between hover:bg-muted/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+                    <Crown className="h-3.5 w-3.5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{context.landlord_name}</p>
+                    <p className="text-xs text-muted-foreground">Landlord</p>
+                  </div>
+                </div>
+                {context.landlord_phone && (
+                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.landlord_phone)}</span>
+                )}
+              </Link>
+            ) : (
+              <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+                    <Crown className="h-3.5 w-3.5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{context.landlord_name}</p>
+                    <p className="text-xs text-muted-foreground">Landlord</p>
+                  </div>
+                </div>
+                {context.landlord_phone && (
+                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.landlord_phone)}</span>
+                )}
+              </div>
+            )
+          )}
+
+          {/* Contractor — explicit when unassigned */}
+          {basic.contractor_name && basic.contractor_id ? (
+            <Link
+              href={`/contractors/${basic.contractor_id}`}
+              className="flex items-center justify-between hover:bg-muted/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                  <Wrench className="h-3.5 w-3.5 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{basic.contractor_name}</p>
+                  <p className="text-xs text-muted-foreground">Contractor</p>
+                </div>
+              </div>
+            </Link>
+          ) : basic.contractor_name ? (
+            <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                  <Wrench className="h-3.5 w-3.5 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{basic.contractor_name}</p>
+                  <p className="text-xs text-muted-foreground">Contractor</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 -mx-3 px-3 py-1.5">
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">No contractor assigned yet</p>
+                <p className="text-xs text-muted-foreground/60">Contractor</p>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* Reschedule Request */}
+      {/* ── Section 3: Job Details ── */}
+      <div className="border-t border-border/40" />
+      <div className="px-6 py-6">
+        <p className="text-sm font-semibold text-foreground mb-4">Job Details</p>
+        <div className="space-y-3">
+          {/* Quote */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Quote</span>
+            {basic.contractor_quote ? (
+              <span className="text-sm font-medium text-foreground font-mono">
+                {formatCurrency(basic.contractor_quote)}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground/60">Not yet received</span>
+            )}
+          </div>
+
+          {/* Markup */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Markup</span>
+            {markup != null ? (
+              <span className="text-sm font-medium text-foreground font-mono">
+                {formatCurrency(markup)}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground/60">—</span>
+            )}
+          </div>
+
+          {/* Final Amount — only when it exists */}
+          {basic.final_amount != null && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Final Amount</span>
+              <span className="text-sm font-semibold text-foreground font-mono">
+                {formatCurrency(basic.final_amount)}
+              </span>
+            </div>
+          )}
+
+          {/* Approval context — only shown once quote exists */}
+          {basic.contractor_quote && context.auto_approve_limit != null && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Approval</span>
+              {basic.contractor_quote <= context.auto_approve_limit ? (
+                <span className="text-sm text-success font-medium">
+                  Within limit ({formatCurrency(context.auto_approve_limit)} auto-approve)
+                </span>
+              ) : (
+                <span className="text-sm text-warning font-medium">
+                  Requires landlord approval · limit {formatCurrency(context.auto_approve_limit)}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Scheduled date */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Scheduled</span>
+            {basic.scheduled_date ? (
+              <span className="text-sm font-medium text-foreground">
+                {format(new Date(basic.scheduled_date), 'd MMM yyyy')}
+                {(() => {
+                  const h = new Date(basic.scheduled_date).getHours()
+                  const slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
+                  return <span className="text-muted-foreground font-normal ml-1.5">· {slot}</span>
+                })()}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground/60">Not yet scheduled</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Reschedule Request (conditional) ── */}
       {basic.reschedule_requested && (
         <>
-          <DashedLine />
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Reschedule Request</p>
-            <div className="flex items-center gap-2 px-1">
-              <CalendarClock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <span className="text-sm font-medium">
-                {basic.reschedule_status === 'pending' ? 'Awaiting contractor response'
-                : basic.reschedule_status === 'approved' ? 'Approved by contractor'
-                : basic.reschedule_status === 'declined' ? 'Declined by contractor'
-                : 'Requested'}
-              </span>
+          <div className="border-t border-border/40" />
+          <div className="px-6 py-4">
+            <p className="text-sm font-semibold text-foreground mb-3">Reschedule Request</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  {basic.reschedule_status === 'pending' ? 'Awaiting contractor response'
+                  : basic.reschedule_status === 'approved' ? 'Approved by contractor'
+                  : basic.reschedule_status === 'declined' ? 'Declined by contractor'
+                  : 'Requested'}
+                </span>
+              </div>
+              {basic.reschedule_date && (
+                <p className="text-xs text-muted-foreground">
+                  Proposed date: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
+                </p>
+              )}
+              {basic.reschedule_reason && (
+                <p className="text-sm">Reason: {basic.reschedule_reason}</p>
+              )}
+              {basic.reschedule_decided_at && (
+                <p className="text-xs text-muted-foreground">
+                  Decided {formatDistanceToNow(new Date(basic.reschedule_decided_at), { addSuffix: true })}
+                </p>
+              )}
             </div>
-            {basic.reschedule_date && (
-              <p className="text-xs text-muted-foreground px-1">
-                Proposed date: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
-              </p>
-            )}
-            {basic.reschedule_reason && (
-              <p className="text-sm px-1">Reason: {basic.reschedule_reason}</p>
-            )}
-            {basic.reschedule_decided_at && (
-              <p className="text-xs text-muted-foreground px-1">
-                Decided {formatDistanceToNow(new Date(basic.reschedule_decided_at), { addSuffix: true })}
-              </p>
-            )}
           </div>
         </>
       )}
 
-      <DashedLine />
-
-      {/* Linked Parties */}
-      <div className="space-y-2">
-        <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider px-1">Linked</p>
-
-        {context.tenant_name && (
-          <Link
-            href={basic.tenant_id ? `/tenants?id=${basic.tenant_id}` : '#'}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="h-7 w-7 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-              <Users className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:underline">{context.tenant_name}</p>
-              <p className="text-[11px] text-muted-foreground">Tenant</p>
-            </div>
-          </Link>
-        )}
-
-        <Link
-          href={`/properties/${context.property_id}`}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
-        >
-          <div className="h-7 w-7 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
-            <MapPin className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate group-hover:underline">{context.property_address}</p>
-            <p className="text-[11px] text-muted-foreground">Property</p>
-          </div>
-        </Link>
-
-        {basic.contractor_name && basic.contractor_id && (
-          <Link
-            href={`/contractors/${basic.contractor_id}`}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="h-7 w-7 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
-              <Wrench className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:underline">{basic.contractor_name}</p>
-              <p className="text-[11px] text-muted-foreground">Contractor</p>
-            </div>
-          </Link>
-        )}
-
-        {context.landlord_name && (
-          <Link
-            href={`/properties/${context.property_id}`}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="h-7 w-7 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-              <Crown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:underline">{context.landlord_name}</p>
-              <p className="text-[11px] text-muted-foreground">Landlord</p>
-            </div>
-          </Link>
-        )}
-      </div>
-
-      {/* Photos */}
+      {/* ── Media (conditional) ── */}
       {images.length > 0 && (
         <>
-          <DashedLine />
-          <div>
-            <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mb-2 px-1">
-              Photos ({images.length})
+          <div className="border-t border-border/40" />
+          <div className="px-6 py-4">
+            <p className="text-sm font-semibold text-foreground mb-3">
+              Media ({images.length})
             </p>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-              {images.map((url, index) => (
-                <a
-                  key={index}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block group"
-                >
-                  <img
-                    src={url}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                  />
-                </a>
-              ))}
+              {images.map((url, index) => {
+                const isVideo = /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes('/video/')
+                return isVideo ? (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group relative"
+                  >
+                    <video
+                      src={url}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-foreground/70 flex items-center justify-center">
+                        <Play className="w-3.5 h-3.5 text-background fill-background ml-0.5" />
+                      </div>
+                    </div>
+                  </a>
+                ) : (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <img
+                      src={url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                )
+              })}
             </div>
           </div>
         </>

@@ -61,7 +61,7 @@ function parseCurrency(val: string | null): number | null {
   if (!val) return null;
   const cleaned = val.replace(/[^0-9.]/g, "");
   const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
+  return isNaN(num) ? null : Math.abs(num);
 }
 
 /** Ensure tenant_token exists — generate + persist if missing */
@@ -142,6 +142,7 @@ async function handleFinalizeJob(
       ticketId,
       recipientPhone: contractor.phone,
       recipientRole: "contractor",
+      recipientId: contractor.id,
       messageType: "contractor_job_schedule",
       templateSid: TEMPLATES.contractor_job_schedule,
       variables: {
@@ -465,6 +466,7 @@ async function handleFilloutScheduling(
         ticketId,
         recipientPhone: llPhone,
         recipientRole: "landlord",
+        recipientId: ctx.property?.landlord_id,
         messageType: "ll_job_booked",
         templateSid: TEMPLATES.ll_job_booked,
         variables: {
@@ -717,6 +719,7 @@ async function handlePortalSchedule(
         ticketId,
         recipientPhone: llPhone,
         recipientRole: "landlord",
+        recipientId: ctx.property?.landlord_id,
         messageType: "ll_job_booked",
         templateSid: TEMPLATES.ll_job_booked,
         variables: {
@@ -873,6 +876,7 @@ async function handlePortalCompletion(
         ticketId,
         recipientPhone: llPhone,
         recipientRole: "landlord",
+        recipientId: ctx.property?.landlord_id,
         messageType: "ll_job_completed",
         templateSid: TEMPLATES.ll_job_completed,
         variables: {
@@ -971,6 +975,7 @@ async function handleRescheduleRequest(
       ticketId,
       recipientPhone: ctx.contractor.contractor_phone,
       recipientRole: "contractor",
+      recipientId: ctx.contractor?.id,
       messageType: "contractor_reschedule_request",
       templateSid: TEMPLATES.contractor_reschedule_request,
       variables: {

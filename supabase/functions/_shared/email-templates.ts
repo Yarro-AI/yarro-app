@@ -15,12 +15,12 @@ interface EmailContent {
 const CONTENT: Record<string, (v: Vars) => EmailContent> = {
   // ─── Contractor Messages ───
 
-  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=media, 5=priority, 6=access, 7=portalToken
+  // dispatcher contractor-sms: 1=business_name, 2=address, 3=issue, 4=priority, 5=access, 6=portalToken
   contractor_dispatch: (v) => ({
     subject: `New Job Request — ${v["3"] || "Maintenance issue"}`,
     heading: "New Job Request",
     body: `You have a new maintenance job request from ${v["1"] || "your property manager"} at ${v["2"] || "a property"}.`,
-    cta: v["7"] ? { text: "View Details & Submit Quote", url: `https://app.yarro.ai/contractor/${v["7"]}` } : undefined,
+    cta: v["6"] ? { text: "View Details & Submit Quote", url: `https://app.yarro.ai/contractor/${v["6"]}` } : undefined,
   }),
 
   // scheduling finalize-job: 1=address, 2=issue, 3=quote, 4=access, 5=contractorToken
@@ -91,6 +91,16 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     subject: `Job Completed — ${v["1"] || "Property"}`,
     heading: "Job Completed",
     body: `The maintenance job at ${v["1"] || "your property"} has been completed by ${v["3"] || "the contractor"}.`,
+  }),
+
+  // ─── Compliance Reminders ───
+
+  // compliance_expiry_operator: 1=cert_type, 2=address, 3=expiry_date, 4=days_remaining, 5=action_text
+  compliance_expiry_operator: (v) => ({
+    subject: `Compliance Alert — ${v["1"] || "Certificate"} expires in ${v["4"] || "?"} days`,
+    heading: "Certificate Expiring Soon",
+    body: `Your ${v["1"] || "certificate"} at ${v["2"] || "your property"} expires on ${v["3"] || "N/A"} (${v["4"] || "?"} days remaining). ${v["5"] || "Log in to arrange renewal."}`,
+    cta: { text: "View in Yarro", url: "https://app.yarro.ai/compliance" },
   }),
 
   // ─── Reschedule Messages ───

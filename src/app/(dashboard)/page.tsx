@@ -6,15 +6,20 @@ import { usePM } from '@/contexts/pm-context'
 import { useDateRange } from '@/contexts/date-range-context'
 import { StatusBadge } from '@/components/status-badge'
 import {
-  ArrowRight,
   AlertTriangle,
   X,
   MessageSquare,
   Phone,
   User,
+  Users,
   Search,
+  ShieldCheck,
+  Zap,
+  Banknote,
+  CalendarDays,
 } from 'lucide-react'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import {
   Sheet,
   SheetContent,
@@ -33,7 +38,12 @@ import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
+import { PageShell } from '@/components/page-shell'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
+import { filterActionable, filterInProgress, REASON_BADGE } from '@/components/dashboard/todo-panel'
+import { StatCard } from '@/components/dashboard/stat-card'
+import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
 
 interface DashboardStats {
   totalTickets: number
@@ -65,40 +75,6 @@ interface HandoffConversation {
   log: unknown
 }
 
-interface TicketSummary {
-  id: string
-  issue_description: string | null
-  status: string
-  job_stage: string | null
-  display_stage: string | null
-  message_stage?: string | null
-  category: string | null
-  priority: string | null
-  date_logged: string
-  scheduled_date?: string | null
-  final_amount?: number | null
-  address?: string
-  handoff?: boolean
-  landlord_declined?: boolean
-  next_action?: string | null
-  next_action_reason?: string | null
-  on_hold?: boolean | null
-}
-
-interface TodoItem {
-  id: string
-  ticket_id: string
-  issue_summary: string
-  property_label: string
-  action_type: string
-  action_label: string
-  action_context: string | null
-  next_action_reason: string | null
-  waiting_since: string
-  priority_bucket: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'
-  priority: string | null
-  sla_breached: boolean
-}
 
 interface RecentEvent {
   event_type: string
@@ -114,248 +90,42 @@ interface RecentEvent {
 }
 
 const EVENT_DOT_COLOR: Record<string, string> = {
-  ISSUE_CREATED:        'bg-blue-500',
-  PENDING_REVIEW:       'bg-violet-500',
-  HANDOFF_CREATED:      'bg-violet-500',
-  CONTRACTOR_ASSIGNED:  'bg-blue-400',
-  QUOTE_RECEIVED:       'bg-amber-500',
-  QUOTE_APPROVED:       'bg-emerald-500',
-  QUOTE_DECLINED:       'bg-red-400',
-  LANDLORD_APPROVED:    'bg-emerald-500',
-  LANDLORD_DECLINED:    'bg-red-400',
-  BOOKING_CONFIRMED:    'bg-emerald-500',
-  NO_CONTRACTORS:       'bg-red-400',
-  JOB_SCHEDULED:        'bg-emerald-400',
-  JOB_COMPLETED:        'bg-emerald-600',
-  TICKET_CLOSED:        'bg-zinc-400',
-  TICKET_ON_HOLD:       'bg-amber-400',
-  TICKET_RESUMED:       'bg-blue-400',
-  TICKET_ARCHIVED:      'bg-zinc-400',
-  FOLLOW_UP_REQUESTED:  'bg-amber-500',
+  ISSUE_CREATED:           'bg-primary',
+  PENDING_REVIEW:          'bg-primary',
+  HANDOFF_CREATED:         'bg-primary',
+  CONTRACTOR_ASSIGNED:     'bg-primary',
+  QUOTE_RECEIVED:          'bg-warning',
+  QUOTE_APPROVED:          'bg-success',
+  QUOTE_DECLINED:          'bg-danger',
+  LANDLORD_APPROVED:       'bg-success',
+  LANDLORD_DECLINED:       'bg-danger',
+  BOOKING_CONFIRMED:       'bg-success',
+  NO_CONTRACTORS:          'bg-danger',
+  JOB_SCHEDULED:           'bg-success',
+  JOB_COMPLETED:           'bg-success',
+  TICKET_CLOSED:           'bg-muted-foreground',
+  TICKET_ON_HOLD:          'bg-warning',
+  TICKET_RESUMED:          'bg-primary',
+  TICKET_ARCHIVED:         'bg-muted-foreground',
+  FOLLOW_UP_REQUESTED:     'bg-warning',
   // OOH events
-  OOH_DISPATCHED:       'bg-purple-500',
-  OOH_RESOLVED:         'bg-emerald-500',
-  OOH_UNRESOLVED:       'bg-red-400',
-  OOH_IN_PROGRESS:      'bg-amber-500',
+  OOH_DISPATCHED:          'bg-primary',
+  OOH_RESOLVED:            'bg-success',
+  OOH_UNRESOLVED:          'bg-danger',
+  OOH_IN_PROGRESS:         'bg-warning',
   // Landlord allocation events
-  LANDLORD_ALLOCATED:   'bg-purple-500',
-  LANDLORD_IN_PROGRESS: 'bg-amber-500',
-  LANDLORD_RESOLVED_ALLOC: 'bg-emerald-500',
-  LANDLORD_NEEDS_HELP:  'bg-red-500',
+  LANDLORD_ALLOCATED:      'bg-primary',
+  LANDLORD_IN_PROGRESS:    'bg-warning',
+  LANDLORD_RESOLVED_ALLOC: 'bg-success',
+  LANDLORD_NEEDS_HELP:     'bg-danger',
 }
 
-// CTA button text per action type
-const ACTION_CTA: Record<string, string> = {
-  'Review issue': 'Triage',
-  'Needs attention': 'Review',
-  'Landlord declined': 'Review',
-  'Job not completed': 'Review',
-  'Assign contractor': 'Assign',
-  'Review quote': 'Approve',
-  'Awaiting landlord': 'Follow up',
-  'Contractor unresponsive': 'Redispatch',
-  'OOH dispatched': 'Review',
-  'OOH resolved': 'Close',
-  'OOH unresolved': 'Review',
-  'OOH in progress': 'View',
-}
 
-// Dot + text badges per next_action_reason (distinct from StatusBadge pills)
-const REASON_BADGE: Record<string, { label: string; dot: string; text: string }> = {
-  on_hold:              { label: 'On Hold',           dot: 'bg-gray-400',   text: 'text-gray-500 dark:text-gray-400' },
-  pending_review:       { label: 'Needs review',      dot: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
-  handoff_review:       { label: 'Handoff',           dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
-  ooh_dispatched:       { label: 'OOH Dispatched',    dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
-  ooh_resolved:         { label: 'OOH Resolved',      dot: 'bg-green-500',  text: 'text-green-600 dark:text-green-400' },
-  ooh_unresolved:       { label: 'OOH Unresolved',    dot: 'bg-red-500',    text: 'text-red-600 dark:text-red-400' },
-  ooh_in_progress:      { label: 'OOH In Progress',   dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
-  no_contractors:       { label: 'No contractors',    dot: 'bg-amber-500',  text: 'text-amber-600 dark:text-amber-400' },
-  job_not_completed:    { label: 'Not completed',     dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
-  landlord_declined:    { label: 'Landlord declined', dot: 'bg-orange-500', text: 'text-orange-600 dark:text-orange-400' },
-  landlord_no_response: { label: 'Landlord silent',   dot: 'bg-orange-400', text: 'text-orange-500 dark:text-orange-400' },
-  manager_approval:     { label: 'Needs approval',    dot: 'bg-blue-500',   text: 'text-blue-600 dark:text-blue-400' },
-  allocated_to_landlord:{ label: 'Landlord Managing', dot: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-400' },
-  landlord_in_progress: { label: 'Landlord In Progress', dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400' },
-  landlord_resolved:    { label: 'Landlord Resolved', dot: 'bg-green-500', text: 'text-green-600 dark:text-green-400' },
-  landlord_needs_help:  { label: 'Landlord Needs Help', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
-  awaiting_contractor:  { label: 'Awaiting reply',    dot: 'bg-sky-500',    text: 'text-sky-600 dark:text-sky-400' },
-  awaiting_booking:     { label: 'Awaiting booking',  dot: 'bg-teal-500',   text: 'text-teal-600 dark:text-teal-400' },
-  scheduled:            { label: 'Scheduled',          dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
-  awaiting_landlord:    { label: 'Awaiting landlord',  dot: 'bg-orange-400',  text: 'text-orange-500 dark:text-orange-400' },
-}
-
-// Recommended next-step descriptions per state (Task 4)
-const NEXT_STEPS: Record<string, string> = {
-  pending_review: 'Triage and assign a category',
-  handoff_review: 'Review AI conversation and create ticket',
-  no_contractors: 'Add or assign a new contractor',
-  manager_approval: 'Review quote and approve or decline',
-  landlord_declined: 'Contact landlord to discuss alternatives',
-  landlord_no_response: 'Follow up with landlord directly',
-  job_not_completed: 'Review contractor reason and redispatch',
-  ooh_dispatched: 'Waiting for OOH contact response',
-  ooh_unresolved: 'Escalate or redispatch to contractor',
-  landlord_needs_help: 'Landlord needs help — take over',
-}
-
-const IN_PROGRESS_REASONS = new Set([
-  'awaiting_contractor', 'awaiting_booking', 'awaiting_landlord',
-  'allocated_to_landlord', 'landlord_in_progress', 'ooh_dispatched', 'ooh_in_progress',
-  'scheduled',
-])
-
-function TodoPanel({ todoItems, allTickets }: { todoItems: TodoItem[]; allTickets: TicketSummary[] }) {
-  const [leftTab, setLeftTab] = useState<'todo' | 'in_progress'>('todo')
-
-  // Only actionable items — exclude FOLLOW_UP and delay awaiting_landlord by 24h
-  const actionable = todoItems.filter(i => {
-    if (i.action_type === 'FOLLOW_UP') return false
-    if (i.next_action_reason === 'awaiting_landlord') {
-      const hrs = (Date.now() - new Date(i.waiting_since).getTime()) / 3_600_000
-      if (hrs < 24) return false
-    }
-    return true
-  })
-
-  const inProgressTickets = allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
-
-  return (
-    <div className="rounded-xl border border-border/60 flex flex-col lg:flex-1 lg:min-h-0 min-w-0 overflow-hidden">
-
-      {/* Header with tabs */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 flex-shrink-0">
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <button
-            onClick={() => setLeftTab('todo')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'todo' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
-          >
-            To-do
-          </button>
-          <button
-            onClick={() => setLeftTab('in_progress')}
-            className={`text-sm font-semibold px-2 py-0.5 rounded-md transition-colors ${leftTab === 'in_progress' ? 'text-card-foreground bg-muted/60' : 'text-muted-foreground hover:text-card-foreground'}`}
-          >
-            In Progress
-          </button>
-          {(leftTab === 'todo' ? actionable.length : inProgressTickets.length) > 0 && (
-            <span className="text-xs font-bold text-primary-foreground bg-primary rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5 ml-1">
-              {leftTab === 'todo' ? actionable.length : inProgressTickets.length}
-            </span>
-          )}
-        </div>
-        <Link href="/tickets" className="flex-shrink-0">
-          <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-            View all
-            <ArrowRight className="ml-1 h-3 w-3" />
-          </Button>
-        </Link>
-      </div>
-
-      {leftTab === 'todo' ? (
-      actionable.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">All clear — nothing needs your attention</p>
-        </div>
-      ) : (
-        <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-          {actionable.map(item => {
-            const ctaText = ACTION_CTA[item.action_label] || 'View'
-            const isHandoff = item.next_action_reason === 'handoff_review'
-            const isPendingReview = item.next_action_reason === 'pending_review'
-            const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
-            const href = isHandoff
-              ? `/tickets?id=${item.ticket_id}&action=complete`
-              : isPendingReview
-              ? `/tickets?id=${item.ticket_id}&action=review`
-              : needsDispatchTab
-              ? `/tickets?id=${item.ticket_id}&tab=dispatch`
-              : `/tickets?id=${item.ticket_id}`
-
-            return (
-              <Link
-                key={item.id}
-                href={href}
-                className="flex items-center gap-3 py-3 px-5 transition-colors min-w-0 hover:bg-muted/30 group"
-              >
-                {/* Left: info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
-                    {item.priority && <StatusBadge status={item.priority} size="sm" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
-                  {NEXT_STEPS[item.next_action_reason || ''] && (
-                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">{NEXT_STEPS[item.next_action_reason || '']}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1">
-                    {(() => {
-                      const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-                      return (
-                        <span className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                          <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
-                        </span>
-                      )
-                    })()}
-                    {(() => {
-                      const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
-                      const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-red-500'
-                        : waitHrs > 24 ? 'text-xs font-medium text-amber-500'
-                        : 'text-[11px] text-muted-foreground/60'
-                      return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-                    })()}
-                  </div>
-                </div>
-
-                {/* Right: CTA button */}
-                <InteractiveHoverButton
-                  text={ctaText}
-                  className="w-[90px] text-xs h-8 flex-shrink-0"
-                  tabIndex={-1}
-                />
-              </Link>
-            )
-          })}
-        </div>
-      )
-      ) : (
-        /* In Progress tab */
-        inProgressTickets.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <p className="text-sm text-muted-foreground">No tickets in progress</p>
-          </div>
-        ) : (
-          <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            {inProgressTickets.map((ticket) => {
-              const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-              return (
-                <Link
-                  key={ticket.id}
-                  href={`/tickets?id=${ticket.id}`}
-                  className="flex items-center gap-3 py-3 px-5 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.address || '—'}</p>
-                    <span className="flex items-center gap-1.5 mt-1">
-                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                      <span className={`text-[11px] font-medium ${badge.text}`}>{badge.label}</span>
-                    </span>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )
-      )}
-
-    </div>
-  )
-}
 
 export default function DashboardPage() {
   const { propertyManager } = usePM()
   const { dateRange } = useDateRange()
+  const openTicket = useOpenTicket()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [allTickets, setAllTickets] = useState<TicketSummary[]>([])
   const [awaitingTickets, setAwaitingTickets] = useState<TicketSummary[]>([])
@@ -369,6 +139,19 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [complianceSummary, setComplianceSummary] = useState<{
+    actions_needed: number; expired: number; expiring_unscheduled: number;
+    review: number; missing: number; renewal_scheduled: number; valid: number;
+    compliant_properties: number; total_properties: number; total_required: number
+  }>({
+    actions_needed: 0, expired: 0, expiring_unscheduled: 0,
+    review: 0, missing: 0, renewal_scheduled: 0, valid: 0,
+    compliant_properties: 0, total_properties: 0, total_required: 0,
+  })
+  const [occupancySummary, setOccupancySummary] = useState<{
+    total_rooms: number; occupied: number; vacant: number; ending_soon: number
+  }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
+  const [aiActionsCount, setAiActionsCount] = useState(0)
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -376,7 +159,7 @@ export default function DashboardPage() {
     setLoading(true)
 
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -428,7 +211,43 @@ export default function DashboardPage() {
         p_limit: 15,
         p_cursor: null,
       } as never),
+      // Compliance summary — RPC returns counts by status
+      supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
+      // Occupancy — portfolio-wide room vacancy
+      supabase.rpc('get_occupancy_summary' as never, { p_pm_id: propertyManager.id } as never),
+      // AI actions — system/AI events this month
+      supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
+      // Non-ticket to-dos: compliance, rent, tenancy, handoff — same shape as c1_get_dashboard_todo
+      supabase.rpc('c1_get_dashboard_todo_extras' as never, { p_pm_id: propertyManager.id } as never),
     ])
+
+    // Process compliance summary — RPC returns action-based counts
+    const summaryData = complianceRes?.data as Record<string, number> | null
+    setComplianceSummary({
+      actions_needed: summaryData?.actions_needed ?? 0,
+      expired: summaryData?.expired ?? 0,
+      expiring_unscheduled: summaryData?.expiring_unscheduled ?? 0,
+      review: summaryData?.review ?? 0,
+      missing: summaryData?.missing ?? 0,
+      renewal_scheduled: summaryData?.renewal_scheduled ?? 0,
+      valid: summaryData?.valid ?? 0,
+      compliant_properties: summaryData?.compliant_properties ?? 0,
+      total_properties: summaryData?.total_properties ?? 0,
+      total_required: summaryData?.total_required ?? 0,
+    })
+
+    // Process occupancy summary — portfolio-wide room vacancy
+    const occData = occupancyRes?.data as Record<string, number> | null
+    setOccupancySummary({
+      total_rooms: occData?.total_rooms ?? 0,
+      occupied: occData?.occupied ?? 0,
+      vacant: occData?.vacant ?? 0,
+      ending_soon: occData?.ending_soon ?? 0,
+    })
+
+    // Process AI actions count
+    const aiData = aiActionsRes?.data as Record<string, number> | null
+    setAiActionsCount(aiData?.count ?? 0)
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
@@ -525,8 +344,14 @@ export default function DashboardPage() {
       setAllTickets(mappedTickets)
     }
 
-    const todoData = (todoRes.data as unknown as TodoItem[] | null) ?? []
-    setTodoItems(todoData)
+    // Merge ticket todos + extras (compliance, rent, tenancy, handoff), sort by priority_score
+    const ticketTodos = (todoRes.data as unknown as TodoItem[] | null) ?? []
+    const extraTodos = (todoExtrasRes.data as unknown as TodoItem[] | null) ?? []
+    const merged = [
+      ...ticketTodos.map(t => ({ ...t, source_type: t.source_type || 'ticket' as const })),
+      ...extraTodos,
+    ].sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0))
+    setTodoItems(merged)
 
     const eventsPayload = (eventsRes.data as unknown as { events: RecentEvent[] } | null)
     setRecentEvents(eventsPayload?.events ?? [])
@@ -537,6 +362,10 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Lift filtered lists to parent scope for stat cards + TodoPanel props
+  const actionable = filterActionable(todoItems)
+  const inProgressTickets = filterInProgress(allTickets)
 
   const showAwaitingTickets = (type: string) => {
     let filtered: TicketSummary[]
@@ -584,6 +413,14 @@ export default function DashboardPage() {
     }
   }
 
+  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const firstName = propertyManager?.name?.split(' ')[0] || ''
+  const taskCount = actionable.length
+  const greetingLabel = taskCount > 0
+    ? `Hi, ${firstName}. You've got ${taskCount} task${taskCount !== 1 ? 's' : ''} today.`
+    : `Hi, ${firstName}. You're all clear.`
+
   // Autocomplete results for global search in top bar
   const searchResults = searchTerm.trim()
     ? allTickets
@@ -597,256 +434,218 @@ export default function DashboardPage() {
 
   if (loading && !stats) {
     return (
-      <div className="p-4 h-full overflow-hidden">
-        <div className="animate-pulse space-y-3">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-[168px] bg-muted rounded-xl" />
-          <div className="grid grid-cols-2 gap-3">
-            <div className="h-[200px] bg-muted rounded-xl" />
-            <div className="h-[200px] bg-muted rounded-xl" />
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0">
+          <h1 className="text-2xl font-semibold text-foreground">{greetingLabel}</h1>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="animate-pulse space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="h-[88px] bg-muted rounded-xl" />
+              <div className="h-[88px] bg-muted rounded-xl" />
+              <div className="h-[88px] bg-muted rounded-xl" />
+              <div className="h-[88px] bg-muted rounded-xl" />
+            </div>
+            <div className="flex flex-col lg:flex-row gap-4 flex-1">
+              <div className="lg:flex-1 h-[300px] bg-muted rounded-xl" />
+              <div className="lg:w-[320px] h-[300px] bg-muted rounded-xl" />
+            </div>
           </div>
-          <div className="flex-1 bg-muted rounded-xl min-h-[160px]" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-        {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 gap-4">
-          {/* LEFT: search */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="relative w-full max-w-72 min-w-0">
-              <div className={`flex items-center gap-2 h-9 px-3 rounded-lg border bg-background/80 backdrop-blur-sm transition-all ${searchFocused ? 'border-primary/60 ring-1 ring-primary/20' : 'border-border'}`}>
-                <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                  placeholder="Search tickets…"
-                  className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-              {searchFocused && searchResults.length > 0 && (
-                <div className="absolute top-full mt-1.5 left-0 w-80 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                  {searchResults.map((ticket) => (
-                    <Link
-                      key={ticket.id}
-                      href={`/tickets?id=${ticket.id}`}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                      </div>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    </Link>
-                  ))}
-                  <Link
-                    href="/tickets"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setSearchTerm(''); setSearchFocused(false) }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    View all results
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header — greeting */}
+      <div className="px-6 py-4 flex-shrink-0">
+        <h1 className="text-2xl font-semibold text-foreground">{greetingLabel}</h1>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-6">
+        {/* Stat row */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-shrink-0">
+          <StatCard
+            label="Occupancy"
+            value={occupancySummary.total_rooms > 0 ? `${Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100)}%` : '—'}
+            subtitle={occupancySummary.vacant > 0 ? `${occupancySummary.vacant} vacant` : occupancySummary.ending_soon > 0 ? `${occupancySummary.ending_soon} ending soon` : occupancySummary.total_rooms > 0 ? 'Fully let' : 'No rooms'}
+            accentColor={(() => {
+              const rate = occupancySummary.total_rooms > 0 ? Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100) : 0
+              return rate < 60 ? 'danger' : rate < 90 ? 'warning' : 'success'
+            })()}
+            icon={Users}
+          />
+          <StatCard
+            label="Compliance"
+            value={complianceSummary.actions_needed > 0 ? `${complianceSummary.actions_needed} actions` : complianceSummary.total_required > 0 ? 'All clear' : '—'}
+            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring_unscheduled > 0 ? `${complianceSummary.expiring_unscheduled} expiring` : complianceSummary.missing > 0 ? `${complianceSummary.missing} missing` : complianceSummary.total_required > 0 ? `${complianceSummary.compliant_properties}/${complianceSummary.total_properties} properties compliant` : 'No certificates'}
+            accentColor={complianceSummary.expired > 0 || complianceSummary.missing > 0 ? 'danger' : complianceSummary.expiring_unscheduled > 0 || complianceSummary.review > 0 ? 'warning' : 'success'}
+            icon={ShieldCheck}
+          />
+          <StatCard
+            label="AI actions"
+            value={aiActionsCount}
+            subtitle={aiActionsCount > 0 ? 'this month' : 'No activity yet'}
+            accentColor="primary"
+            icon={Zap}
+          />
+        </div>
+
+        {/* Main Content — two-column layout: Needs Action + In Progress */}
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 lg:items-stretch">
+
+          {/* Left column — Needs Action (unified: tickets + compliance + rent + tenancy + handoff) */}
+          <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
+              <span className="text-base font-semibold text-foreground">Needs action</span>
+              {actionable.length > 0 && (
+                <span className="text-xs font-bold text-danger bg-danger/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                  {actionable.length}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto">
+              {actionable.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <p className="text-sm text-success font-medium">All clear — nothing needs your attention</p>
                 </div>
+              ) : (
+                actionable.map(item => {
+                  const borderAccent = (item.sla_breached || item.priority_bucket === 'URGENT')
+                    ? 'border-l-[3px] border-l-danger'
+                    : item.priority_bucket === 'HIGH'
+                    ? 'border-l-[3px] border-l-warning'
+                    : ''
+                  const src = item.source_type || 'ticket'
+
+                  // Source icon for non-ticket items
+                  const SourceIcon = src === 'compliance' ? ShieldCheck
+                    : src === 'rent' ? Banknote
+                    : src === 'tenancy' ? CalendarDays
+                    : src === 'handoff' ? MessageSquare
+                    : null
+
+                  // CTA text
+                  const ctaText = (() => {
+                    if (src === 'compliance') {
+                      if (item.next_action_reason === 'compliance_expired') return 'Renew'
+                      if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
+                      if (item.next_action_reason === 'compliance_missing') return 'Add'
+                      return 'View'
+                    }
+                    if (src === 'rent') return item.next_action_reason === 'rent_partial' ? 'Follow up' : 'Chase'
+                    if (src === 'tenancy') return item.next_action_reason === 'tenancy_expired' ? 'Update' : 'Review'
+                    if (src === 'handoff') return 'Create ticket'
+                    // Ticket CTAs
+                    return ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
+                  })()
+
+                  // Navigation per source
+                  const getHref = (): string | null => {
+                    if (src === 'compliance') {
+                      return item.next_action_reason === 'compliance_missing'
+                        ? `/properties/${item.property_id}`
+                        : `/compliance/${item.entity_id}`
+                    }
+                    if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
+                    // Ticket navigation
+                    if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
+                    if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
+                    return null
+                  }
+                  const href = getHref()
+
+                  // Handoff source items open the handoff dialog instead of navigating
+                  const handleHandoffClick = () => {
+                    if (src === 'handoff') {
+                      const convo = handoffConversations.find(c => c.id === item.entity_id)
+                      if (convo) {
+                        setSelectedHandoff(convo)
+                        setCreateTicketOpen(true)
+                      }
+                      return
+                    }
+                    // Ticket fallback — open ticket detail
+                    const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+                    openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
+                  }
+
+                  const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+                  const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
+                  const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger' : waitHrs > 24 ? 'text-xs font-medium text-warning' : 'text-[11px] text-muted-foreground/60'
+
+                  const rowContent = (
+                    <>
+                      {SourceIcon && (
+                        <SourceIcon className="h-4 w-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
+                          {item.priority && <StatusBadge status={item.priority} size="sm" className="border-border/50 text-muted-foreground/70" />}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                            <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
+                          </span>
+                          <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">{ctaText}</span>
+                    </>
+                  )
+
+                  const rowClass = cn("flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer", borderAccent)
+
+                  if (href) {
+                    return <Link key={item.id} href={href} className={rowClass}>{rowContent}</Link>
+                  }
+                  return (
+                    <button key={item.id} onClick={handleHandoffClick} className={cn(rowClass, 'w-full text-left')}>
+                      {rowContent}
+                    </button>
+                  )
+                })
               )}
             </div>
           </div>
-          {/* RIGHT: Create ticket button */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/tickets?create=true">
-              <InteractiveHoverButton text="Create ticket" className="w-32 text-xs h-9" />
-            </Link>
-          </div>
-        </div>
 
-        {/* Main Content — panels below header line */}
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-4 flex flex-col lg:flex-row gap-4">
-            {/* To-do — primary left column */}
-            <TodoPanel todoItems={todoItems} allTickets={allTickets} />
-
-          <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-1 lg:grid-rows-2 lg:h-full lg:w-[clamp(320px,30vw,420px)] lg:min-w-[320px] lg:max-w-[420px] min-w-0">
-              {/* RIGHT: Scheduled jobs */}
-              {(() => {
-                const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
-                const allScheduled = allTickets
-                  .filter((t) => t.next_action_reason === 'scheduled' && t.scheduled_date)
-                  .sort((a, b) => {
-                    const ta = new Date(a.scheduled_date!).getTime()
-                    const tb = new Date(b.scheduled_date!).getTime()
-                    if (isNaN(ta) && isNaN(tb)) return 0
-                    if (isNaN(ta)) return 1
-                    if (isNaN(tb)) return -1
-                    return ta - tb
-                  })
-                const upcomingScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) >= startOfToday).slice(0, 5)
-                const overdueScheduled = allScheduled.filter(t => new Date(t.scheduled_date!) < startOfToday)
-
-                const byDate: Record<string, TicketSummary[]> = {}
-                for (const t of upcomingScheduled) {
-                  const key = formatDate(t.scheduled_date!)
-                  if (!byDate[key]) byDate[key] = []
-                  byDate[key].push(t)
-                }
-                const groups = Object.entries(byDate)
-
-                return (
-                  <div className="rounded-xl border border-border/60 flex flex-col min-w-0 min-h-0 overflow-hidden">
-                    <div className="flex items-center px-5 py-3 border-b border-border/40 flex-shrink-0">
-                      <h3 className="text-sm font-semibold text-card-foreground flex-1 min-w-0">Scheduled</h3>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {(upcomingScheduled.length + overdueScheduled.length) > 0 && (
-                          <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                            {upcomingScheduled.length + overdueScheduled.length}
-                          </span>
-                        )}
-                        <Link href="/tickets">
-                          <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-                            View all
-                            <ArrowRight className="ml-1 h-3 w-3" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4">
-                      {groups.length === 0 && overdueScheduled.length === 0 ? (
-                        <div className="flex gap-3 items-center">
-                          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground/40">—</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground/40">No scheduled jobs</p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-4">
-                          {/* Overdue jobs */}
-                          {overdueScheduled.length > 0 && (
-                            <div className="flex flex-col gap-1.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-red-500">Overdue</span>
-                              {overdueScheduled.map((ticket) => (
-                                <Link
-                                  key={ticket.id}
-                                  href={`/tickets?id=${ticket.id}`}
-                                  className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200 dark:border-red-900/40"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.issue_description || 'No description'}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                                  </div>
-                                  <span className="text-[10px] font-medium text-red-500 whitespace-nowrap">Confirm completion</span>
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                          {/* Upcoming jobs */}
-                          {groups.map(([date, tickets]) => (
-                            <div key={date} className="flex gap-3">
-                              {(() => {
-                                const [day, month] = date.split(' ')
-                                return (
-                                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-muted/60 flex flex-col items-center justify-center">
-                                    <span className="text-[20px] font-semibold text-card-foreground leading-none">{day}</span>
-                                    <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground leading-none mt-0.5">{month}</span>
-                                  </div>
-                                )
-                              })()}
-                              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                                {tickets.map((ticket) => (
-                                  <Link
-                                    key={ticket.id}
-                                    href={`/tickets?id=${ticket.id}`}
-                                    className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
-                                  >
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-card-foreground truncate">
-                                        {ticket.issue_description || 'No description'}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground truncate">{ticket.address || '—'}</p>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })()}
-
-            {/* Recent activity */}
-            <div className="rounded-xl border border-border/60 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex items-center px-5 py-3 border-b border-border/40 min-w-0 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-card-foreground flex-1 min-w-0">Recent activity</h3>
-                <Link href="/tickets" className="flex-shrink-0">
-                  <Button variant="ghost" size="sm" className="h-6 text-xs text-primary hover:text-primary/80 hover:bg-primary/10">
-                    View all
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </Link>
-              </div>
-              <div className="divide-y divide-border/30 overflow-y-auto flex-1 min-h-0">
-                {recentEvents.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-muted-foreground">
-                    No recent activity
-                  </div>
-                ) : (
-                  recentEvents.map((event, idx) => {
-                    const dotColor = EVENT_DOT_COLOR[event.event_type] || 'bg-zinc-400'
-                    const isGrouped = (event.event_count ?? 1) > 1
-                    const detail = event.issue_snippet || event.property_label
-                    const inner = (
-                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                        <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${dotColor}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-card-foreground truncate leading-snug">{event.event_label}</p>
-                          {detail && (
-                            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                              {detail}{event.actor_name ? ` · ${event.actor_name}` : ''}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap flex-shrink-0 mt-0.5">
-                          {formatDistanceToNow(new Date(event.occurred_at), { addSuffix: true })}
+          {/* Right column — In Progress */}
+          <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
+              <span className="text-base font-semibold text-foreground">In progress</span>
+              {inProgressTickets.length > 0 && (
+                <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                  {inProgressTickets.length}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto">
+              {inProgressTickets.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <p className="text-sm text-muted-foreground">No tickets in progress</p>
+                </div>
+              ) : (
+                inProgressTickets.map(ticket => {
+                  const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+                  return (
+                    <button key={ticket.id} onClick={() => openTicket(ticket.id)} className="flex items-center gap-3 py-3 px-6 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-card-foreground truncate">{ticket.address || '—'}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.issue_description || 'No description'}</p>
+                        <span className="flex items-center gap-1.5 mt-1">
+                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                          <span className={`text-[11px] font-medium ${badge.text}`}>{badge.label}</span>
                         </span>
                       </div>
-                    )
-                    return event.ticket_id && !isGrouped ? (
-                      <Link
-                        key={`${event.event_type}-${event.occurred_at}-${idx}`}
-                        href={`/tickets?id=${event.ticket_id}`}
-                        className="flex px-4 py-2 min-w-0 hover:bg-muted/30 transition-colors cursor-pointer"
-                      >
-                        {inner}
-                      </Link>
-                    ) : (
-                      <div
-                        key={`${event.event_type}-${event.occurred_at}-${idx}`}
-                        className="flex px-4 py-2 min-w-0"
-                      >
-                        {inner}
-                      </div>
-                    )
-                  })
-                )}
-              </div>
+                    </button>
+                  )
+                })
+              )}
             </div>
           </div>
         </div>
@@ -868,10 +667,9 @@ export default function DashboardPage() {
                     key={ticket.id}
                     className="p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20"
                   >
-                    <Link
-                      href={`/tickets?id=${ticket.id}`}
-                      className="block"
-                      onClick={() => setAwaitingType(null)}
+                    <button
+                      className="block w-full text-left cursor-pointer"
+                      onClick={() => { openTicket(ticket.id); setAwaitingType(null) }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -882,7 +680,7 @@ export default function DashboardPage() {
                           {formatDate(ticket.date_logged)}
                         </span>
                       </div>
-                    </Link>
+                    </button>
                     <div className="mt-3 flex items-center justify-between gap-2">
                       {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
                       {awaitingType === 'handoff' && ticket.handoff && (
@@ -890,7 +688,7 @@ export default function DashboardPage() {
                           href={`/tickets?id=${ticket.id}&action=complete`}
                           onClick={() => setAwaitingType(null)}
                         >
-                          <InteractiveHoverButton text="Review" className="w-24 text-xs h-7 p-1" />
+                          <InteractiveHoverButton text="Review" size="sm" />
                         </Link>
                       )}
                     </div>
@@ -912,8 +710,8 @@ export default function DashboardPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                <div className="h-8 w-8 rounded-lg bg-danger/10 flex items-center justify-center">
+                  <AlertTriangle className="h-4 w-4 text-danger" />
                 </div>
                 <div>
                   <DialogTitle>Create Ticket from Handoff</DialogTitle>
@@ -1044,5 +842,6 @@ export default function DashboardPage() {
           </DialogContent>
         </Dialog>
       </div>
+    </div>
   )
 }

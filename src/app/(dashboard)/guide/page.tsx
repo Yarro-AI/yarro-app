@@ -3,7 +3,8 @@
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
 import { WhatsAppPreview } from '@/components/whatsapp-preview'
-import { Bell, CheckCircle, MessageSquare, AlertTriangle, Shield, BookOpen } from 'lucide-react'
+import { Bell, CheckCircle, MessageSquare, AlertTriangle, Shield } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
 
 const PM_GUIDE_TEXT = `HOW TO USE YARRO AS A PROPERTY MANAGER
 
@@ -40,26 +41,8 @@ TIPS:
 
 export default function GuidePage() {
   return (
-    <div className="h-full overflow-hidden bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background">
-      <div className="h-full p-6 flex flex-col gap-4 overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0">
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Product Guide
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Your complete guide to Yarro property management
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex-shrink-0">
-          <GuideTabs />
-        </div>
-
-        {/* Content - fills remaining space */}
-        <div className="flex-1 min-h-0">
+    <PageShell title="Product Guide" subtitle="Your complete guide to Yarro property management" headerExtra={<GuideTabs />}>
+      <div className="flex-1 min-h-0 pt-4">
           <CopyableGuide title="Getting Started" content={PM_GUIDE_TEXT}>
             <div className="h-full flex flex-col">
               <p className="text-sm text-muted-foreground mb-4">
@@ -72,8 +55,8 @@ export default function GuidePage() {
                 <div className="flex flex-col gap-6">
                   {/* Step 1 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Bell className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">1. You'll Be Notified via WhatsApp</h3>
@@ -88,8 +71,8 @@ export default function GuidePage() {
 
                   {/* Step 2 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-success" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">2. Approve or Decline Quotes</h3>
@@ -103,8 +86,8 @@ export default function GuidePage() {
 
                   {/* Step 3 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                      <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-warning/10 flex items-center justify-center">
+                      <AlertTriangle className="h-6 w-6 text-warning" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">3. Handle Handoffs</h3>
@@ -118,8 +101,8 @@ export default function GuidePage() {
 
                   {/* Step 4 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                      <MessageSquare className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <MessageSquare className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">4. Monitor Your Dashboard</h3>
@@ -147,7 +130,7 @@ export default function GuidePage() {
                   </div>
 
                   {/* Tips */}
-                  <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
+                  <div className="bg-primary/10 rounded-xl p-5 border border-primary/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Check dashboard daily</li>
@@ -157,9 +140,9 @@ export default function GuidePage() {
                   </div>
 
                   {/* Compliance Note */}
-                  <div className="bg-slate-500/10 rounded-xl p-5 border border-slate-500/20">
+                  <div className="bg-muted rounded-xl p-5 border border-border">
                     <div className="flex items-start gap-3">
-                      <Shield className="h-6 w-6 text-slate-600 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                      <Shield className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-0.5" />
                       <div>
                         <h4 className="text-base font-semibold text-card-foreground">Data &amp; AI Compliance</h4>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -173,7 +156,6 @@ export default function GuidePage() {
             </div>
           </CopyableGuide>
         </div>
-      </div>
-    </div>
+    </PageShell>
   )
 }

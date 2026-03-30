@@ -119,13 +119,13 @@ export function StepProperties({ properties, landlords, onChange, onLookupCity }
       }
       if (!property.city) {
         return (
-          <span className="text-xs text-amber-600 dark:text-amber-400 italic">
+          <span className="text-xs text-amber-600 italic">
             Looking up...
           </span>
         )
       }
       return (
-        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+        <span className="text-xs text-emerald-600 font-medium">
           {property.city}
         </span>
       )

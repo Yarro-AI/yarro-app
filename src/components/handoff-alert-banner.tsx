@@ -56,7 +56,7 @@ export function HandoffAlertBanner({ tickets, onReview }: HandoffAlertBannerProp
             </div>
             <InteractiveHoverButton
               text="Review"
-              className="w-24 text-xs h-8"
+              size="sm"
               onClick={() => onReview(ticket.id)}
             />
           </div>

@@ -3,7 +3,8 @@
 import { GuideTabs } from '@/components/guide-tabs'
 import { CopyableGuide } from '@/components/copyable-guide'
 import { WhatsAppPreview } from '@/components/whatsapp-preview'
-import { MessageSquare, ClipboardList, Bell, BookOpen } from 'lucide-react'
+import { MessageSquare, ClipboardList, Bell } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
 
 const TENANT_GUIDE_TEXT = `HOW TO REPORT MAINTENANCE ISSUES
 
@@ -30,26 +31,8 @@ TIPS
 
 export default function TenantGuidePage() {
   return (
-    <div className="h-full overflow-hidden bg-gradient-to-br from-blue-50/50 via-background to-cyan-50/30 dark:from-background dark:via-background dark:to-background">
-      <div className="h-full p-6 flex flex-col gap-4 overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0">
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Product Guide
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Your complete guide to Yarro property management
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex-shrink-0">
-          <GuideTabs />
-        </div>
-
-        {/* Content - fills remaining space */}
-        <div className="flex-1 min-h-0">
+    <PageShell title="Product Guide" subtitle="Your complete guide to Yarro property management" headerExtra={<GuideTabs />}>
+      <div className="flex-1 min-h-0 pt-4">
           <CopyableGuide title="For Your Tenants" content={TENANT_GUIDE_TEXT}>
             <div className="h-full flex flex-col">
               <p className="text-sm text-muted-foreground mb-4">
@@ -62,15 +45,15 @@ export default function TenantGuidePage() {
                 <div className="flex flex-col gap-6">
                   {/* Step 1 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <MessageSquare className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">1. Start a Conversation</h3>
                       <p className="text-sm text-muted-foreground mt-1.5">
                         Send a WhatsApp message to report your maintenance issue.
                       </p>
-                      <p className="text-sm text-blue-600 dark:text-blue-400 mt-2 bg-blue-500/10 inline-block px-2 py-1 rounded">
+                      <p className="text-sm text-primary mt-2 bg-primary/10 inline-block px-2 py-1 rounded">
                         Tip: One issue per conversation works best.
                       </p>
                     </div>
@@ -78,8 +61,8 @@ export default function TenantGuidePage() {
 
                   {/* Step 2 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                      <ClipboardList className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <ClipboardList className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">2. Follow the Prompts</h3>
@@ -95,8 +78,8 @@ export default function TenantGuidePage() {
 
                   {/* Step 3 */}
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <Bell className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center">
+                      <Bell className="h-6 w-6 text-success" />
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-card-foreground">3. Wait for Updates</h3>
@@ -130,7 +113,7 @@ export default function TenantGuidePage() {
                     />
                   </div>
 
-                  <div className="bg-blue-500/10 rounded-xl p-5 border border-blue-500/20">
+                  <div className="bg-primary/10 rounded-xl p-5 border border-primary/20">
                     <h4 className="text-base font-semibold text-card-foreground mb-2">Tips</h4>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Send one message at a time</li>
@@ -143,7 +126,6 @@ export default function TenantGuidePage() {
             </div>
           </CopyableGuide>
         </div>
-      </div>
-    </div>
+    </PageShell>
   )
 }

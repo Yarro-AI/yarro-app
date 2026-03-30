@@ -219,31 +219,39 @@ Always use semantic tokens, never raw colors:
 
 ### Common Layout Patterns
 
-**Page structure:**
-```tsx
-<div className="p-8 flex flex-col h-full overflow-hidden">
-  {/* Header */}
-  <div className="flex-shrink-0 flex items-center justify-between mb-3">
-    <h1 className="text-2xl font-semibold">Page Title</h1>
-  </div>
+**The design system — always import from these files, never write raw classes:**
 
-  {/* Content */}
-  <div className="flex-1 min-h-0">
-    <DataTable ... />
-  </div>
-</div>
+| File | Owns |
+|------|------|
+| `src/lib/typography.ts` | All text styles — `typography.pageTitle`, `typography.bodyText`, etc. |
+| `src/styles/spacing.ts` | All spacing — `spacing.pagePaddingX`, `spacing.cardHeaderPadding`, etc. |
+| `src/components/page-shell.tsx` | Page wrapper — padding, title, actions slot, scroll behaviour |
+| `src/components/section-header.tsx` | Card/panel header — border, padding, label style |
+
+**Page structure — always use PageShell:**
+```tsx
+import { PageShell } from '@/components/page-shell'
+
+return (
+  <PageShell title="Page Title" actions={<RefreshButton />}>
+    {/* content — manages its own internal layout */}
+  </PageShell>
+)
 ```
 
-**Card sections:**
+**Card/section headers — always use SectionHeader:**
 ```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Section Title</CardTitle>
-  </CardHeader>
-  <CardContent>
-    {/* Content here */}
-  </CardContent>
-</Card>
+import { SectionHeader } from '@/components/section-header'
+
+<SectionHeader title="Scheduled" actions={<ViewAllLink />} />
+```
+
+**Typography — always use the scale:**
+```tsx
+import { typography } from '@/lib/typography'
+
+<h1 className={typography.pageTitle}>Tickets</h1>
+<p className={typography.metaText}>3 days ago</p>
 ```
 
 ---

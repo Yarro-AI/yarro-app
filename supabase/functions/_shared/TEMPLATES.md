@@ -1056,6 +1056,97 @@ No completion submitted after {{5}} hours. Please review and take action.
 
 ---
 
+### 10 — Rent Reminders (yarro-rent-reminder)
+
+#### 10a_rent_reminder_before
+| Field | Value |
+|-------|-------|
+| SID | `HXb413545f2da07b74058e874c66ea605d` |
+| Key | `rent_reminder_before` |
+| Type | Text |
+| Recipient | Tenant |
+| Edge Function | `yarro-rent-reminder` |
+| Status | Approved (Mar 28, 2026) |
+
+**Copy:**
+```
+💰 *Rent due soon*
+
+Hi {{1}},
+
+Your rent payment of {{2}} is due on {{3}}.
+
+Please ensure payment is made on time to avoid any follow-ups.
+```
+
+**Variables:**
+| Var | Value |
+|-----|-------|
+| {{1}} | Tenant first name |
+| {{2}} | Amount (e.g. "£750.00") |
+| {{3}} | Due date (e.g. "Saturday 12th Apr") |
+
+---
+
+#### 10b_rent_reminder_due
+| Field | Value |
+|-------|-------|
+| SID | *Awaiting Twilio creation* |
+| Key | `rent_reminder_due` |
+| Type | Text |
+| Recipient | Tenant |
+| Edge Function | `yarro-rent-reminder` |
+| Status | Not yet created |
+
+**Copy:**
+```
+💰 *Rent due today*
+
+Hi {{1}},
+
+Your rent payment of {{2}} is due today.
+
+Please make your payment as soon as possible. If you've already paid, you can ignore this message.
+```
+
+**Variables:**
+| Var | Value |
+|-----|-------|
+| {{1}} | Tenant first name |
+| {{2}} | Amount (e.g. "£750.00") |
+
+---
+
+#### 10c_rent_reminder_overdue
+| Field | Value |
+|-------|-------|
+| SID | `HXf6910c8f67b2d36b6aa22af42e860dd8` |
+| Key | `rent_reminder_overdue` |
+| Type | Text |
+| Recipient | Tenant |
+| Edge Function | `yarro-rent-reminder` |
+| Status | Approved (Mar 28, 2026) |
+
+**Copy:**
+```
+⚠️ *Rent payment overdue*
+
+Hi {{1}},
+
+Your rent payment of {{2}} was due on {{3}} and has not yet been received.
+
+Please make your payment as soon as possible. If you've already paid, please let your property manager know so we can update our records.
+```
+
+**Variables:**
+| Var | Value |
+|-----|-------|
+| {{1}} | Tenant first name |
+| {{2}} | Amount (e.g. "£750.00") |
+| {{3}} | Due date (e.g. "Saturday 12th Apr") |
+
+---
+
 ## Reschedule Templates (Pending Portal Build)
 
 These are placeholders in `templates.ts` — not yet created in Twilio.

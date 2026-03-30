@@ -6,19 +6,19 @@ export const metadata: Metadata = {
   title: 'Ticket Photos — Yarro',
 }
 
-// Public anon client — no cookies/auth needed
-// The SECURITY DEFINER RPC handles data access
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export default async function TicketImagesPage({
   params,
 }: {
   params: Promise<{ ticketId: string }>
 }) {
   const { ticketId } = await params
+
+  // Public anon client — no cookies/auth needed
+  // The SECURITY DEFINER RPC handles data access
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   const { data } = await supabase.rpc('c1_public_ticket_images', {
     p_ticket_id: ticketId,

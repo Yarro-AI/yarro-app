@@ -975,6 +975,7 @@ export interface ContextForPrompt {
   property?: { address?: string };
   property_manager?: { business_name?: string; emergency_contact?: string };
   tenant?: { full_name?: string; email?: string; phone?: string };
+  room?: { room_number?: string; room_name?: string; floor?: string } | null;
 }
 
 export function buildSystemPrompt(ctx: ContextForPrompt): string {
@@ -1011,6 +1012,7 @@ export interface MessageContext {
   tenant: any;
   property: any;
   property_manager: any;
+  room: any;
   conversation: any;
   ai_instruction: string;
   recent_tickets: any;
@@ -1027,6 +1029,7 @@ images  = ${JSON.stringify(ctx.images)}
 tenant           = ${JSON.stringify(ctx.tenant)}
 property         = ${JSON.stringify(ctx.property)}
 property_manager = ${JSON.stringify(ctx.property_manager)}
+room             = ${JSON.stringify(ctx.room)}
 conversation     = ${JSON.stringify(ctx.conversation)}
 
 ai_instruction   = ${ctx.ai_instruction}

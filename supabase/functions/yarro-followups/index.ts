@@ -134,10 +134,18 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createSupabaseClient();
 
+    // Resolve recipient ID for contractor/landlord channel lookup
+    const recipientId = config.recipientRole === "contractor"
+      ? payload.contractor_id
+      : config.recipientRole === "landlord"
+        ? payload.landlord_id
+        : undefined;
+
     const result = await sendAndLog(supabase, FN, route, {
       ticketId: payload.ticket_id,
       recipientPhone: to,
       recipientRole: config.recipientRole,
+      recipientId,
       messageType: config.messageType,
       templateSid: config.templateSid,
       variables: config.getVariables(payload),

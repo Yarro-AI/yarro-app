@@ -24,9 +24,9 @@ export function WhatsAppPreview({
       </div>
 
       {/* Chat area */}
-      <div className="bg-muted/60 dark:bg-[#0b141a] p-3 space-y-1.5">
+      <div className="bg-muted/60 p-3 space-y-1.5">
         {label && (
-          <p className="text-[10px] text-center text-black/40 dark:text-white/30 mb-2">
+          <p className="text-[10px] text-center text-black/40 mb-2">
             {label}
           </p>
         )}
@@ -39,14 +39,14 @@ export function WhatsAppPreview({
               <div
                 className={`rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed whitespace-pre-line ${
                   msg.from === 'yarro'
-                    ? 'bg-white dark:bg-[#1f2c34] text-gray-900 dark:text-gray-100'
-                    : 'bg-[#dbeafe] dark:bg-[#1e3a5f] text-gray-900 dark:text-gray-100'
+                    ? 'bg-white text-gray-900'
+                    : 'bg-[#dbeafe] text-gray-900'
                 } ${msg.actions ? 'rounded-b-none' : ''}`}
               >
                 {msg.text}
               </div>
               {msg.actions && (
-                <div className="bg-white dark:bg-[#1f2c34] rounded-b-lg border-t border-gray-200 dark:border-gray-700 flex divide-x divide-gray-200 dark:divide-gray-700">
+                <div className="bg-white rounded-b-lg border-t border-gray-200 flex divide-x divide-gray-200">
                   {msg.actions.map((action, j) => (
                     <div
                       key={j}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -15,7 +15,6 @@ import {
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -25,8 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Phone, Mail, Building2, Wrench, X, Check, ChevronDown, MoreHorizontal } from 'lucide-react'
+import { PageShell } from '@/components/page-shell'
+import { CommandSearchInput } from '@/components/command-search-input'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Popover,
   PopoverContent,
@@ -47,6 +48,7 @@ interface Contractor {
   active: boolean
   property_ids: string[] | null
   created_at: string
+  contact_method: string
 }
 
 interface ContractorEditable {
@@ -91,6 +93,16 @@ export default function ContractorsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredContractors = useMemo(() => {
+    if (!search) return contractors
+    const lower = search.toLowerCase()
+    return contractors.filter(c =>
+      c.contractor_name?.toLowerCase().includes(lower) ||
+      c.category?.toLowerCase().includes(lower) ||
+      c.contractor_email?.toLowerCase().includes(lower)
+    )
+  }, [contractors, search])
   const supabase = createClient()
 
   const selectedId = searchParams.get('id')
@@ -303,6 +315,14 @@ export default function ContractorsPage() {
     setDrawerOpen(true)
   }
 
+  // Auto-open create from global header ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleAddClick()
+      window.history.replaceState({}, '', '/contractors')
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleCloseCreateDrawer = () => {
     cancelCreating()
     setValidationErrors({})
@@ -351,14 +371,15 @@ export default function ContractorsPage() {
       sortable: true,
       render: (c) => {
         const cats = c.categories?.length ? c.categories : (c.category ? [c.category] : [])
+        if (cats.length === 0) return <span className="text-muted-foreground">—</span>
         return (
-          <div className="flex flex-wrap gap-1">
-            {cats.map((cat) => (
-              <Badge key={cat} variant="outline" className="text-xs">
-                <Wrench className="h-3 w-3 mr-1" />
-                {cat}
-              </Badge>
-            ))}
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border">
+              {cats[0]}
+            </span>
+            {cats.length > 1 && (
+              <span className="text-xs text-muted-foreground">+{cats.length - 1}</span>
+            )}
           </div>
         )
       },
@@ -378,12 +399,63 @@ export default function ContractorsPage() {
       render: (c) => c.contractor_email || '-',
     },
     {
-      key: 'property_ids',
-      header: 'Properties',
-      render: (c) => (
-        <Badge variant="secondary">
-          {c.property_ids?.length || 0}
-        </Badge>
+      key: 'contact_method',
+      header: 'Contact Method',
+      sortable: true,
+      render: (row) => {
+        if (row.contact_method === 'whatsapp') return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success border border-success/20">
+            WhatsApp
+          </span>
+        )
+        if (row.contact_method === 'email') return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+            Email
+          </span>
+        )
+        return <span className="text-muted-foreground">—</span>
+      },
+      getValue: (row) => row.contact_method,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedContractor(row)
+                startEditing()
+                setDrawerOpen(true)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-danger focus:text-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedContractor(row)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ]
@@ -597,35 +669,25 @@ export default function ContractorsPage() {
   )
 
   return (
-    <div className="px-8 pb-8 pt-6 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Wrench className="h-5 w-5" />
-            Contractors
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your contractor network
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fetchContractors()} disabled={loading}>
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
-          <InteractiveHoverButton text="Add Contractor" onClick={handleAddClick} className="w-40 text-sm h-10" />
-        </div>
-      </div>
+    <PageShell
+      title="Contractors"
+      count={filteredContractors.length}
+      actions={
+        <CommandSearchInput
+          placeholder="Search contractors..."
+          value={search}
+          onChange={setSearch}
+          className="w-64"
+        />
+      }
+    >
 
       {/* Data Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <DataTable
-          data={contractors}
+          data={filteredContractors}
           columns={columns}
-          searchPlaceholder="Search contractors..."
-          searchKeys={['contractor_name', 'category', 'contractor_email']}
           onRowClick={handleRowClick}
-          onViewClick={handleRowClick}
           getRowId={(c) => c.id}
           fillHeight
           emptyMessage={
@@ -791,6 +853,6 @@ export default function ContractorsPage() {
         itemName={selectedContractor?.contractor_name || undefined}
         onConfirm={handleDelete}
       />
-    </div>
+    </PageShell>
   )
 }

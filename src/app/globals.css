@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *, .blue *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -51,12 +49,26 @@
   --color-yarro-light: var(--yarro-light);
   --color-yarro-cyan: var(--yarro-cyan);
   --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
 }
 
 :root {
   --radius: 0.625rem;
+
+  /* Spacing scale */
+  --page-padding-x: 2rem;       /* px-8 */
+  --page-padding-top: 2rem;     /* pt-8 */
+  --page-padding-bottom: 2rem;  /* pb-8 */
+  --card-padding-x: 1.25rem;    /* px-5 */
+  --card-padding-y: 0.75rem;    /* py-3 */
+  --section-gap: 1.5rem;        /* gap-6 */
+  --item-gap: 1rem;             /* gap-4 */
 
   /* Yarro Brand */
   --yarro: #0059FF;
@@ -66,28 +78,35 @@
 
   /* Semantic colors */
   --success: #10b981;
+  --success-foreground: #ffffff;
   --warning: #f59e0b;
+  --warning-foreground: #1a1a1a;
   --danger: #ef4444;
+  --danger-foreground: #ffffff;
 
-  /* Light Theme — Apple Zinc + Yarro Blue */
-  --background: #FAFAFA;
-  --foreground: #18181B;
-  --card: #FAFAFA;
-  --card-foreground: #18181B;
+  /* Light Theme — Cool Blue + Yarro Blue */
+  --background: #F4F8FC;
+  --foreground: #1c1b18;
+  --card: #FFFFFF;
+  --card-foreground: #1c1b18;
   --popover: #FFFFFF;
-  --popover-foreground: #18181B;
+  --popover-foreground: #1c1b18;
   --primary: #0059FF;
   --primary-foreground: #FFFFFF;
-  --secondary: #F4F4F5;
-  --secondary-foreground: #18181B;
-  --muted: #F4F4F5;
-  --muted-foreground: #71717A;
-  --accent: #F4F4F5;
-  --accent-foreground: #18181B;
+  --secondary: #EDF2F7;
+  --secondary-foreground: #1c1b18;
+  --muted: #EDF2F7;
+  --muted-foreground: #64748B;
+  --accent: #E2E8F0;
+  --accent-foreground: #1c1b18;
   --destructive: #EF4444;
-  --border: #E4E4E7;
-  --input: #E4E4E7;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
   --ring: #0059FF;
+
+  /* Info semantic token */
+  --info: #3b82f6;
+  --info-foreground: #ffffff;
 
   /* Chart colors */
   --chart-1: #0059FF;
@@ -96,90 +115,17 @@
   --chart-4: #01375e;
   --chart-5: #fa710f;
 
-  /* Sidebar — Light */
-  --sidebar: #FAFAFA;
-  --sidebar-foreground: #18181B;
+  /* Sidebar — Deep Navy */
+  --sidebar: #162B45;
+  --sidebar-foreground: #6A94B5;
   --sidebar-primary: #0059FF;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F4F4F5;
-  --sidebar-accent-foreground: #18181B;
-  --sidebar-border: #E4E4E7;
+  --sidebar-accent: rgba(0,89,255,0.10);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1E3A54;
   --sidebar-ring: #0059FF;
 }
 
-/* Dark Theme — True dark, Zinc scale */
-.dark {
-  --background: #09090B;
-  --foreground: #FAFAFA;
-  --card: #09090B;
-  --card-foreground: #FAFAFA;
-  --popover: #18181B;
-  --popover-foreground: #FAFAFA;
-  --primary: #3B82F6;
-  --primary-foreground: #FFFFFF;
-  --secondary: #27272A;
-  --secondary-foreground: #FAFAFA;
-  --muted: #27272A;
-  --muted-foreground: #A1A1AA;
-  --accent: #27272A;
-  --accent-foreground: #FAFAFA;
-  --destructive: #EF4444;
-  --border: #27272A;
-  --input: #27272A;
-  --ring: #3B82F6;
-  --chart-1: #3B82F6;
-  --chart-2: #00cdd4;
-  --chart-3: #a6e1ff;
-  --chart-4: #60a5fa;
-  --chart-5: #fa710f;
-
-  /* Sidebar — Dark */
-  --sidebar: #09090B;
-  --sidebar-foreground: #FAFAFA;
-  --sidebar-primary: #3B82F6;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #27272A;
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: #27272A;
-  --sidebar-ring: #3B82F6;
-}
-
-/* Yarro Blue Theme — Navy blue */
-.blue {
-  --background: #0a1628;
-  --foreground: #f1f5f9;
-  --card: #0a1628;
-  --card-foreground: #f1f5f9;
-  --popover: #0f2136;
-  --popover-foreground: #f1f5f9;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #1e3a5f;
-  --secondary-foreground: #a6e1ff;
-  --muted: #1e3a5f;
-  --muted-foreground: #94a3b8;
-  --accent: #1e3a5f;
-  --accent-foreground: #a6e1ff;
-  --destructive: #ef4444;
-  --border: #1e3a5f;
-  --input: #1e3a5f;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
-  --chart-2: #00cdd4;
-  --chart-3: #a6e1ff;
-  --chart-4: #60a5fa;
-  --chart-5: #fa710f;
-
-  /* Sidebar — Yarro Blue */
-  --sidebar: #071525;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e3a5f;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #1e3a5f;
-  --sidebar-ring: #3b82f6;
-}
 
 @layer base {
   * {
@@ -202,28 +148,32 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D4D4D8;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #A1A1AA;
+  background: #94A3B8;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #3F3F46;
-}
+/* Print styles — hide app chrome, show only content */
+@media print {
+  nav, aside, header,
+  [data-sidebar], [data-slot="sidebar"] {
+    display: none !important;
+  }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #52525B;
-}
+  main, [role="main"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 
-.blue ::-webkit-scrollbar-thumb {
-  background: #1e3a5f;
-}
-
-.blue ::-webkit-scrollbar-thumb:hover {
-  background: #2d4a6f;
+  body {
+    background: white !important;
+    color: black !important;
+  }
 }
 
 /* Fix browser autofill styling */

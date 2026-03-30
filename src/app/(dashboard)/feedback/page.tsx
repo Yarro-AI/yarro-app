@@ -13,14 +13,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { MessageCircle, Bug, Lightbulb, Sparkles, HelpCircle, CheckCircle2, Clock, Ticket } from 'lucide-react'
+import { Bug, Lightbulb, Sparkles, HelpCircle, CheckCircle2, Clock, Ticket } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PageShell } from '@/components/page-shell'
 
 const FEEDBACK_CATEGORIES = [
-  { value: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20 hover:border-red-500/40', activeBorder: 'border-red-500/50 ring-2 ring-red-500/20', activeBg: 'bg-red-500/15' },
-  { value: 'feature', label: 'Feature Request', desc: 'I\'d like Yarro to do something new', icon: Lightbulb, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20 hover:border-amber-500/40', activeBorder: 'border-amber-500/50 ring-2 ring-amber-500/20', activeBg: 'bg-amber-500/15' },
-  { value: 'improvement', label: 'Improvement', desc: 'Something could work better', icon: Sparkles, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20 hover:border-blue-500/40', activeBorder: 'border-blue-500/50 ring-2 ring-blue-500/20', activeBg: 'bg-blue-500/15' },
-  { value: 'general', label: 'General', desc: 'Other feedback or comments', icon: HelpCircle, color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20 hover:border-gray-500/40', activeBorder: 'border-gray-500/50 ring-2 ring-gray-500/20', activeBg: 'bg-gray-500/15' },
+  { value: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: Bug, color: 'text-danger', bg: 'bg-danger/10', border: 'border-danger/20 hover:border-danger/40', activeBorder: 'border-danger/50 ring-2 ring-danger/20', activeBg: 'bg-danger/15' },
+  { value: 'feature', label: 'Feature Request', desc: 'I\'d like Yarro to do something new', icon: Lightbulb, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20 hover:border-warning/40', activeBorder: 'border-warning/50 ring-2 ring-warning/20', activeBg: 'bg-warning/15' },
+  { value: 'improvement', label: 'Improvement', desc: 'Something could work better', icon: Sparkles, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20 hover:border-primary/40', activeBorder: 'border-primary/50 ring-2 ring-primary/20', activeBg: 'bg-primary/15' },
+  { value: 'general', label: 'General', desc: 'Other feedback or comments', icon: HelpCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border hover:border-border/60', activeBorder: 'border-border ring-2 ring-border/40', activeBg: 'bg-muted' },
 ]
 
 interface FeedbackEntry {
@@ -109,23 +110,10 @@ export default function FeedbackPage() {
   const activeCat = FEEDBACK_CATEGORIES.find(c => c.value === category)
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Hero — compact */}
-      <div className="relative bg-gradient-to-br from-primary/5 via-background to-blue-500/5 dark:from-primary/10 dark:to-blue-500/10 border-b flex-shrink-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.03] via-transparent to-transparent" />
-        <div className="relative px-8 pt-6 pb-5">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Feedback
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Help us shape Yarro. Every piece of feedback makes the product better.</p>
-          </div>
-        </div>
-      </div>
+    <PageShell title="Feedback" subtitle="Help us shape Yarro. Every piece of feedback makes the product better.">
 
       {/* Main content — fills remaining space, no page scroll */}
-      <div className="flex-1 overflow-hidden flex flex-col px-8 py-6 gap-6">
+      <div className="flex-1 overflow-hidden flex flex-col gap-6">
 
         {/* Category Buttons — always visible, no scroll */}
         <div className="flex-shrink-0">
@@ -148,7 +136,7 @@ export default function FeedbackPage() {
                 >
                   <div className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0',
-                    isActive ? 'bg-white/50 dark:bg-white/10' : 'bg-white/30 dark:bg-white/5'
+                    isActive ? 'bg-white/10' : 'bg-white/5'
                   )}>
                     <Icon className={cn('h-5 w-5', cat.color)} />
                   </div>
@@ -216,7 +204,7 @@ export default function FeedbackPage() {
                     text={sent ? 'Sent!' : sending ? 'Sending...' : 'Send Feedback'}
                     onClick={handleSubmit}
                     disabled={sending || sent || !message.trim()}
-                    className={cn('w-44 text-sm h-10', sent && 'bg-emerald-500')}
+                    className={cn(sent && 'bg-success text-success-foreground')}
                   />
                   {!message.trim() && (
                     <p className="text-xs text-muted-foreground">Write something above to send</p>
@@ -282,6 +270,6 @@ export default function FeedbackPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

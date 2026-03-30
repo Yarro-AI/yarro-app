@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { TEMPLATES } from "../_shared/templates.ts";
+import { TEMPLATES, formatUkPhone, withArticle } from "../_shared/templates.ts";
 import { logEvent } from "../_shared/events.ts";
 
 const FN = "yarro-job-reminder";
@@ -12,6 +12,12 @@ interface JobReminder {
   scheduled_date: string;
   property_address: string;
   contractor_phone: string;
+  contractor_id?: string;
+  contractor_name?: string;
+  contractor_category?: string;
+  tenant_name?: string;
+  tenant_phone?: string;
+  tenant_token?: string;
   access_text: string;
   formatted_time: string;
   formatted_window: string;
@@ -29,6 +35,7 @@ async function sendReminder(
     ticketId: reminder.ticket_id,
     recipientPhone: reminder.contractor_phone,
     recipientRole: "contractor",
+    recipientId: reminder.contractor_id,
     messageType: "contractor_job_reminder",
     templateSid: TEMPLATES.contractor_job_reminder,
     variables: {
@@ -45,6 +52,37 @@ async function sendReminder(
       scheduled_date: reminder.scheduled_date,
       message_sid: result.messageSid,
     });
+  }
+
+  // ─── Tenant day-of reminder ───
+  if (reminder.tenant_phone && reminder.tenant_name) {
+    const firstName = reminder.tenant_name.split(" ")[0] || "there";
+    const category = reminder.contractor_category
+      ? withArticle(reminder.contractor_category)
+      : "A contractor";
+    const slot = (reminder.arrival_slot || "morning").toLowerCase();
+
+    const tenantResult = await sendAndLog(supabase, FN, "tenant_job_reminder", {
+      ticketId: reminder.ticket_id,
+      recipientPhone: reminder.tenant_phone,
+      recipientRole: "tenant",
+      messageType: "tenant_job_reminder",
+      templateSid: TEMPLATES.tenant_job_reminder,
+      variables: {
+        "1": firstName,
+        "2": category,
+        "3": reminder.contractor_name || "your contractor",
+        "4": slot,
+        "5": formatUkPhone(reminder.contractor_phone),
+      },
+    });
+
+    if (tenantResult.ok) {
+      await logEvent(supabase, reminder.ticket_id, "TENANT_REMINDER_SENT", {
+        scheduled_date: reminder.scheduled_date,
+        message_sid: tenantResult.messageSid,
+      });
+    }
   }
 
   return {

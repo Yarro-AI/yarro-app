@@ -33,9 +33,11 @@
 | Path | What It Is | Why Never |
 |------|-----------|-----------|
 | `supabase/functions/` | 8 Edge Functions (Deno) | Backend: Twilio, OpenAI, Supabase RPCs. Breaking these breaks WhatsApp. |
+| `supabase/migrations/20260327041845_remote_schema.sql` | Core migration (72 functions) | Contains 70+ production RPCs, triggers, RLS policies. See `supabase/core-rpcs/README.md`. |
+| `supabase/migrations/20260329000000_whatsapp_room_awareness.sql` | Live c1_context_logic + c1_create_ticket | Current production versions of the two most critical RPCs. |
 | `supabase/config.toml` | Supabase project config | Project-level settings |
 | `.github/workflows/` | GitHub Actions CI/CD | Auto-deploys Edge Functions on push |
-| `src/middleware.ts` | Auth session middleware | Handles cookie-based session refresh on every request |
+| `src/proxy.ts` | Auth session proxy | Handles cookie-based session refresh on every request |
 | `src/contexts/pm-context.tsx` | Auth state provider | Complex race-condition fixes. Do not modify. |
 | `src/lib/supabase/` | Supabase client setup | Three files: browser client, server client, middleware client |
 | `types/database.ts` | Auto-generated types | Generated from Supabase schema. Manual edits get overwritten. |

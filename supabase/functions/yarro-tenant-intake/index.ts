@@ -335,6 +335,7 @@ Deno.serve(async (req: Request) => {
       property: ctx.property,
       property_manager: ctx.property_manager,
       tenant: ctx.tenant,
+      room: ctx.room || null,
     };
     const systemPrompt = buildSystemPrompt(contextForPrompt);
 
@@ -345,6 +346,7 @@ Deno.serve(async (req: Request) => {
       tenant: ctx.tenant,
       property: ctx.property,
       property_manager: ctx.property_manager,
+      room: ctx.room || null,
       conversation: ctx.conversation,
       ai_instruction: ctx.ai_instruction,
       recent_tickets: ctx.recent_tickets,
@@ -489,6 +491,21 @@ Deno.serve(async (req: Request) => {
           handoff: issueAIContext.handoff,
           is_new_contact: issueAIContext.is_new_contact,
         };
+      }
+
+      // Dedup: check if an open ticket already exists for this conversation
+      const { data: existingTicket } = await supabase
+        .from("c1_tickets")
+        .select("id")
+        .eq("conversation_id", ctx.conversation.id)
+        .neq("status", "closed")
+        .eq("archived", false)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingTicket) {
+        console.log(`[${FN}] Duplicate prevented — open ticket ${existingTicket.id} already exists for conversation ${ctx.conversation.id}`);
+        return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
       }
 
       // Create ticket

@@ -112,7 +112,7 @@ export function DetailDrawer({
                     text={isSaving ? 'Saving...' : 'Save'}
                     onClick={onSave}
                     disabled={isSaving}
-                    className="w-24 text-sm h-8"
+                    size="sm"
                   />
                 </>
               )}

@@ -15,7 +15,7 @@ export const TEMPLATES = {
   allocate_landlord: "HXeabe4ebe93c1f8d2401c0516bfd376ec",        // 2c_landlord_allocate
 
   // ─── Contractor Dispatch (yarro-dispatcher) ───
-  contractor_quote: "HX0a758deb4c7bc64d041f339135726fb3",     // 2_contractor_quote
+  contractor_quote: "HX15ae5e2d079ff7b0401bd09a767098ab",     // 2_contractor_quote_portal
   pm_quote: "HXfc449642c7c47ae1f85f3d903ee336e1",             // 3_pm_quote
   landlord_quote: "HXc667c8008203a80708c1a1596e4805ea",       // 3b_landlord_quote
   no_more_contractors: "HX158401383297f8b6f9d4848e507ea1b0",   // 2d_no_contractors
@@ -31,6 +31,7 @@ export const TEMPLATES = {
 
   // ─── Job Reminder (yarro-job-reminder) ───
   contractor_job_reminder: "HXda58fda394cba7fc4e91d2b42bd9ee36", // 6_contractor_job
+  tenant_job_reminder: "HXe685750335d1aba51926fdd0852b747a",     // 6b_tenant_job_reminder
 
   // ─── Completion (yarro-completion) ───
   pm_job_completed: "HX3a0180411b1dca11e958c23b6945f4d4",        // 7_pm_job_completed
@@ -46,6 +47,15 @@ export const TEMPLATES = {
   tenant_reschedule_approved: "HXc23248c496127023fcc734bee2a9a570", // 8b_tenant_reschedule_approve
   tenant_reschedule_declined: "HX5970d0b59e71aa9b65b80a9ea9fc38c9", // 8c_tenant_reschedule_declined
   pm_reschedule_approved: "HXe65aba3e4c039787600546a41f151c54",     // 8d_pm_reschedule_approved
+
+  // ─── Compliance Reminders (yarro-compliance-reminder) ───
+  compliance_expiry_operator: "HX8f836e6e12955e849bf09b00e9f71295",  // compliance_expiry_operator_contractor
+
+  // ─── Rent Reminders (yarro-rent-reminder) ───
+  // TODO: Create these in Twilio Content API and replace PLACEHOLDER SIDs
+  rent_reminder_before:  "HXb413545f2da07b74058e874c66ea605d",   // 3 days before due
+  rent_reminder_due:     "PLACEHOLDER_rent_reminder_due",      // on due date — awaiting Twilio approval
+  rent_reminder_overdue: "HXf6910c8f67b2d36b6aa22af42e860dd8",  // 3 days overdue
 
   // ─── Followups (yarro-followups) ───
   contractor_reminder: "HXf09513c99a0af31ae036e7e4c1c69676",     // 9a_contractor_reminder
