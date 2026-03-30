@@ -6,7 +6,43 @@
 
 ---
 
-## Latest: 2026-03-30 — Production Rollout + Scope Guard System + Journey Planning
+## Latest: 2026-03-31 — Onboarding Flow + Category Dashboard + Centralized Onboarding State
+
+### Summary
+Built the full onboarding experience: card-based flow (account → property → confetti success → dashboard), category-based to-do system on the dashboard (Getting Started, Maintenance, Compliance, Finance), and centralized onboarding state via `onboarding_completed_at` on the PM record. The Getting Started card has an animated blue glow and a one-time spotlight overlay that dims the dashboard on first visit. Compliance and Finance categories are hidden until onboarding is complete. Dashboard greeting count only reflects visible tasks. Also created a robust account deletion SQL script and deployed all RPCs.
+
+### Changes Made
+- `src/components/onboarding/onboarding-flow.tsx` — simplified flow: account → property → complete (removed tenant step)
+- `src/components/onboarding/success-card.tsx` — new confetti celebration screen (canvas-confetti, dynamic import)
+- `src/components/onboarding/account-card.tsx` — auto-title-case name, updated phone placeholder
+- `src/components/onboarding/property-card.tsx` — auto-title-case address, simplified onComplete
+- `src/components/dashboard/todo-category-card.tsx` — collapsible category card with icon, count, accordion
+- `src/components/dashboard/onboarding-category-card.tsx` — Getting Started card with animated blue glow, z-50 spotlight
+- `src/components/dashboard/todo-row.tsx` — extracted reusable todo row from dashboard inline rendering
+- `src/app/(dashboard)/page.tsx` — category grouping, onboarding state, spotlight overlay, smart greeting count
+- `src/components/ui/input.tsx` — removed md:text-sm, inputs now 16px everywhere
+- `src/components/ui/collapsible.tsx` — added via shadcn CLI
+- `supabase/migrations/20260331200000_onboarding_checklist_rpc.sql` — checklist RPC with auto-completion stamp
+- `supabase/migrations/20260331300000_onboarding_completed_column.sql` — onboarding_completed_at column + updated RPC
+- Deleted `src/components/onboarding/tenant-card.tsx` and its RPC migration
+- Installed `canvas-confetti`, `@radix-ui/react-collapsible`
+
+### Status
+- [x] Build passes
+- [x] Tested locally
+- [x] Committed and pushed
+- [x] Production deployment live on Vercel
+
+### Next Session Pickup
+1. **Tenant onboarding experience** — the "Add your tenants" checklist item links to `/properties/[id]?tab=people`. Consider building a first-visit experience on that page
+2. **Contractor onboarding** — same pattern for contractors page first-visit
+3. **Compliance onboarding** — first-visit experience on compliance tab
+4. Journey file: `.claude/tasks/journey-operator-onboarding.md` — slices 5+ (tenant verification, success, dashboard first-run)
+5. Consider adding `visited_pages` jsonb column to PM for per-page first-visit tracking
+
+---
+
+## 2026-03-30 — Production Rollout + Scope Guard System + Journey Planning
 
 ### Summary
 Major session covering three areas: (1) Rolled out 112 commits to production in two waves — Wave 1 (core HMO pivot) and Wave 2 (self-serve onboarding). All migrations confirmed applied, builds passed, deployed to Vercel. (2) Built the Scope Guard system to prevent commit pileups — `/scope` skill (journey-driven PRD builder), `/ship` skill (test-merge-push ritual), Session Discipline rules in CLAUDE.md. Replaced the old `morning-prd` skill. (3) Mapped the operator onboarding journey (landing page → useful dashboard) with 8 vertical slices ready for tomorrow.
