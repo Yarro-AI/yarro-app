@@ -1,162 +1,102 @@
 # Scope — PRD Builder
 
-## Purpose
+Build a bounded, testable PRD for one vertical slice. Branch from main, build it, ship it.
 
-Build a bounded, testable PRD before any code gets written. This skill interrogates the idea until the scope is clear, generates a structured task file with acceptance criteria and test plan, and creates a branch from main.
+- `/scope` — scope a slice (uses active journey if one exists)
+- `/scope journey` — create a new journey (read `scope-guide.md` first, then `.claude/templates/journey-template.md`)
+- `/scope fix` — lightweight mode for quick fixes
 
-**This replaces the morning-prd skill.** The key difference: morning-prd was a form-filler. /scope is an interrogator.
-
-## When To Use
-
-- Adam says "let's build a PRD" or "let's scope this out"
-- Start of any build session
-- Before any feature, fix, or refactor work begins
-- Trigger: `/scope` or `/scope [topic]`
+---
 
 ## Process
 
-### Phase 1 — Read Context (silent)
+### Phase 0 — Check State
 
-Before asking anything, read:
-- `CLAUDE.md` (project rules, session discipline)
-- `SESSION_LOG.md` (what was last worked on, next pickup)
-- `.claude/tasks/BACKLOG.md` (captured ideas)
-- Check `.claude/tasks/` for any files with `Status: In Progress`
+1. Look in `.claude/tasks/` for any PRD with `Status: In Progress`. If found:
+   > "Unfinished task: **[name]**. Ship it (`/ship`) or abandon it first."
+   Stop until resolved.
 
-**If an incomplete PRD exists**, stop and flag it immediately:
-> "There's an unfinished task: **[name]** from [date]. We need to either ship it (`/ship`) or mark it abandoned before starting new work. Which one?"
+2. Look for `journey-*.md` with `Status: Active`. If found, read it and show:
+   > "Journey: **[name]** — [N]/[M] slices shipped. Next: **[slice]**. Continue?"
+   If Adam confirms, use that slice as the starting point for Phase 2.
 
-Do NOT proceed past this point until the incomplete PRD is resolved.
+### Phase 1 — Read Context (minimal)
+
+Read only what's needed — don't load everything:
+- `SESSION_LOG.md` — **latest entry only** (first `## Latest:` or `## 2026-` section)
+- Active journey file (if exists, already small)
+- CLAUDE.md is already in context — don't re-read it
+- BACKLOG.md — only if Adam is deciding what to build, skip if they already know
 
 ### Phase 2 — Interrogate
 
-Ask these questions **one at a time**. Wait for each answer before asking the next. Do not generate the PRD until all 5 are answered.
+**If there's an active journey with a clear next slice** — ask 3 questions:
 
-**1. "What are we building?"**
-Get the feature name and a one-sentence description. If the answer is vague ("improve the dashboard"), push back: "Can you be more specific? What exactly will be different when this is done?"
+1. **"What does done look like?"** — concrete, browser-verifiable acceptance criteria
+2. **"What are we NOT building?"** — scope boundary. Prompt with adjacent slices from the journey
+3. **"Any caution zones?"** — check against CLAUDE.md caution zones + `supabase/core-rpcs/README.md`
 
-**2. "Why now? What does this unblock?"**
-Forces prioritisation thinking. If there's no clear urgency, note it — this might belong on the backlog.
+**If standalone (no journey)** — ask 5 questions:
 
-**3. "What does done look like? How will you test it?"**
-This becomes the acceptance criteria. Push for concrete, verifiable statements: "I can click X and see Y" not "the page looks better."
+1. **"What are we building?"** — specific slice, not a vague area. Push back on broad answers: "What's the one thing a user can do when we ship this?"
+2. **"Why now? What does this unblock?"** — if no clear urgency, suggest backlog
+3. **"What does done look like?"** — browser-verifiable acceptance criteria
+4. **"What are we NOT building?"** — the most important question. If Adam can't answer, scope isn't clear
+5. **"Any caution zones?"** — cross-reference CLAUDE.md + protected RPCs
 
-**4. "What are we NOT building?"**
-This is the most important question. It creates the scope boundary that prevents creep. If Adam can't answer it, the scope isn't clear enough. Prompt with adjacent features: "Are we also doing [related thing]? Or is that separate?"
+### Scope Gate
 
-**5. "Does this touch any caution zones?"**
-Cross-reference against:
-- CLAUDE.md caution zones table
-- `supabase/core-rpcs/README.md` (protected RPCs)
-- Any files in `src/lib/supabase/`, `src/contexts/pm-context.tsx`, `src/proxy.ts`
+Before generating anything, verify:
+- **Vertical slice?** Data layer → UI → works in browser. If it's just RPCs or just a form, push back: "Can we scope this end-to-end?"
+- **One session?** If not: "What's the minimum slice that's useful on its own?"
+- **Dependencies shipped?** If this needs something unbuilt: "This depends on [X]. Build that first?"
+- **Testable done?** If vague: "I can't write a test for that. What would you check in the browser?"
 
-If it touches a caution zone, note the constraint explicitly.
+### Phase 3 — Generate PRD
 
-### Scope Check
+Create `.claude/tasks/YYYY-MM-DD-[name].md` using the template at `.claude/templates/prd-template.md`.
 
-After all 5 questions, assess the scope:
-- **Touches more than 2-3 areas of the codebase?** Push back: "This touches [areas]. Can we narrow to [one area] and backlog the rest?"
-- **Can't be done in one session?** Push back: "This sounds like a multi-session build. Can we slice off the first deliverable piece?"
-- **Vague acceptance criteria?** Push back: "I still can't write a test for 'done.' What's the specific thing you'd check in the browser?"
+Fill in all sections from the interrogation answers. If an active journey exists, add `**Journey:** [name] — Slice [N] of [M]` to the header.
 
-Only proceed to Phase 3 when the scope is clearly bounded.
+Add any "Out of Scope" items to `.claude/tasks/BACKLOG.md` immediately.
 
-### Phase 3 — Generate the PRD
+### Phase 4 — Branch and Confirm
 
-Create a file at `.claude/tasks/YYYY-MM-DD-[name].md` using the structure below.
-
-```markdown
-## PRD: [name]
-**Date:** YYYY-MM-DD
-**Branch:** feat/[name] (or fix/ or refactor/)
-**Status:** In Progress
-**Scope:** [one sentence — this is the "bumper" for drift detection during the session]
-
-### Goal
-What this builds and why it matters. One paragraph max.
-
-### User Story
-As a [PM/landlord/tenant], I want [action] so that [outcome].
-
-### Technical Plan
-[Claude states this — Adam approves before any code is written]
-1. Step one
-2. Step two
-3. Step three
-
-### Acceptance Criteria
-- [ ] Specific, testable statement ("User can click X and see Y")
-- [ ] Another testable statement
-- [ ] Each must be verifiable in browser or via database query
-
-### Test Plan
-Step-by-step instructions for verifying the feature works after building.
-| # | Step | Expected Result | Pass? |
-|---|------|-----------------|-------|
-| 1 | [specific action to take] | [what you should see] | |
-| 2 | [next action] | [expected result] | |
-| 3 | npm run build | Zero errors | |
-
-### Out of Scope
-- [Thing that came up but is NOT part of this build]
-- [Another adjacent thing]
-These items get added to BACKLOG.md if not already there.
-
-### Constraints
-- Files not to touch
-- Patterns to follow (reference .claude/docs/patterns.md)
-- Protected RPCs (reference supabase/core-rpcs/README.md)
-
-### Done When
-- [ ] All acceptance criteria pass
-- [ ] Test plan passes
-- [ ] `npm run build` passes
-- [ ] Committed, merged to main, pushed
-- [ ] SESSION_LOG.md updated
-```
-
-### Phase 4 — Set Up the Session
-
-1. Create the branch from main:
 ```bash
-git checkout main
-git pull origin main
-git checkout -b feat/[name]  # or fix/[name] or refactor/[name]
+git checkout main && git pull origin main
+git checkout -b feat/[name]
 ```
 
-2. Confirm ready:
-> "PRD created at `.claude/tasks/YYYY-MM-DD-[name].md`. Branch `feat/[name]` created from main. Ready to build — confirm to start."
+> "PRD created. Branch `feat/[name]` from main. Confirm to start."
 
-3. **Do NOT write any code until Adam confirms.**
+Do NOT write code until Adam confirms.
 
-## Lightweight Mode
+---
 
-If Adam describes something obviously small (1-2 files, clear fix, prefix "fix:"), offer:
+## Lightweight Mode (`/scope fix`)
 
-> "This looks like a quick fix. Full PRD or just branch + done-when?"
+For quick fixes (1-2 files, obvious scope):
 
-If lightweight, create a minimal task file:
+Create minimal task file:
 ```markdown
 ## Fix: [name]
-**Date:** YYYY-MM-DD
-**Branch:** fix/[name]
-**Status:** In Progress
-
+**Date:** YYYY-MM-DD  |  **Branch:** fix/[name]  |  **Status:** In Progress
 ### Goal
 [One sentence]
-
 ### Done When
 - [ ] [The fix works]
 - [ ] `npm run build` passes
 - [ ] Committed, merged to main, pushed
 ```
 
-Then create the branch and confirm. Skip the interrogation.
+Branch, confirm, go. No interrogation.
+
+---
 
 ## Rules
 
-- Never generate a PRD without asking all 5 questions (unless lightweight mode)
-- Never branch from an integration branch — always from `main`
-- Never start building without Adam's confirmation
-- If a previous PRD is in progress, resolve it first
-- Add "Out of Scope" items to BACKLOG.md immediately after PRD generation
+- Always branch from `main`
+- Never start building without confirmation
+- Resolve incomplete PRDs before creating new ones
+- Every slice must be vertical (data → UI → works in browser)
+- Update journey file when a slice ships

@@ -2,6 +2,7 @@
 **Date:** YYYY-MM-DD
 **Branch:** feat/[name]
 **Status:** In Progress | Complete | Abandoned
+**Journey:** [journey name — Slice N of M] (omit if standalone)
 **Scope:** [one sentence — the bumper for drift detection during the session]
 
 ### Goal
