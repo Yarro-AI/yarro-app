@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import * as Sentry from '@sentry/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { useDateRange } from '@/contexts/date-range-context'
@@ -499,20 +498,8 @@ export default function DashboardPage() {
     )
   }
 
-  // TEMPORARY: Sentry test button — remove after confirming Sentry works
-  const testSentry = () => {
-    Sentry.captureException(new Error('Yarro dashboard test — Sentry is working'))
-    alert('Test error sent to Sentry! Check your Sentry dashboard.')
-  }
-
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      {/* TEMPORARY: Remove after Sentry test */}
-      {process.env.NODE_ENV === 'production' && (
-        <button onClick={testSentry} className="fixed bottom-4 left-4 z-50 bg-red-500 text-white text-xs px-3 py-1.5 rounded-full opacity-50 hover:opacity-100">
-          Test Sentry
-        </button>
-      )}
       {/* Onboarding spotlight overlay — dims everything except the Getting Started card */}
       {spotlightVisible && (
         <div
