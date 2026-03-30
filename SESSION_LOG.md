@@ -6,7 +6,74 @@
 
 ---
 
-## Latest: 2026-03-29 — Demo Test Plan Execution + Compliance Overhaul
+## Latest: 2026-03-30 — Production Rollout + Scope Guard System + Journey Planning
+
+### Summary
+Major session covering three areas: (1) Rolled out 112 commits to production in two waves — Wave 1 (core HMO pivot) and Wave 2 (self-serve onboarding). All migrations confirmed applied, builds passed, deployed to Vercel. (2) Built the Scope Guard system to prevent commit pileups — `/scope` skill (journey-driven PRD builder), `/ship` skill (test-merge-push ritual), Session Discipline rules in CLAUDE.md. Replaced the old `morning-prd` skill. (3) Mapped the operator onboarding journey (landing page → useful dashboard) with 8 vertical slices ready for tomorrow.
+
+### Changes Made
+- Merged `feat/profile-pages` (112 commits) into main via `--no-ff` — tagged `pre-hmo-rollout` for rollback
+- Merged `feat/self-serve-onboarding` (4 commits) into main — signup, billing, compliance wizard, trial gate
+- Created `.claude/skills/scope/SKILL.md` — lean PRD builder with journey awareness, adaptive questioning
+- Created `.claude/skills/scope/scope-guide.md` — reference material for vertical slice thinking
+- Created `.claude/skills/ship/SKILL.md` — shipping ritual (test plan, build, merge, push, log)
+- Created `.claude/templates/prd-template.md` and `journey-template.md`
+- Updated `CLAUDE.md` — replaced Daily Workflow with 5 Session Discipline rules, branch-from-main strategy
+- Deleted `morning-prd` skill and `task-template.md`
+- Created `.claude/tasks/journey-operator-onboarding.md` — 8-slice journey from landing to useful dashboard
+
+### Status
+- [x] Build passes
+- [x] Tested locally
+- [x] Committed and pushed
+- [x] Production deployment live on Vercel
+
+### Next Session Pickup
+1. **Run `/scope`** — journey will auto-detect. Start with **Slice 1: Landing page**
+2. Journey file at `.claude/tasks/journey-operator-onboarding.md` has full detail
+3. Stale stashes to clean up: `stash@{0}` through `stash@{3}` (old branches, safe to drop)
+4. Untracked files on disk: 5 deleted components still on filesystem (kanban-board, kpi-card, section-header, theme-provider, theme-toggle) — can delete
+
+---
+
+## 2026-03-30 — API Strategy Discussion + CSV Import/Export Scaffolding
+
+### Summary
+Discussed whether building a public API or Zapier integration is worth it for Yarro's ICP. Conclusion: skip Zapier and public API for now. Instead build CSV import (onboarding), CSV/PDF export (reporting), and native Google Sheets push (ongoing sync via service account). Built the initial CSV import flow and export utilities, but the import page needs more work — Adam flagged it as not working well ("a bit dead").
+
+### Changes Made
+- Created `supabase/migrations/20260330160000_bulk_import_rpcs.sql` — `bulk_import_properties` and `bulk_import_tenants` RPCs with dedup, validation, batch tracking
+- Created `src/app/(dashboard)/integrations/import/page.tsx` — multi-step CSV import flow (select type → upload → preview → import → results)
+- Modified `src/app/(dashboard)/integrations/page.tsx` — added "Spreadsheet Import" card
+- Created `src/lib/export.ts` — CSV export utility with pre-built column configs
+- Modified `src/app/(dashboard)/properties/page.tsx` — added Export button
+- Modified `src/app/(dashboard)/tenants/page.tsx` — added Export button
+- Installed `papaparse` + `@types/papaparse`
+- Added Zapier CLI integration idea to BACKLOG.md
+
+### Strategy Decisions (saved in plan file)
+- **No public API** — no demand from ICP, high maintenance cost
+- **No Zapier** — ICP doesn't know what it is, premature
+- **CSV import** — solves onboarding friction (properties + tenants from spreadsheet)
+- **CSV/PDF export** — solves reporting (compliance for council, costs for accountant)
+- **Google Sheets push** — operator shares sheet with Yarro service account, events auto-push rows
+- Full plan at `.claude/plans/sunny-gathering-pie.md`
+
+### Status
+- [x] Build passes
+- [ ] Tested locally — import page needs UX work
+- [ ] Committed and pushed
+
+### Next Session Pickup
+1. **Fix CSV import page** — Adam said it's "a bit dead" / doesn't work how it should. Needs UX review, test the full flow end-to-end, likely needs visual polish and interaction fixes
+2. **Deploy bulk import RPCs** — run `supabase db push` to deploy the migration
+3. **Test import RPCs** — verify in Supabase SQL editor before trusting the UI
+4. **Google Sheets push integration** (Days 2-3 of plan) — GCP service account setup, edge function, database trigger, settings UI
+5. **Plan file** — `.claude/plans/sunny-gathering-pie.md` has the full 3-day integration strategy
+
+---
+
+## 2026-03-29 — Demo Test Plan Execution + Compliance Overhaul
 
 ### Summary
 Started executing the integrated test plan (`.claude/tasks/2026-03-30-test-plan.md`) on `style/demo-polish` branch. Completed Phase 0 (environment check), Phase 1 (auth & nav), Phase 2 (CRUD smoke tests), and partial Phase 3 (rent flow, dashboard). Hit three compliance blockers and fixed them all — this turned into a significant compliance feature build.
