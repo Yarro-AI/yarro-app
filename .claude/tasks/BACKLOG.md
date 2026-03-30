@@ -50,3 +50,14 @@ Review each morning when writing the day's PRD.
 - [2026-03-30] Onboarding role selection — capture whether the user is a property manager or a landlord during onboarding. Use this to tailor what's shown in the app (e.g. landlords may not need contractor dispatch, PMs need multi-property views). Ties into SSO/onboarding flow design. [priority: high]
 - [2026-03-30] Table scroll / page scroll fix — tenants page (and likely all table pages) has broken scroll behaviour. Table should scroll independently or page should scroll naturally. Key pre-demo UI fix. [priority: high]
 - [2026-03-30] Compliance onboarding flow — focus on ONE property: pick a property → select which certs are needed → upload those certs (they may only have 1-2 to hand, option to add rest later) → complete that property's compliance in full. Then send a test reminder message (WhatsApp/email) showing what happens when a cert is about to expire. Gets them to the "aha" moment fast — see the full loop on one property before scaling to the rest. [priority: high]
+
+### Engineering Maturity (from 2026-03-30 stability audit)
+- [2026-03-30] Commit validation — install commitlint + Husky pre-commit hook to enforce conventional commits. Prevents bad commit messages from new devs. [priority: medium]
+- [2026-03-30] PR template — create `.github/PULL_REQUEST_TEMPLATE.md` with What/Why/How to test/Checklist sections [priority: low]
+- [2026-03-30] Branch cleanup — delete 30+ stale remote branches, set up auto-delete after merge in GitHub repo settings [priority: low]
+- [2026-03-30] Structured logging in edge functions — replace raw console.log/error with JSON format + traceId per invocation. Enables filtering all logs for one WhatsApp message. [priority: medium]
+- [2026-03-30] Zod input validation — replace minimal validate.ts with Zod schemas for forms that submit to Supabase. Prevents malformed data. [priority: medium]
+- [2026-03-30] Security headers — add CSP, X-Frame-Options, HSTS, X-Content-Type-Options to next.config.ts [priority: medium]
+- [2026-03-30] Dependabot — create `.github/dependabot.yml` for automated dependency update PRs [priority: low]
+- [2026-03-30] Vitest test framework — install Vitest, add npm test script, write tests for critical RPCs (onboarding, dashboard). Add test step to CI pipeline. [priority: high]
+- [2026-03-30] Source map upload to Sentry — set up SENTRY_AUTH_TOKEN, enable sourcemaps in next.config.ts for better stack traces [priority: low]

@@ -156,6 +156,7 @@ export default function DashboardPage() {
   const [aiActionsCount, setAiActionsCount] = useState(0)
   const [onboardingChecklist, setOnboardingChecklist] = useState<OnboardingChecklistItem[]>([])
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [spotlightVisible, setSpotlightVisible] = useState(false)
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -372,6 +373,18 @@ export default function DashboardPage() {
       localStorage.setItem('yarro_onboarding_complete', 'true')
     }
 
+    // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
+    if (
+      checklistData.length > 0 &&
+      !checklistData.every(i => i.complete) &&
+      !localStorage.getItem('yarro_onboarding_spotlight_shown')
+    ) {
+      setSpotlightVisible(true)
+      setExpandedCategory('onboarding')
+      localStorage.setItem('yarro_onboarding_spotlight_shown', 'true')
+      setTimeout(() => setSpotlightVisible(false), 1500)
+    }
+
     setLoading(false)
     } catch (err) {
       console.error('Dashboard fetch failed:', err)
@@ -478,7 +491,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative">
+      {/* Onboarding spotlight overlay — dims everything except the Getting Started card */}
+      {spotlightVisible && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-700 pointer-events-none"
+          style={{ animation: 'spotlight-fade 1.5s ease-in-out forwards' }}
+        />
+      )}
+      <style>{`
+        @keyframes spotlight-fade {
+          0% { opacity: 0; }
+          15% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
       {/* Header — greeting */}
       <div className="px-6 py-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold text-foreground">{greetingLabel}</h1>
@@ -560,26 +588,31 @@ export default function DashboardPage() {
                       openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
                     }}
                   />
-                  <TodoCategoryCard
-                    icon={ShieldCheck}
-                    title="Compliance"
-                    accentColor="bg-warning"
-                    items={actionable.filter(i => i.source_type === 'compliance')}
-                    expanded={expandedCategory === 'compliance'}
-                    onToggle={() => setExpandedCategory(expandedCategory === 'compliance' ? null : 'compliance')}
-                    onHandoffClick={() => {}}
-                    onTicketClick={() => {}}
-                  />
-                  <TodoCategoryCard
-                    icon={Banknote}
-                    title="Finance"
-                    accentColor="bg-danger"
-                    items={actionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy')}
-                    expanded={expandedCategory === 'finance'}
-                    onToggle={() => setExpandedCategory(expandedCategory === 'finance' ? null : 'finance')}
-                    onHandoffClick={() => {}}
-                    onTicketClick={() => {}}
-                  />
+                  {/* Only show Compliance + Finance after onboarding is complete */}
+                  {(onboardingChecklist.length === 0 || onboardingChecklist.every(i => i.complete)) && (
+                    <>
+                      <TodoCategoryCard
+                        icon={ShieldCheck}
+                        title="Compliance"
+                        accentColor="bg-warning"
+                        items={actionable.filter(i => i.source_type === 'compliance')}
+                        expanded={expandedCategory === 'compliance'}
+                        onToggle={() => setExpandedCategory(expandedCategory === 'compliance' ? null : 'compliance')}
+                        onHandoffClick={() => {}}
+                        onTicketClick={() => {}}
+                      />
+                      <TodoCategoryCard
+                        icon={Banknote}
+                        title="Finance"
+                        accentColor="bg-danger"
+                        items={actionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy')}
+                        expanded={expandedCategory === 'finance'}
+                        onToggle={() => setExpandedCategory(expandedCategory === 'finance' ? null : 'finance')}
+                        onHandoffClick={() => {}}
+                        onTicketClick={() => {}}
+                      />
+                    </>
+                  )}
                 </>
               )}
             </div>

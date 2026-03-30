@@ -14,6 +14,8 @@ This folder is the single source of truth for how the Yarro system works under t
 | [Edge Function Flows](edge-function-flows.md) | Before touching WhatsApp intake, notifications, or dispatch |
 | [Development Guidelines](development-guidelines.md) | Before starting any new build session |
 | [Known Issues](known-issues.md) | When looking for backlog items or checking if an issue is already tracked |
+| [When Things Go Wrong](when-things-go-wrong.md) | **During an incident** — step-by-step response for the 5 most likely failures |
+| [Monitoring](monitoring.md) | Setting up and understanding the monitoring stack (Sentry, UptimeRobot, Telegram) |
 
 ## Related Docs (don't duplicate)
 
