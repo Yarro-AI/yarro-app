@@ -990,6 +990,7 @@ export type Database = {
           landlord_timeout_hours: number | null
           min_booking_lead_hours: number
           name: string
+          onboarding_completed_at: string | null
           ooh_enabled: boolean
           ooh_routine_action: string
           phone: string | null
@@ -1020,6 +1021,7 @@ export type Database = {
           landlord_timeout_hours?: number | null
           min_booking_lead_hours?: number
           name: string
+          onboarding_completed_at?: string | null
           ooh_enabled?: boolean
           ooh_routine_action?: string
           phone?: string | null
@@ -1050,6 +1052,7 @@ export type Database = {
           landlord_timeout_hours?: number | null
           min_booking_lead_hours?: number
           name?: string
+          onboarding_completed_at?: string | null
           ooh_enabled?: boolean
           ooh_routine_action?: string
           phone?: string | null

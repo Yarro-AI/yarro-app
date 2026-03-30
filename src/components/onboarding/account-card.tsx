@@ -95,7 +95,7 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
             <div className="mt-8">
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.replace(/\b\w/g, c => c.toUpperCase()))}
                 placeholder="e.g. John Doe"
                 className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
                 autoFocus
@@ -119,7 +119,7 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 07700 900000"
+                placeholder="e.g. 07456789123"
                 className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePhoneNext() } }}

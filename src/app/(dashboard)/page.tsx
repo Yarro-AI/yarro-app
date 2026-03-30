@@ -125,7 +125,7 @@ const EVENT_DOT_COLOR: Record<string, string> = {
 
 
 export default function DashboardPage() {
-  const { propertyManager } = usePM()
+  const { propertyManager, refreshPM } = usePM()
   const { dateRange } = useDateRange()
   const openTicket = useOpenTicket()
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -225,8 +225,8 @@ export default function DashboardPage() {
       supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
       // Non-ticket to-dos: compliance, rent, tenancy, handoff — same shape as c1_get_dashboard_todo
       supabase.rpc('c1_get_dashboard_todo_extras' as never, { p_pm_id: propertyManager.id } as never),
-      // Onboarding checklist — skip if already completed
-      localStorage.getItem('yarro_onboarding_complete')
+      // Onboarding checklist — skip if already completed (DB field)
+      propertyManager.onboarding_completed_at
         ? Promise.resolve({ data: null })
         : supabase.rpc('c1_get_onboarding_checklist', { p_pm_id: propertyManager.id }),
     ])
@@ -369,19 +369,21 @@ export default function DashboardPage() {
     // Onboarding checklist
     const checklistData = (onboardingRes?.data as unknown as OnboardingChecklistItem[] | null) ?? []
     setOnboardingChecklist(checklistData)
-    if (checklistData.length > 0 && checklistData.every(i => i.complete)) {
-      localStorage.setItem('yarro_onboarding_complete', 'true')
+
+    // If checklist just completed, refresh PM to pick up the new onboarding_completed_at
+    if (checklistData.length > 0 && checklistData.every(i => i.complete) && !propertyManager.onboarding_completed_at) {
+      refreshPM()
     }
 
     // Spotlight: one-time dim on first dashboard visit with incomplete onboarding
     if (
       checklistData.length > 0 &&
       !checklistData.every(i => i.complete) &&
-      !localStorage.getItem('yarro_onboarding_spotlight_shown')
+      !localStorage.getItem(`yarro_onboarding_spotlight_${propertyManager.id}`)
     ) {
       setSpotlightVisible(true)
       setExpandedCategory('onboarding')
-      localStorage.setItem('yarro_onboarding_spotlight_shown', 'true')
+      localStorage.setItem(`yarro_onboarding_spotlight_${propertyManager.id}`, 'true')
       setTimeout(() => setSpotlightVisible(false), 1500)
     }
 
@@ -391,7 +393,7 @@ export default function DashboardPage() {
       toast.error('Could not load dashboard. Please refresh.')
       setLoading(false)
     }
-  }, [propertyManager, dateRange, supabase])
+  }, [propertyManager, dateRange, supabase, refreshPM])
 
   useEffect(() => {
     fetchData()
@@ -450,9 +452,15 @@ export default function DashboardPage() {
   const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const firstName = propertyManager?.name?.split(' ')[0] || ''
-  const taskCount = actionable.length
-  const greetingLabel = taskCount > 0
-    ? `Hi, ${firstName}. You've got ${taskCount} task${taskCount !== 1 ? 's' : ''} today.`
+  const onboardingDone = !!propertyManager?.onboarding_completed_at
+  // During onboarding, only count maintenance items (compliance/finance are hidden)
+  const visibleTaskCount = onboardingDone
+    ? actionable.length
+    : actionable.filter(i => { const s = i.source_type || 'ticket'; return s === 'ticket' || s === 'handoff' }).length
+  const onboardingRemaining = onboardingChecklist.filter(i => !i.complete).length
+  const totalTasks = visibleTaskCount + (onboardingDone ? 0 : onboardingRemaining)
+  const greetingLabel = totalTasks > 0
+    ? `Hi, ${firstName}. You've got ${totalTasks} task${totalTasks !== 1 ? 's' : ''} today.`
     : `Hi, ${firstName}. You're all clear.`
 
   // Autocomplete results for global search in top bar
@@ -549,9 +557,9 @@ export default function DashboardPage() {
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
               <span className="text-base font-semibold text-foreground">Needs action</span>
-              {actionable.length > 0 && (
+              {totalTasks > 0 && (
                 <span className="text-xs font-bold text-danger bg-danger/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                  {actionable.length}
+                  {totalTasks}
                 </span>
               )}
             </div>
@@ -589,7 +597,7 @@ export default function DashboardPage() {
                     }}
                   />
                   {/* Only show Compliance + Finance after onboarding is complete */}
-                  {(onboardingChecklist.length === 0 || onboardingChecklist.every(i => i.complete)) && (
+                  {onboardingDone && (
                     <>
                       <TodoCategoryCard
                         icon={ShieldCheck}
