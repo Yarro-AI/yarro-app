@@ -4,29 +4,48 @@ Rules for building safely on the Yarro codebase. These exist because we've been 
 
 ---
 
-## 1. Local Development Setup (Recommended)
+## 1. Local Development Setup (Active)
 
-Use Supabase local development to isolate your work from production.
+Local Supabase is set up and working. Use it to test migrations before deploying to production.
 
-**One-time setup:**
+**Commands:**
 
-1. Install Docker Desktop
-2. Run `supabase start` — spins up local Postgres, Auth, Storage, Edge Functions
-3. Create `.env.local.dev`:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=<local anon key from supabase start output>
-   ```
-4. To switch to local dev: rename `.env.local` → `.env.local.prod`, rename `.env.local.dev` → `.env.local`
+```bash
+# Start local Supabase (Docker must be running)
+supabase start
+
+# Apply all migrations to local DB (resets everything)
+supabase db reset
+
+# Run frontend against LOCAL Supabase (no env file swap needed)
+npm run dev:local
+
+# Run frontend against PRODUCTION Supabase (normal)
+npm run dev
+
+# Stop local Supabase when done
+supabase stop
+```
+
+**Local URLs:**
+- App: `http://localhost:3000`
+- Supabase Studio (local DB admin): `http://127.0.0.1:54323`
+- Local API: `http://127.0.0.1:54321`
 
 **Daily workflow:**
 
 1. Write migration SQL in `supabase/migrations/`
 2. `supabase db reset` — applies all migrations to local DB from scratch
-3. `npm run dev` — frontend hits local Supabase
-4. Test thoroughly
-5. When confident: swap back to prod env, run `supabase db push`
+3. `npm run dev:local` — frontend hits local Supabase
+4. Test the migration works correctly
+5. When confident: `supabase db push` deploys to production
 6. Verify in Supabase dashboard
+
+**Important notes:**
+- `npm run dev` = production Supabase. `npm run dev:local` = local Supabase. No file swapping needed.
+- `.env.local` always points to production and is never changed.
+- Edge functions require production secrets (OpenAI, Twilio, Telegram) that aren't available locally. Local env is for **migration and RPC testing only**.
+- Local Supabase Studio at `http://127.0.0.1:54323` lets you browse tables and run SQL against the local DB.
 
 **When to upgrade to Supabase Branching:** If the project gets multiple developers working on different features simultaneously. Branching creates isolated cloud DBs per git branch. For solo dev, local is sufficient and zero-cost.
 
