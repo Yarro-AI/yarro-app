@@ -90,7 +90,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#101011] items-center justify-center p-12">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#162B45] items-center justify-center p-12">
         <div className="max-w-md text-center">
           <Image
             src="/logo-white.png"
