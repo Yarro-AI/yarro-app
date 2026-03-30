@@ -167,6 +167,10 @@ export type Database = {
           property_ids: string[] | null
           property_manager_id: string | null
           service_areas: string[] | null
+          verification_sent_at: string | null
+          verification_token: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           _audit_log?: Json | null
@@ -185,6 +189,10 @@ export type Database = {
           property_ids?: string[] | null
           property_manager_id?: string | null
           service_areas?: string[] | null
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           _audit_log?: Json | null
@@ -203,6 +211,10 @@ export type Database = {
           property_ids?: string[] | null
           property_manager_id?: string | null
           service_areas?: string[] | null
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -981,7 +993,11 @@ export type Database = {
           ooh_enabled: boolean
           ooh_routine_action: string
           phone: string | null
+          stripe_customer_id: string | null
+          subscription_status: string | null
           ticket_mode: string
+          trial_ends_at: string | null
+          trial_starts_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -1005,7 +1021,11 @@ export type Database = {
           ooh_enabled?: boolean
           ooh_routine_action?: string
           phone?: string | null
+          stripe_customer_id?: string | null
+          subscription_status?: string | null
           ticket_mode?: string
+          trial_ends_at?: string | null
+          trial_starts_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1029,7 +1049,11 @@ export type Database = {
           ooh_enabled?: boolean
           ooh_routine_action?: string
           phone?: string | null
+          stripe_customer_id?: string | null
+          subscription_status?: string | null
           ticket_mode?: string
+          trial_ends_at?: string | null
+          trial_starts_at?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -1211,6 +1235,9 @@ export type Database = {
           property_manager_id: string | null
           role_tag: string | null
           room_id: string | null
+          verification_sent_at: string | null
+          verification_token: string | null
+          verified_at: string | null
           verified_by: string | null
         }
         Insert: {
@@ -1227,6 +1254,9 @@ export type Database = {
           property_manager_id?: string | null
           role_tag?: string | null
           room_id?: string | null
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
@@ -1243,6 +1273,9 @@ export type Database = {
           property_manager_id?: string | null
           role_tag?: string | null
           room_id?: string | null
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified_at?: string | null
           verified_by?: string | null
         }
         Relationships: [
@@ -1856,6 +1889,10 @@ export type Database = {
       }
       c1_get_contractor_ticket: { Args: { p_token: string }; Returns: Json }
       c1_get_dashboard_todo: { Args: { p_pm_id: string }; Returns: Json[] }
+      c1_get_dashboard_todo_extras: {
+        Args: { p_pm_id: string }
+        Returns: Json[]
+      }
       c1_get_landlord_ticket: { Args: { p_token: string }; Returns: Json }
       c1_get_ooh_contacts: {
         Args: { p_pm_id: string }
@@ -2162,6 +2199,14 @@ export type Database = {
           urgency_label: string
         }[]
       }
+      compliance_set_property_type: {
+        Args: {
+          p_pm_id: string
+          p_property_id: string
+          p_property_type: string
+        }
+        Returns: undefined
+      }
       compliance_upsert_certificate: {
         Args: {
           p_certificate_number?: string
@@ -2189,6 +2234,10 @@ export type Database = {
           p_year: number
         }
         Returns: number
+      }
+      generate_verification_token: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: string
       }
       get_ai_actions_count: { Args: { p_pm_id: string }; Returns: Json }
       get_compliance_expiring: {
@@ -2322,6 +2371,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      verify_entity: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
       certificate_type:
@@ -2334,6 +2384,9 @@ export type Database = {
         | "legionella"
         | "smoke_alarms"
         | "co_alarms"
+        | "building_insurance"
+        | "landlord_insurance"
+        | "rent_guarantee_insurance"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2471,6 +2524,9 @@ export const Constants = {
         "legionella",
         "smoke_alarms",
         "co_alarms",
+        "building_insurance",
+        "landlord_insurance",
+        "rent_guarantee_insurance",
       ],
     },
   },
