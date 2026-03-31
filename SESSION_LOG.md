@@ -6,7 +6,56 @@
 
 ---
 
-## Latest: 2026-03-31 — Full Onboarding Flow + Category Dashboard + Tenant Onboarding
+## Latest: 2026-03-31 — Demo-First Onboarding + Edge Function + Full Flow Rework
+
+### Summary
+Major rework of the onboarding flow to "demo first, setup after." New flow: sign up → account card (name, contact method, contact detail, role) → confetti welcome → 5-page split-screen demo walkthrough → dashboard with Getting Started. Built `yarro-demo-notify` edge function for real WhatsApp sends during demo. Created `onboarding_seed_demo` RPC that creates demo property/tenants/contractor/ticket. Added `is_demo` flag to 4 tables. Fixed multiple loop bugs in the onboarding routing. Getting Started now shows only "Add your property" until a real property exists.
+
+### Changes Made
+- `src/components/onboarding/account-card.tsx` — reworked: name → contact method → contact detail (phone OR email) → role
+- `src/components/onboarding/onboarding-flow.tsx` — new flow: account → welcome → demo → done. Synchronous demo_seen check, render null for done state
+- `src/components/onboarding/demo-walkthrough.tsx` — 5-page split-screen (video placeholder + bullets), WhatsApp triggers on pages 2 & 4
+- `src/components/onboarding/success-card.tsx` — generic with heading/subtext/buttonLabel props
+- `src/components/onboarding/tenant-onboarding.tsx` — room-by-room tenant entry with summary card
+- `src/app/(dashboard)/import/page.tsx` — smart routing: no PM → onboarding, PM + demo seen → property card
+- `src/app/(dashboard)/layout.tsx` — removed property count redirect, dashboard always accessible
+- `src/app/(dashboard)/page.tsx` — Getting Started filters: only property item until real property exists
+- `supabase/functions/yarro-demo-notify/index.ts` — NEW: sends pm_ticket + pm_auto_approved templates during demo
+- `supabase/migrations/20260401000000_demo_seed.sql` — is_demo columns, seed RPC, updated checklist + property RPCs
+- `supabase/migrations/20260331400000_onboarding_tenants_rpc.sql` — batch tenant creation RPC
+
+### Status
+- [x] Build passes
+- [x] Committed (NOT pushed)
+- [ ] Edge function deployment needs verification
+- [ ] Demo seed not creating data — needs debugging
+- [ ] WhatsApp sends not firing — blocked by above two issues
+
+### Next Session Pickup — EXACT STATE
+1. **Debug demo seed RPC** — `onboarding_seed_demo` exists in Supabase but isn't creating data. Run these queries to check:
+   ```sql
+   SELECT id FROM c1_property_managers ORDER BY created_at DESC LIMIT 1;
+   -- Then with that ID:
+   SELECT * FROM c1_properties WHERE property_manager_id = 'ID' AND is_demo = true;
+   SELECT * FROM c1_tickets WHERE property_manager_id = 'ID' AND is_demo = true;
+   ```
+   If empty: the RPC is being called but failing (likely `auth.uid()` check). Check browser console for `Demo seed error:` messages. May need to remove the auth check or fix the timing.
+
+2. **Deploy edge function** — `yarro-demo-notify` may not have deployed. Run in terminal:
+   ```bash
+   supabase functions deploy yarro-demo-notify
+   ```
+   Verify it appears in Supabase dashboard → Edge Functions.
+
+3. **Test full flow** — delete account, sign up fresh, verify: account → confetti → demo → dashboard (no loop)
+
+4. **After demo flow works:** Push to Vercel, then continue with contractor onboarding + compliance onboarding
+
+5. **Backlog:** Bulk CSV overlay bug, tenant verification flow, property page polish
+
+---
+
+## 2026-03-31 (earlier) — Full Onboarding Flow + Category Dashboard + Tenant Onboarding
 
 ### Summary
 Extended session building the complete onboarding experience. Card-based onboarding (account → property → confetti → dashboard), category-based dashboard to-dos with Getting Started glow card + spotlight, centralized onboarding state via `onboarding_completed_at` on PM record, and tenant onboarding flow (intro → room-by-room entry → summary card → dashboard). Smart greeting counts only visible tasks. Compliance/Finance categories hidden during onboarding.
