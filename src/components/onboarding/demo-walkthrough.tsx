@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { typography } from '@/lib/typography'
 import type { DemoIssue } from './demo-issues'
 import {
   MessageSquare,
@@ -20,6 +19,7 @@ import {
 interface DemoPage {
   icon: React.ElementType
   title: string
+  subtitle: string
   bullets: string[]
   videoUrl?: string
   sendsWhatsApp?: boolean
@@ -30,56 +30,56 @@ function buildPages(issue: DemoIssue): DemoPage[] {
   return [
     {
       icon: MessageSquare,
-      title: `Tenant reports: "${issue.title}"`,
+      title: 'Tenants report issues through WhatsApp — 24/7',
+      subtitle: 'No missed calls. No lost emails. No app for tenants to download.',
       bullets: [
-        'Your tenant reports an issue via WhatsApp',
-        'Yarro AI diagnoses the problem automatically',
-        'Photos are collected and attached to the ticket',
-        `Ticket created: ${issue.category} · ${issue.priority}`,
+        'Tenants message your Yarro number on WhatsApp',
+        'AI gathers all the details — photos, description, urgency',
+        'A maintenance ticket is created automatically',
       ],
     },
     {
       icon: Bell,
-      title: 'You get notified instantly',
+      title: 'You get notified the moment something needs attention',
+      subtitle: 'Every new issue lands on your phone and your dashboard.',
       bullets: [
-        'You just received this on your phone',
-        `"${issue.description}"`,
-        'Priority, category, and tenant details included',
-        'You didn\'t have to ask — Yarro told you',
+        'Real-time WhatsApp notification with full details',
+        'Priority, category, and tenant info — everything you need',
+        'No chasing tenants for information',
       ],
       sendsWhatsApp: true,
       whatsAppStep: 1,
     },
     {
       icon: Wrench,
-      title: 'The right contractor is dispatched',
+      title: 'The right contractor is dispatched instantly',
+      subtitle: 'No more calling around for quotes.',
       bullets: [
-        `Yarro matches this to a ${issue.category} contractor`,
-        'They receive the job details via WhatsApp',
-        'A secure portal link lets them quote or book',
-        'No phone calls, no back-and-forth',
+        'Yarro matches the job to the best contractor on your list',
+        'They get the full brief via WhatsApp — photos, access, everything',
+        'A contractor portal lets them quote and book in seconds',
       ],
     },
     {
       icon: CalendarCheck,
-      title: 'Job scheduled, everyone notified',
+      title: 'Jobs are scheduled and everyone stays in the loop',
+      subtitle: 'Tenants, contractors, and landlords — all updated automatically.',
       bullets: [
-        'Once the contractor confirms, everyone is notified',
-        'Tenant knows when to expect the visit',
-        'You get confirmation without chasing anyone',
-        'Check your phone — you just received this',
+        'Once approved, the job is booked automatically',
+        'The tenant knows exactly when to expect the visit',
+        'You get confirmation without sending a single message',
       ],
       sendsWhatsApp: true,
       whatsAppStep: 2,
     },
     {
       icon: ClipboardCheck,
-      title: `"${issue.title}" — resolved`,
+      title: 'Every job has a complete audit trail',
+      subtitle: 'Compliance-ready. Dispute-proof. Export-ready.',
       bullets: [
-        'The contractor closes the job with photo proof',
-        'Full audit trail logged automatically',
-        'Compliance-ready documentation for every job',
-        'From report to resolution — zero manual work',
+        'Photos, timestamps, and messages — all logged automatically',
+        'See who said what, when, and what was agreed',
+        'Ready for landlords, insurers, or council inspections',
       ],
     },
   ]
@@ -98,6 +98,7 @@ export function DemoWalkthrough({ onComplete, issue }: { onComplete: () => void;
   const isFirst = currentPage === 0
 
   const handleContinue = async () => {
+    // Send WhatsApp for the NEXT page if it has one
     const nextPage = pages[currentPage + 1]
     if (nextPage?.sendsWhatsApp && propertyManager) {
       setSending(true)
@@ -116,9 +117,7 @@ export function DemoWalkthrough({ onComplete, issue }: { onComplete: () => void;
 
     if (isLast) {
       setDismissing(true)
-      setTimeout(() => {
-        onComplete()
-      }, 600)
+      setTimeout(() => onComplete(), 600)
     } else {
       setCurrentPage(currentPage + 1)
     }
@@ -164,7 +163,7 @@ export function DemoWalkthrough({ onComplete, issue }: { onComplete: () => void;
             <div className="w-8" />
           </div>
 
-          {/* Split screen content */}
+          {/* Split screen */}
           <div className="flex flex-col md:flex-row md:items-stretch gap-0 md:gap-8 px-8 pb-8 pt-4">
             {/* Left: video placeholder */}
             <div className="flex-1 min-w-0 flex">
@@ -194,8 +193,11 @@ export function DemoWalkthrough({ onComplete, issue }: { onComplete: () => void;
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                 <page.icon className="w-5 h-5 text-primary" />
               </div>
-              <h2 className={`${typography.pageTitle} mb-6`}>{page.title}</h2>
-              <ul className="space-y-4 mb-8">
+              <h2 className="text-2xl font-bold text-foreground leading-tight mb-2">
+                {page.title}
+              </h2>
+              <p className="text-sm text-muted-foreground mb-6">{page.subtitle}</p>
+              <ul className="space-y-3 mb-8">
                 {page.bullets.map((bullet, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />

@@ -120,16 +120,16 @@ Deno.serve(async (req) => {
     if (step === 1) {
       const vars = {
         "1": desc,
-        "2": "14 Brixton Hill, London SW2 1QA",
-        "3": "Sarah Mitchell (Room 1)",
+        "2": "123 Demo Street, London SW1A 1AA",
+        "3": "Jane Doe (Room 1)",
         "4": "Today",
       };
       console.log("[demo-notify] Sending pm_ticket with vars:", JSON.stringify(vars));
       result = await sendWhatsApp(phone, TEMPLATES.pm_ticket, vars);
     } else if (step === 2) {
       const vars = {
-        "1": "Mike's Plumbing",
-        "2": "14 Brixton Hill, London SW2 1QA",
+        "1": "Demo Repairs Ltd",
+        "2": "123 Demo Street, London SW1A 1AA",
         "3": desc,
         "4": "-",
         "5": "85",

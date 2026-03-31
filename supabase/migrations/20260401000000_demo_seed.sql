@@ -47,7 +47,7 @@ BEGIN
 
   -- Create demo property
   INSERT INTO c1_properties (address, city, property_manager_id, property_type, is_demo)
-  VALUES ('14 Brixton Hill, London SW2 1QA', 'London', p_pm_id, 'hmo', true)
+  VALUES ('123 Demo Street, London SW1A 1AA', 'London', p_pm_id, 'hmo', true)
   RETURNING * INTO v_property;
 
   -- Create 3 rooms
@@ -65,11 +65,11 @@ BEGIN
 
   -- Create 2 demo tenants
   INSERT INTO c1_tenants (full_name, phone, email, property_id, property_manager_id, room_id, is_demo)
-  VALUES ('Sarah Mitchell', '447700200001', 'sarah.m@example.com', v_property.id, p_pm_id, v_room1.id, true)
+  VALUES ('Jane Doe', '447700200001', 'jane.doe@example.com', v_property.id, p_pm_id, v_room1.id, true)
   RETURNING * INTO v_tenant1;
 
   INSERT INTO c1_tenants (full_name, phone, email, property_id, property_manager_id, room_id, is_demo)
-  VALUES ('James Cooper', '447700200002', 'james.c@example.com', v_property.id, p_pm_id, v_room2.id, true)
+  VALUES ('John Smith', '447700200002', 'john.smith@example.com', v_property.id, p_pm_id, v_room2.id, true)
   RETURNING * INTO v_tenant2;
 
   -- Assign tenants to rooms
@@ -78,7 +78,7 @@ BEGIN
 
   -- Create demo contractor
   INSERT INTO c1_contractors (contractor_name, contractor_phone, contractor_email, contact_method, category, property_manager_id, is_demo)
-  VALUES ('Mike''s Plumbing', '447700300001', 'mike@plumbing.example.com', 'whatsapp', 'Plumbing', p_pm_id, true)
+  VALUES ('Demo Repairs Ltd', '447700300001', 'mike@plumbing.example.com', 'whatsapp', 'Plumbing', p_pm_id, true)
   RETURNING * INTO v_contractor;
 
   -- Create demo conversation (pre-built log)
@@ -88,7 +88,7 @@ BEGIN
     log
   ) VALUES (
     '447700200001', 'closed', p_pm_id, v_property.id, v_tenant1.id, 'final_summary', false,
-    'Sarah Mitchell', 'tenant', true,
+    'Jane Doe', 'tenant', true,
     jsonb_build_array(
       jsonb_build_object('direction', 'inbound', 'message', 'Hi, I need to report an issue — ' || p_issue_description, 'timestamp', (now() - interval '2 hours')::text),
       jsonb_build_object('direction', 'outbound', 'message', 'Sorry to hear that, Sarah. Can you tell me more about the problem?', 'timestamp', (now() - interval '1 hour 58 minutes')::text),
@@ -116,7 +116,7 @@ BEGIN
 
   -- Add audit trail entries (the trigger creates the first one, we add the rest)
   INSERT INTO c1_ledger (ticket_id, event_type, actor_role, data, created_at) VALUES
-    (v_ticket.id, 'CONTRACTOR_ASSIGNED', 'system', jsonb_build_object('contractor', 'Mike''s Plumbing', 'category', p_category), now() - interval '1 hour 45 minutes'),
+    (v_ticket.id, 'CONTRACTOR_ASSIGNED', 'system', jsonb_build_object('contractor', 'Demo Repairs Ltd', 'category', p_category), now() - interval '1 hour 45 minutes'),
     (v_ticket.id, 'QUOTE_RECEIVED', 'contractor', jsonb_build_object('amount', 85, 'notes', 'Standard repair job'), now() - interval '1 hour 30 minutes'),
     (v_ticket.id, 'QUOTE_APPROVED', 'system', jsonb_build_object('approved_by', 'auto', 'amount', 85), now() - interval '1 hour 28 minutes'),
     (v_ticket.id, 'JOB_SCHEDULED', 'contractor', jsonb_build_object('date', (CURRENT_DATE + 1)::text, 'time', '14:00'), now() - interval '1 hour'),
