@@ -49,17 +49,20 @@ export function OnboardingFlow() {
   const handleAccountComplete = async () => {
     try {
       await refreshPM()
-      const { data: pm } = await supabase
+      const { data: pm, error: pmErr } = await supabase
         .from('c1_property_managers')
         .select('id')
         .eq('user_id', authUser!.id)
         .single()
 
+      console.log('[onboarding] PM lookup:', pm, pmErr)
+
       if (pm) {
-        await supabase.rpc('onboarding_seed_demo', { p_pm_id: pm.id })
+        const { data: seedResult, error: seedErr } = await supabase.rpc('onboarding_seed_demo', { p_pm_id: pm.id })
+        console.log('[onboarding] Seed result:', seedResult, seedErr)
       }
     } catch (err) {
-      console.error('Failed to seed demo data:', err)
+      console.error('[onboarding] Failed to seed demo data:', err)
     }
 
     setStep('welcome')

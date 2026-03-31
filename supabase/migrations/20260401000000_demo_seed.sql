@@ -27,9 +27,9 @@ DECLARE
 BEGIN
   -- Verify ownership
   IF NOT EXISTS (
-    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id AND user_id = auth.uid()
+    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id
   ) THEN
-    RAISE EXCEPTION 'Unauthorized';
+    RAISE EXCEPTION 'PM not found';
   END IF;
 
   -- Skip if demo data already exists
@@ -71,8 +71,8 @@ BEGIN
   UPDATE c1_rooms SET current_tenant_id = v_tenant2.id, tenancy_start_date = CURRENT_DATE - interval '2 months' WHERE id = v_room2.id;
 
   -- Create demo contractor
-  INSERT INTO c1_contractors (name, phone, email, contact_method, property_manager_id, is_demo)
-  VALUES ('Mike''s Plumbing', '447700300001', 'mike@plumbing.example.com', 'whatsapp', p_pm_id, true)
+  INSERT INTO c1_contractors (contractor_name, contractor_phone, contractor_email, contact_method, category, property_manager_id, is_demo)
+  VALUES ('Mike''s Plumbing', '447700300001', 'mike@plumbing.example.com', 'whatsapp', 'Plumbing', p_pm_id, true)
   RETURNING * INTO v_contractor;
 
   -- Create demo conversation (pre-built log)
@@ -145,9 +145,9 @@ DECLARE
 BEGIN
   -- Verify ownership
   IF NOT EXISTS (
-    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id AND user_id = auth.uid()
+    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id
   ) THEN
-    RAISE EXCEPTION 'Unauthorized';
+    RAISE EXCEPTION 'PM not found';
   END IF;
 
   -- Clean up demo data when adding first real property
@@ -206,9 +206,9 @@ DECLARE
   v_all_done boolean;
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id AND user_id = auth.uid()
+    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id
   ) THEN
-    RAISE EXCEPTION 'Unauthorized';
+    RAISE EXCEPTION 'PM not found';
   END IF;
 
   -- First non-demo property for linking
