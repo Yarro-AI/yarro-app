@@ -2381,6 +2381,14 @@ export type Database = {
         }
         Returns: Json
       }
+      onboarding_create_tenants: {
+        Args: {
+          p_pm_id: string
+          p_property_id: string
+          p_tenants: Json
+        }
+        Returns: Json
+      }
       room_assign_tenant: {
         Args: {
           p_pm_id: string

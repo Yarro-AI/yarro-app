@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
+import { TenantOnboarding } from '@/components/onboarding/tenant-onboarding'
 
 interface Tenant {
   id: string
@@ -84,6 +85,7 @@ export default function TenantsPage() {
   const [properties, setProperties] = useState<PropertyOption[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [showTenantOnboarding, setShowTenantOnboarding] = useState(false)
   const [search, setSearch] = useState('')
   const filteredTenants = useMemo(() => {
     if (!search) return tenants
@@ -249,6 +251,12 @@ export default function TenantsPage() {
         address: (t.c1_properties as unknown as { address: string } | null)?.address,
       }))
       setTenants(mapped)
+      // Show tenant onboarding if no tenants and still onboarding
+      if (mapped.length === 0 && !propertyManager?.onboarding_completed_at) {
+        setShowTenantOnboarding(true)
+      }
+    } else if (!propertyManager?.onboarding_completed_at) {
+      setShowTenantOnboarding(true)
     }
     setLoading(false)
   }
@@ -506,6 +514,8 @@ export default function TenantsPage() {
   )
 
   return (
+    <>
+    {showTenantOnboarding && <TenantOnboarding />}
     <PageShell
       title="Tenants"
       count={filteredTenants.length}
@@ -682,5 +692,6 @@ export default function TenantsPage() {
         onConfirm={handleDelete}
       />
     </PageShell>
+    </>
   )
 }

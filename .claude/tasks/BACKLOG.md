@@ -12,6 +12,8 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-03-31] Bulk CSV upload doesn't dismiss tenant onboarding overlay — navigating to /import while onboarding overlay is active leaves the overlay mounted. Need to gate the overlay off when navigating away or use a layout-level state [priority: high]
+- [2026-03-31] Tenant verification onboarding — build WhatsApp/email verification message templates + send flow. "Verify contact details" button on tenant summary card is currently a dead end [priority: high]
 - [2026-03-27] Dashboard compliance summary card — aggregate expiring/expired certs across all properties, new card on main dashboard [priority: high]
 - [2026-03-27] Phase 1 sign-off — run full done checklist, verify compliance end-to-end, mark Phase 1 complete in hmo-pivot-plan.md [priority: high]
 - [2026-03-28] Build context compression save hook [priority: high]
