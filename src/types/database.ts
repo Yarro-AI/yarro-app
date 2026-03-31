@@ -164,6 +164,7 @@ export type Database = {
           created_at: string
           external_ref: string | null
           id: string
+          is_demo: boolean
           property_ids: string[] | null
           property_manager_id: string | null
           service_areas: string[] | null
@@ -186,6 +187,7 @@ export type Database = {
           created_at?: string
           external_ref?: string | null
           id?: string
+          is_demo?: boolean
           property_ids?: string[] | null
           property_manager_id?: string | null
           service_areas?: string[] | null
@@ -208,6 +210,7 @@ export type Database = {
           created_at?: string
           external_ref?: string | null
           id?: string
+          is_demo?: boolean
           property_ids?: string[] | null
           property_manager_id?: string | null
           service_areas?: string[] | null
@@ -904,6 +907,7 @@ export type Database = {
           emergency_access_contact: string | null
           external_ref: string | null
           id: string
+          is_demo: boolean
           landlord_email: string | null
           landlord_id: string | null
           landlord_name: string | null
@@ -925,6 +929,7 @@ export type Database = {
           emergency_access_contact?: string | null
           external_ref?: string | null
           id?: string
+          is_demo?: boolean
           landlord_email?: string | null
           landlord_id?: string | null
           landlord_name?: string | null
@@ -946,6 +951,7 @@ export type Database = {
           emergency_access_contact?: string | null
           external_ref?: string | null
           id?: string
+          is_demo?: boolean
           landlord_email?: string | null
           landlord_id?: string | null
           landlord_name?: string | null
@@ -1239,6 +1245,7 @@ export type Database = {
           external_ref: string | null
           full_name: string | null
           id: string
+          is_demo: boolean
           phone: string | null
           property_id: string | null
           property_manager_id: string | null
@@ -1258,6 +1265,7 @@ export type Database = {
           external_ref?: string | null
           full_name?: string | null
           id?: string
+          is_demo?: boolean
           phone?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -1277,6 +1285,7 @@ export type Database = {
           external_ref?: string | null
           full_name?: string | null
           id?: string
+          is_demo?: boolean
           phone?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -1342,6 +1351,7 @@ export type Database = {
           held_at: string | null
           id: string
           images: Json | null
+          is_demo: boolean
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
@@ -1820,6 +1830,7 @@ export type Database = {
           held_at: string | null
           id: string
           images: Json | null
+          is_demo: boolean
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
@@ -2379,6 +2390,10 @@ export type Database = {
           p_property_type?: string
           p_room_count?: number
         }
+        Returns: Json
+      }
+      onboarding_seed_demo: {
+        Args: { p_pm_id: string }
         Returns: Json
       }
       onboarding_create_tenants: {
