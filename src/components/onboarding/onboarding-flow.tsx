@@ -5,39 +5,50 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { AccountCard } from './account-card'
-import { PropertyCard } from './property-card'
+import { SuccessCard } from './success-card'
 import { DemoWalkthrough } from './demo-walkthrough'
-import { toast } from 'sonner'
 
-type OnboardingStep = 'account' | 'demo' | 'property'
+type OnboardingStep = 'account' | 'welcome' | 'demo' | 'done'
+
+function getDemoSeenKey(pmId: string) {
+  return `yarro_demo_seen_${pmId}`
+}
 
 export function OnboardingFlow() {
   const { propertyManager, authUser, refreshPM } = usePM()
   const router = useRouter()
   const supabase = createClient()
-  const [step, setStep] = useState<OnboardingStep>('account')
-  const [dismissing, setDismissing] = useState(false)
 
-  // If PM exists but no real properties, show property card
-  // If PM exists and has demo data, show demo walkthrough
+  // Compute initial step synchronously — no flash
+  const [step, setStep] = useState<OnboardingStep>(() => {
+    if (typeof window === 'undefined') return 'account'
+    if (propertyManager) {
+      if (localStorage.getItem(getDemoSeenKey(propertyManager.id))) return 'done'
+      return 'welcome'
+    }
+    return 'account'
+  })
+
+  // If PM loads after mount (e.g. returning user), advance from account
   useEffect(() => {
-    if (!propertyManager) return
-    if (step === 'account') {
-      // PM exists — check if they've seen the demo
-      const hasDemoProperty = propertyManager.onboarding_completed_at === null
-      if (hasDemoProperty) {
-        setStep('demo')
-      } else {
-        setStep('property')
-      }
+    if (!propertyManager || step !== 'account') return
+    if (localStorage.getItem(getDemoSeenKey(propertyManager.id))) {
+      setStep('done')
+    } else {
+      setStep('welcome')
     }
   }, [propertyManager, step])
 
+  // done = redirect to dashboard, render nothing
+  useEffect(() => {
+    if (step === 'done') {
+      router.replace('/')
+    }
+  }, [step, router])
+
   const handleAccountComplete = async () => {
-    // Seed demo data after account creation
     try {
       await refreshPM()
-      // Get fresh PM ID after refresh
       const { data: pm } = await supabase
         .from('c1_property_managers')
         .select('id')
@@ -45,63 +56,42 @@ export function OnboardingFlow() {
         .single()
 
       if (pm) {
-        const { error } = await supabase.rpc('onboarding_seed_demo', { p_pm_id: pm.id })
-        if (error) {
-          console.error('Demo seed error:', error)
-        }
+        await supabase.rpc('onboarding_seed_demo', { p_pm_id: pm.id })
       }
     } catch (err) {
       console.error('Failed to seed demo data:', err)
     }
 
-    setStep('demo')
+    setStep('welcome')
   }
 
   const handleDemoComplete = () => {
-    setDismissing(true)
-    setTimeout(() => {
-      router.push('/')
-    }, 600)
+    if (propertyManager) {
+      localStorage.setItem(getDemoSeenKey(propertyManager.id), 'true')
+    }
+    setStep('done')
   }
 
-  const handlePropertyComplete = () => {
-    setDismissing(true)
-    setTimeout(() => {
-      router.push('/')
-    }, 600)
-  }
+  // Render nothing while redirecting
+  if (step === 'done') return null
 
-  // The demo walkthrough handles its own overlay
   if (step === 'demo' && propertyManager) {
     return <DemoWalkthrough onComplete={handleDemoComplete} />
   }
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-500 ${
-        dismissing
-          ? 'bg-black/0 backdrop-blur-0'
-          : 'bg-black/40 backdrop-blur-sm'
-      }`}
-    >
-      <div
-        className={`w-full max-w-lg px-4 transition-all duration-500 ${
-          dismissing
-            ? 'opacity-0 scale-95 translate-y-4'
-            : 'opacity-100 scale-100 translate-y-0'
-        }`}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg px-4">
         {step === 'account' && authUser && (
-          <AccountCard
-            authUser={authUser}
-            onComplete={handleAccountComplete}
-          />
+          <AccountCard authUser={authUser} onComplete={handleAccountComplete} />
         )}
 
-        {step === 'property' && propertyManager && (
-          <PropertyCard
-            pmId={propertyManager.id}
-            onComplete={handlePropertyComplete}
+        {step === 'welcome' && (
+          <SuccessCard
+            onDismiss={() => setStep('demo')}
+            heading={`Welcome, ${propertyManager?.name?.split(' ')[0] || ''}!`}
+            subtext="Your account is ready. Let's show you what Yarro can do — walk through a real maintenance job in under a minute."
+            buttonLabel="Start the demo"
           />
         )}
       </div>

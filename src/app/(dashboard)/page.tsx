@@ -570,13 +570,19 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <>
-                  {onboardingChecklist.length > 0 && !onboardingChecklist.every(i => i.complete) && (
-                    <OnboardingCategoryCard
-                      items={onboardingChecklist}
-                      expanded={expandedCategory === 'onboarding'}
-                      onToggle={() => setExpandedCategory(expandedCategory === 'onboarding' ? null : 'onboarding')}
-                    />
-                  )}
+                  {onboardingChecklist.length > 0 && !onboardingChecklist.every(i => i.complete) && (() => {
+                    // Only show property item until a real property exists, then show all
+                    const propertyItem = onboardingChecklist.find(i => i.key === 'add_property')
+                    const hasRealProperty = propertyItem?.complete
+                    const visibleItems = hasRealProperty ? onboardingChecklist : onboardingChecklist.filter(i => i.key === 'add_property')
+                    return (
+                      <OnboardingCategoryCard
+                        items={visibleItems}
+                        expanded={expandedCategory === 'onboarding'}
+                        onToggle={() => setExpandedCategory(expandedCategory === 'onboarding' ? null : 'onboarding')}
+                      />
+                    )
+                  })()}
                   <TodoCategoryCard
                     icon={Wrench}
                     title="Maintenance"

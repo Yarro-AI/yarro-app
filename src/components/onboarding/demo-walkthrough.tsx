@@ -84,7 +84,7 @@ const DEMO_PAGES: DemoPage[] = [
 ]
 
 export function DemoWalkthrough({ onComplete }: { onComplete: () => void }) {
-  const { propertyManager, refreshPM } = usePM()
+  const { propertyManager } = usePM()
   const router = useRouter()
   const supabase = createClient()
   const [currentPage, setCurrentPage] = useState(0)
@@ -115,7 +115,6 @@ export function DemoWalkthrough({ onComplete }: { onComplete: () => void }) {
     }
 
     if (isLast) {
-      await refreshPM()
       setDismissing(true)
       setTimeout(() => {
         onComplete()
@@ -166,10 +165,10 @@ export function DemoWalkthrough({ onComplete }: { onComplete: () => void }) {
           </div>
 
           {/* Split screen content */}
-          <div className="flex flex-col md:flex-row gap-0 md:gap-8 px-8 pb-8 pt-4">
+          <div className="flex flex-col md:flex-row md:items-stretch gap-0 md:gap-8 px-8 pb-8 pt-4">
             {/* Left: video placeholder */}
-            <div className="flex-1 min-w-0">
-              <div className="aspect-[4/3] rounded-xl bg-muted/50 border border-border/50 flex flex-col items-center justify-center gap-3">
+            <div className="flex-1 min-w-0 flex">
+              <div className="flex-1 rounded-xl bg-muted/50 border border-border/50 flex flex-col items-center justify-center gap-3 min-h-[300px]">
                 {page.videoUrl ? (
                   <video
                     src={page.videoUrl}

@@ -37,37 +37,10 @@ export default function DashboardLayout({
     }
   }, [loading, propertyManager, authUser, router, pathname])
 
-  // Check if PM needs onboarding (no properties yet)
-  // Skip this check for new users without PM (they're on /import creating their PM)
+  // Skip property check — demo data or Getting Started handles it
   useEffect(() => {
-    if (!propertyManager || pathname === '/import' || pathname === '/settings' || pathname === '/update-password') {
-      setCheckingOnboarding(false)
-      return
-    }
-
-    const checkProperties = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('c1_properties')
-          .select('id', { count: 'exact', head: true })
-          .eq('property_manager_id', propertyManager.id)
-
-        if (error) {
-          setCheckingOnboarding(false)
-          return
-        }
-
-        if (count === 0) {
-          router.push('/import')
-        }
-        setCheckingOnboarding(false)
-      } catch {
-        setCheckingOnboarding(false)
-      }
-    }
-
-    checkProperties()
-  }, [propertyManager, pathname, router, supabase])
+    setCheckingOnboarding(false)
+  }, [propertyManager])
 
   // Trial expiry check — redirect to /billing if trial has ended
   useEffect(() => {

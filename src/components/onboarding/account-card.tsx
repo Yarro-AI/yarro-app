@@ -7,7 +7,7 @@ import { normalizePhone, isValidUKPhone } from '@/lib/normalize'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronLeft } from 'lucide-react'
 import { typography } from '@/lib/typography'
 
 interface AccountCardProps {
@@ -15,7 +15,7 @@ interface AccountCardProps {
   onComplete: () => void
 }
 
-type Step = 'name' | 'phone' | 'contact' | 'role'
+type Step = 'name' | 'contact' | 'contact-detail' | 'role'
 
 export function AccountCard({ authUser, onComplete }: AccountCardProps) {
   const { refreshPM } = usePM()
@@ -25,25 +25,40 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
   const [step, setStep] = useState<Step>('name')
 
   const [name, setName] = useState('')
+  const [preferredContact, setPreferredContact] = useState<'whatsapp' | 'email'>('whatsapp')
   const [phone, setPhone] = useState('')
-  const [preferredContact, setPreferredContact] = useState('whatsapp')
+  const [email, setEmail] = useState(authUser.email)
   const [role, setRole] = useState<string | null>(null)
+
+  const steps: Step[] = ['name', 'contact', 'contact-detail', 'role']
+  const stepIndex = steps.indexOf(step)
+
+  const handleBack = () => {
+    if (stepIndex > 0) {
+      setStep(steps[stepIndex - 1])
+      setError(null)
+    }
+  }
 
   const handleNameNext = () => {
     if (!name.trim()) { setError('Your name is required'); return }
     setError(null)
-    setStep('phone')
-  }
-
-  const handlePhoneNext = () => {
-    if (!phone.trim()) { setError('Your number is required'); return }
-    if (!isValidUKPhone(phone)) { setError('Enter a valid UK phone number'); return }
-    setError(null)
     setStep('contact')
   }
 
-  const handleContactNext = (method: string) => {
+  const handleContactSelect = (method: 'whatsapp' | 'email') => {
     setPreferredContact(method)
+    setStep('contact-detail')
+  }
+
+  const handleContactDetailNext = () => {
+    if (preferredContact === 'whatsapp') {
+      if (!phone.trim()) { setError('Your WhatsApp number is required'); return }
+      if (!isValidUKPhone(phone)) { setError('Enter a valid UK phone number'); return }
+    } else {
+      if (!email.trim()) { setError('Your email is required'); return }
+    }
+    setError(null)
     setStep('role')
   }
 
@@ -56,8 +71,8 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
       const { error: rpcError } = await supabase.rpc('onboarding_create_account', {
         p_user_id: authUser.id,
         p_name: name.trim(),
-        p_email: authUser.email,
-        p_phone: normalizePhone(phone),
+        p_email: preferredContact === 'email' ? email.trim().toLowerCase() : authUser.email,
+        p_phone: preferredContact === 'whatsapp' ? normalizePhone(phone) : '',
         p_preferred_contact: preferredContact,
         p_business_name: '',
         p_role: selectedRole,
@@ -71,7 +86,6 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
       }
 
       await refreshPM()
-      toast.success('Account created')
       onComplete()
     } catch {
       setError('Something went wrong. Please try again.')
@@ -80,15 +94,24 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
     }
   }
 
-  const stepIndex = ['name', 'phone', 'contact', 'role'].indexOf(step)
-
   return (
     <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
-      <div className="px-10 pt-8 pb-2">
-        <ProgressDots current={stepIndex + 1} total={4} />
+      <div className="flex items-center px-6 pt-6 pb-2">
+        {stepIndex > 0 ? (
+          <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        ) : (
+          <div className="w-8" />
+        )}
+        <div className="flex-1">
+          <ProgressDots current={stepIndex + 1} total={4} />
+        </div>
+        <div className="w-8" />
       </div>
 
       <div className="px-10 pb-10 pt-6">
+        {/* Step 1: Name */}
         {step === 'name' && (
           <>
             <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your full name?</h2>
@@ -109,47 +132,56 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
           </>
         )}
 
-        {step === 'phone' && (
+        {/* Step 2: Contact method */}
+        {step === 'contact' && (
           <>
-            <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your number?</h2>
-            <p className={`${typography.bodyText} text-center mt-1`}>
-              We&apos;ll use this for notifications and tenant messages.
-            </p>
+            <h2 className={`${typography.pageTitle} text-center`}>How should we contact you?</h2>
+            <div className="mt-8 space-y-3">
+              <OptionButton label="WhatsApp" selected={false} onClick={() => handleContactSelect('whatsapp')} />
+              <OptionButton label="Email" selected={false} onClick={() => handleContactSelect('email')} />
+            </div>
+          </>
+        )}
+
+        {/* Step 3: Contact detail */}
+        {step === 'contact-detail' && (
+          <>
+            <h2 className={`${typography.pageTitle} text-center`}>
+              {preferredContact === 'whatsapp'
+                ? "What\u2019s your WhatsApp number?"
+                : "What\u2019s your email?"
+              }
+            </h2>
             <div className="mt-8">
-              <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 07456789123"
-                className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePhoneNext() } }}
-              />
+              {preferredContact === 'whatsapp' ? (
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 07456789123"
+                  className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleContactDetailNext() } }}
+                />
+              ) : (
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  type="email"
+                  className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleContactDetailNext() } }}
+                />
+              )}
             </div>
             {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
-            <Button onClick={handlePhoneNext} className="w-full mt-8" size="lg">
+            <Button onClick={handleContactDetailNext} className="w-full mt-8" size="lg">
               Continue
             </Button>
           </>
         )}
 
-        {step === 'contact' && (
-          <>
-            <h2 className={`${typography.pageTitle} text-center`}>How should we reach you?</h2>
-            <div className="mt-8 space-y-3">
-              <OptionButton
-                label="WhatsApp"
-                selected={false}
-                onClick={() => handleContactNext('whatsapp')}
-              />
-              <OptionButton
-                label="Email"
-                selected={false}
-                onClick={() => handleContactNext('email')}
-              />
-            </div>
-          </>
-        )}
-
+        {/* Step 4: Role */}
         {step === 'role' && (
           <>
             <h2 className={`${typography.pageTitle} text-center`}>I am a...</h2>

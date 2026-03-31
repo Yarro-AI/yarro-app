@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Search, MapPin, Check } from 'lucide-react'
+import { Loader2, Search, MapPin, Check, ChevronLeft } from 'lucide-react'
 import { typography } from '@/lib/typography'
 
 interface PropertyCardProps {
@@ -132,11 +132,26 @@ export function PropertyCard({ pmId, onComplete }: PropertyCardProps) {
     }
   }
 
+  const handleBack = () => {
+    if (stage === 'rooms') setStage('type')
+    else if (stage === 'type') setStage('address')
+    else if (stage === 'address') { setStage('postcode'); setPostcodeResult(null) }
+  }
+
   return (
     <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
-      {/* Progress inside card */}
-      <div className="px-10 pt-8 pb-2">
-        <ProgressDots current={2} total={2} />
+      <div className="flex items-center px-6 pt-6 pb-2">
+        {stage !== 'postcode' ? (
+          <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        ) : (
+          <div className="w-8" />
+        )}
+        <div className="flex-1">
+          <ProgressDots current={2} total={2} />
+        </div>
+        <div className="w-8" />
       </div>
 
       <div className="px-10 pb-10 pt-4">
