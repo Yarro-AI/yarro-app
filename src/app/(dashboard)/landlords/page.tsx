@@ -15,7 +15,7 @@ import {
 } from '@/components/detail-drawer'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import Link from 'next/link'
-import { Building2, Contact, MoreHorizontal } from 'lucide-react'
+import { Building2, Contact, MoreHorizontal, Send } from 'lucide-react'
 import { EditableField } from '@/components/editable-field'
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import { CommandSearchInput } from '@/components/command-search-input'
 import { Button } from '@/components/ui/button'
 import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
+import { SendBlastDialog } from '@/components/onboarding/send-blast-dialog'
 
 interface Landlord {
   id: string
@@ -66,6 +67,8 @@ export default function LandlordsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [blastDialogOpen, setBlastDialogOpen] = useState(false)
+  const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
   const filteredLandlords = useMemo(() => {
     if (!search) return landlords
@@ -187,6 +190,7 @@ export default function LandlordsPage() {
   useEffect(() => {
     if (!propertyManager) return
     fetchLandlords()
+    fetchBlastTargets()
   }, [propertyManager])
 
   useEffect(() => {
@@ -202,6 +206,14 @@ export default function LandlordsPage() {
   useEffect(() => {
     resetData(toEditable(selectedLandlord))
   }, [selectedLandlord, resetData])
+
+  const fetchBlastTargets = async () => {
+    const { data } = await supabase.rpc('get_onboarding_send_targets', {
+      p_pm_id: propertyManager!.id,
+      p_entity_type: 'landlord',
+    })
+    if (data) setBlastTargets(data as typeof blastTargets)
+  }
 
   const fetchLandlords = async () => {
     const { data } = await supabase
@@ -420,12 +432,25 @@ export default function LandlordsPage() {
       title="Landlords"
       count={filteredLandlords.length}
       actions={
-        <CommandSearchInput
-          placeholder="Search landlords..."
-          value={search}
-          onChange={setSearch}
-          className="w-64"
-        />
+        <div className="flex items-center gap-2">
+          <CommandSearchInput
+            placeholder="Search landlords..."
+            value={search}
+            onChange={setSearch}
+            className="w-64"
+          />
+          {blastTargets.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBlastDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Send Onboarding ({blastTargets.length})
+            </Button>
+          )}
+        </div>
       }
     >
 
@@ -560,6 +585,15 @@ export default function LandlordsPage() {
         description="Are you sure you want to delete this landlord? This action cannot be undone."
         itemName={selectedLandlord?.full_name || undefined}
         onConfirm={handleDelete}
+      />
+
+      {/* Send Onboarding Blast Dialog */}
+      <SendBlastDialog
+        open={blastDialogOpen}
+        onOpenChange={setBlastDialogOpen}
+        entityType="landlord"
+        targets={blastTargets}
+        onComplete={() => { fetchLandlords(); fetchBlastTargets() }}
       />
     </PageShell>
   )
