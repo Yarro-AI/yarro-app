@@ -55,11 +55,16 @@ interface SidebarCounts {
   contractors: number
 }
 
+interface BadgeCounts {
+  actionableTickets: number
+  complianceIssues: number
+}
+
 interface NavChild {
   href: string
   label: string
   countKey?: keyof SidebarCounts
-  badge?: boolean
+  badgeKey?: keyof BadgeCounts
   comingSoon?: boolean
 }
 
@@ -90,7 +95,7 @@ const navGroups: NavGroup[] = [
     icon: Wrench,
     defaultOpen: false,
     children: [
-      { href: '/tickets', label: 'Jobs', badge: true },
+      { href: '/tickets', label: 'Jobs', badgeKey: 'actionableTickets' },
       { href: '/contractors', label: 'Contractors', countKey: 'contractors' },
     ],
   },
@@ -109,7 +114,7 @@ const navGroups: NavGroup[] = [
     icon: ShieldCheck,
     defaultOpen: false,
     children: [
-      { href: '/compliance', label: 'Certificates', badge: true },
+      { href: '/compliance', label: 'Certificates', badgeKey: 'complianceIssues' },
       { href: '/audit-trail', label: 'Audit Trail' },
       { href: '/tenancies', label: 'Tenancies', comingSoon: true },
     ],
@@ -168,6 +173,7 @@ export function Sidebar() {
     return initial
   })
   const [counts, setCounts] = useState<SidebarCounts>({ properties: 0, landlords: 0, tenants: 0, contractors: 0 })
+  const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({ actionableTickets: 0, complianceIssues: 0 })
   const supabase = createClient()
 
   const toggleCollapsed = () => {
@@ -192,13 +198,24 @@ export function Sidebar() {
   }
 
   const fetchCounts = useCallback(async () => {
-    if (!propertyManager) return
+    if (!propertyManager) {
+      setBadgeCounts({ actionableTickets: 0, complianceIssues: 0 })
+      return
+    }
 
-    const [propsRes, landlordsRes, tenantsRes, contractorsRes] = await Promise.all([
+    const [propsRes, landlordsRes, tenantsRes, contractorsRes, ticketsRes, complianceRes] = await Promise.all([
       supabase.from('c1_properties').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_landlords').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_tenants').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id),
       supabase.from('c1_contractors').select('id', { count: 'exact', head: true }).eq('property_manager_id', propertyManager.id).eq('active', true),
+      // Actionable tickets: open + needs PM attention
+      supabase.from('c1_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_manager_id', propertyManager.id)
+        .eq('status', 'open')
+        .or('handoff.eq.true,pending_review.eq.true'),
+      // Compliance: use RPC for accurate computed statuses (handles "missing" certs + date-based expiry)
+      supabase.rpc('compliance_get_all_statuses', { p_pm_id: propertyManager.id }),
     ])
 
     setCounts({
@@ -206,6 +223,16 @@ export function Sidebar() {
       landlords: landlordsRes.count || 0,
       tenants: tenantsRes.count || 0,
       contractors: contractorsRes.count || 0,
+    })
+
+    const complianceIssues = (complianceRes.data ?? []).filter(
+      (c: { display_status: string }) =>
+        c.display_status === 'expired' || c.display_status === 'expiring_soon' || c.display_status === 'missing'
+    ).length
+
+    setBadgeCounts({
+      actionableTickets: ticketsRes.count || 0,
+      complianceIssues,
     })
   }, [propertyManager, supabase])
 
@@ -430,9 +457,9 @@ export function Sidebar() {
                               {count}
                             </span>
                           )}
-                          {child.badge && (
+                          {child.badgeKey && badgeCounts[child.badgeKey] > 0 && (
                             <span className="text-[10px] font-bold bg-[rgba(220,38,38,0.22)] text-[#FCA5A5] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 mr-2">
-                              !
+                              {badgeCounts[child.badgeKey]}
                             </span>
                           )}
                           {child.comingSoon && (

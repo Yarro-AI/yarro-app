@@ -145,6 +145,11 @@ export function PMProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     // Use server-side logout to properly clear httpOnly cookies
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+    // Clear app-specific localStorage (onboarding/notification state)
+    // Preserves layout prefs (sidebar-collapsed, sidebar-groups)
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('yarro_'))
+      .forEach(k => localStorage.removeItem(k))
     setPropertyManager(null)
     setAuthUser(null)
     setUserId(null)
