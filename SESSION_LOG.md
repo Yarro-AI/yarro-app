@@ -6,7 +6,87 @@
 
 ---
 
-## Latest: 2026-04-01 — Simplified Demo Walkthrough + Cleanup
+## Latest: 2026-04-01 — Sidebar Badge Bug Fix
+
+### Summary
+Fixed backlog bug #1: sidebar notification badges (Jobs, Certificates) were hardcoded to always show `!` regardless of data. Made them data-driven — Jobs badge now shows count of open tickets needing PM attention (handoff or pending_review), Certificates badge shows count of expired/expiring/missing certs via the `compliance_get_all_statuses` RPC. Badges disappear when counts are zero and reset on account switch. Also added red notification dots on collapsed group headers so you can see alerts even when accordion sections are closed. Added `yarro_*` localStorage cleanup on sign out to prevent stale onboarding state leaking across accounts.
+
+### Changes Made
+- `src/components/sidebar.tsx` — replaced hardcoded `badge: true` with data-driven `badgeKey` system, added `BadgeCounts` state, added ticket + compliance queries to `fetchCounts`, added `groupHasBadge` helper + red dot on collapsed group icons
+- `src/contexts/pm-context.tsx` — added `yarro_*` localStorage cleanup in `signOut()`
+
+### Status
+- [x] Build passes (portal type error is from parallel session, not this fix)
+- [x] Committed and pushed to `feat/contractor-onboarding`
+- [ ] Needs visual testing in browser
+
+### Next Session Pickup
+1. **Visual test** — sign in, check sidebar badges reflect real data, sign out and back in to verify cleanup
+2. **Portal session** — continue from previous session log entry below (tenant v2 polish, PortalShell subtitle type error)
+3. **Compliance onboarding session** — separate parallel track
+4. **Remaining bugs** — 8 more in backlog, next highest impact: tenant count off-by-one, ghost notifications, table scroll fix
+
+---
+
+## 2026-04-01 — Portal Template System + Tenant Portal v2
+
+### Summary
+Built a full portal component system from scratch: shared components (PortalShell, PortalCard, PortalBanner, InfoRows, MiniCalendar, OutcomeButton), container/presenter split for all 4 portal pages (tenant, contractor, landlord, OOH), shared types and utils, dev preview route at `/portal-preview/[type]` with state variant switcher. Then redesigned the tenant portal per PRD: two-column layout with navy identity card (bg-sidebar) + white tabbed content card (Details/Updates/Contact). Semantic tokens adopted across all portal components (bg-card, border-border, text-foreground etc.).
+
+### Changes Made
+- `src/components/portal/` — 10 new files: portal-shell, portal-card, portal-banner, info-rows, mini-calendar, outcome-button, tenant-portal, landlord-portal, ooh-portal, contractor-portal, tenant-portal-v2
+- `src/lib/portal-types.ts` — all portal ticket types + new TenantPortalData + PortalActivityEntry
+- `src/lib/portal-utils.ts` — shared formatters (formatDate, formatPhone, formatScheduledSlot, etc.)
+- `src/lib/portal-mock-data.ts` — realistic UK mock data with state variants for all portal types + v2 tenant mocks
+- `src/app/(dashboard)/portal-preview/[type]/page.tsx` — dev preview route with type switcher + variant dropdown
+- `src/app/tenant/[token]/page.tsx` — refactored to thin container
+- `src/app/landlord/[token]/page.tsx` — refactored to thin container
+- `src/app/ooh/[token]/page.tsx` — refactored to thin container
+- `src/app/contractor/[token]/page.tsx` — refactored to thin container
+
+### Status
+- [x] Build passes
+- [x] Preview route works for all 4 portal types
+- [x] Tenant v2 two-column layout built
+- [ ] Not yet committed
+- [ ] Not yet tested in browser (need visual review)
+
+### Next Session Pickup
+1. **Visual review** — run `npm run dev`, visit `/portal-preview/tenant`, check all 4 variants look correct (navy card, tracker, tabs, availability editor)
+2. **Polish** — adjust spacing/colours based on visual review, compare to PRD spec
+3. **Commit** — all portal template work is on `feat/portal-template` branch, uncommitted
+4. **Plan file** — `.claude/plans/woolly-riding-rainbow.md` has the tenant v2 PRD implementation plan
+5. **After tenant is polished** — consider applying similar two-column treatment to other portal types
+6. **Broader context** — portal refactor is Slice A in the build order (see `project_workflow_audit_20260401.md`)
+
+---
+
+## 2026-04-01 — Workflow Audit & Build Order Planning
+
+### Summary
+Full audit of all core workflows (WhatsApp flows, reminders/cron, dashboard data flow). Mapped what's complete vs broken vs missing. Identified 7 buildable slices prioritized for operational readiness. Portal refactor (feat/contractor-onboarding) must ship first — 4 portal pages rewritten into shared components. Twilio templates for entity verification need submitting ASAP (days to approve).
+
+### Changes Made
+- `.claude/plans/nested-tinkering-sunset.md` — full workflow audit plan with 7 slices
+- `.claude/tasks/2026-03-31-onboarding-account-property.md` — marked Complete (was In Progress)
+- `.claude/tasks/journey-operator-onboarding.md` — Slice 2 marked Shipped
+
+### Status
+- [x] Audit complete
+- [x] Build order agreed
+- [ ] No code changes — planning session only
+
+### Next Session Pickup
+1. **Ship portal refactor** — merge `feat/contractor-onboarding` branch (4 portal pages rewritten into shared components in `src/components/portal/`)
+2. **Submit Twilio templates** for entity verification messages (long lead time)
+3. **Regression test (Slice E)** — 1hr time-box, test portal changes + core flows
+4. **Dashboard to-do wiring (Slice C)** — route compliance/rent/tenancy items by source_type
+5. Full build order in memory: `project_workflow_audit_20260401.md`
+6. Plan details: `.claude/plans/nested-tinkering-sunset.md`
+
+---
+
+## 2026-04-01 — Simplified Demo Walkthrough + Cleanup
 
 ### Summary
 Simplified the demo flow to video+copy cards only. Removed all seeded demo data, edge function (yarro-demo-notify), issue picker, interactive WhatsApp approval experiment. Final flow: account card → confetti welcome → 5-page video walkthrough → "You're ready to go" → dashboard with Getting Started. Set up GitHub Actions auto-deploy for edge functions. Fixed stale property data from old accounts.
