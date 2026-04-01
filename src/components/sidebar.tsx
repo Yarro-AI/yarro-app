@@ -246,6 +246,10 @@ export function Sidebar() {
     return pathname === basePath || (basePath !== '/' && pathname.startsWith(basePath + '/'))
   }
 
+  // Check if any child in a group has an active badge
+  const groupHasBadge = (group: NavGroup) =>
+    group.children.some(c => c.badgeKey && badgeCounts[c.badgeKey] > 0)
+
   // Check if any child in a group is active
   const isGroupActive = (group: NavGroup) => group.children.some(c => isActive(c.href))
 
@@ -306,13 +310,16 @@ export function Sidebar() {
                     <Link
                       href={group.children[0]?.href || '/'}
                       className={cn(
-                        'flex items-center justify-center p-2.5 rounded-lg transition-all mt-1',
+                        'flex items-center justify-center p-2.5 rounded-lg transition-all mt-1 relative',
                         isGroupActive(group)
                           ? 'text-white'
                           : 'text-sidebar-foreground hover:text-white hover:bg-sidebar-accent'
                       )}
                     >
                       <GroupIcon className="h-5 w-5" />
+                      {groupHasBadge(group) && (
+                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+                      )}
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right"><p>{group.label}</p></TooltipContent>
@@ -422,7 +429,12 @@ export function Sidebar() {
                       : 'text-sidebar-foreground hover:text-[#B8D4E8]'
                   )}
                 >
-                  <GroupIcon className="h-5 w-5 flex-shrink-0" />
+                  <span className="relative flex-shrink-0">
+                    <GroupIcon className="h-5 w-5" />
+                    {!open && groupHasBadge(group) && (
+                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                    )}
+                  </span>
                   <span className="flex-1">{group.label}</span>
                   <ChevronRight className={cn(
                     'h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200',
