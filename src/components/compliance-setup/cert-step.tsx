@@ -19,6 +19,7 @@ interface CertStepProps {
   onSkip: () => void
   onBack: () => void
   isFirst: boolean
+  onSaveAndReturn?: () => void
 }
 
 export function CertStep({
@@ -32,6 +33,7 @@ export function CertStep({
   onSkip,
   onBack,
   isFirst,
+  onSaveAndReturn,
 }: CertStepProps) {
   const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -236,6 +238,16 @@ export function CertStep({
           </Button>
         </div>
       </div>
+
+      {onSaveAndReturn && (
+        <button
+          type="button"
+          onClick={onSaveAndReturn}
+          className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Save & return later
+        </button>
+      )}
     </div>
   )
 }
