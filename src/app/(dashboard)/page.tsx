@@ -367,7 +367,13 @@ export default function DashboardPage() {
     setRecentEvents(eventsPayload?.events ?? [])
 
     // Onboarding checklist
-    const checklistData = (onboardingRes?.data as unknown as OnboardingChecklistItem[] | null) ?? []
+    const checklistData = ((onboardingRes?.data as unknown as OnboardingChecklistItem[] | null) ?? []).map(item => {
+      // Compliance onboarding now lives on /compliance page
+      if (item.key === 'setup_compliance') {
+        return { ...item, link_href: '/compliance' }
+      }
+      return item
+    })
     setOnboardingChecklist(checklistData)
 
     // If checklist just completed, refresh PM to pick up the new onboarding_completed_at
