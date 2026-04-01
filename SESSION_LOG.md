@@ -6,7 +6,40 @@
 
 ---
 
-## Latest: 2026-03-31 — Demo-First Onboarding + Edge Function + Full Flow Rework
+## Latest: 2026-04-01 — Simplified Demo Walkthrough + Cleanup
+
+### Summary
+Simplified the demo flow to video+copy cards only. Removed all seeded demo data, edge function (yarro-demo-notify), issue picker, interactive WhatsApp approval experiment. Final flow: account card → confetti welcome → 5-page video walkthrough → "You're ready to go" → dashboard with Getting Started. Set up GitHub Actions auto-deploy for edge functions. Fixed stale property data from old accounts.
+
+### Changes Made
+- `src/components/onboarding/demo-walkthrough.tsx` — 5 benefit-driven pages: tenant reports, contractors assigned, access coordinated, photo-verified completion, audit trail. Video placeholders on left, copy on right. No progress dots, flush video, spacious layout.
+- `src/components/onboarding/onboarding-flow.tsx` — removed seed RPC call, removed supabase client import. Clean: account → welcome → demo → ready → done.
+- Deleted `src/components/onboarding/demo-issues.ts` — issue picker removed
+- Deleted `supabase/functions/yarro-demo-notify/` — WhatsApp demo sends removed
+- `supabase/migrations/20260401000000_demo_seed.sql` — removed demo cleanup from onboarding_create_property, removed is_demo filters from checklist RPC
+- `supabase/config.toml` — removed yarro-demo-notify entry
+- `src/app/(dashboard)/page.tsx` — task counter matches visible items only
+- `public/demos/demo-tenant-reports.mp4` — first demo video added
+- Set up GitHub Actions secrets for auto edge function deploy
+- `docs/stability/postmortem-demo-notify-500.md` — post-mortem from edge function debugging
+
+### Status
+- [x] Build passes
+- [x] Committed and pushed
+- [x] RPCs deployed to Supabase (clean versions without is_demo filters)
+- [x] Edge function auto-deploy working via GitHub Actions
+
+### Next Session Pickup
+1. **Contractor onboarding** — same first-visit pattern as tenant onboarding for `/contractors` page
+2. **Record remaining demo videos** — 4 more needed for walkthrough pages 2-5
+3. **Test full flow end-to-end** on Vercel production
+4. Compliance onboarding after contractors
+5. `is_demo` columns still exist on 4 tables (harmless, DEFAULT false) — clean up later if desired
+6. `onboarding_seed_demo` RPC dropped from Supabase but migration file still references it — cosmetic only
+
+---
+
+## 2026-03-31 — Demo-First Onboarding + Edge Function + Full Flow Rework
 
 ### Summary
 Major rework of the onboarding flow to "demo first, setup after." New flow: sign up → account card (name, contact method, contact detail, role) → confetti welcome → 5-page split-screen demo walkthrough → dashboard with Getting Started. Built `yarro-demo-notify` edge function for real WhatsApp sends during demo. Created `onboarding_seed_demo` RPC that creates demo property/tenants/contractor/ticket. Added `is_demo` flag to 4 tables. Fixed multiple loop bugs in the onboarding routing. Getting Started now shows only "Add your property" until a real property exists.
