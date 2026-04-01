@@ -1,7 +1,7 @@
 ## PRD: Onboarding — Account + Property Cards
 **Date:** 2026-03-31
 **Branch:** feat/onboarding-cards
-**Status:** In Progress
+**Status:** Complete
 **Journey:** Operator Onboarding — Slice 2 of 8
 **Scope:** New user signs up → card-based flow to set up account details and first property. Replaces existing /import wizard.
 
@@ -74,9 +74,9 @@ As a new HMO operator, I want to set up my account and first property quickly af
 - Follow card styling from `.claude/docs/patterns.md` and frontend-design skill
 
 ### Done When
-- [ ] All acceptance criteria pass
-- [ ] Test plan passes
-- [ ] `npm run build` passes
-- [ ] Committed, merged to main, pushed
-- [ ] SESSION_LOG.md updated
-- [ ] Journey file updated (slice 2 marked complete)
+- [x] All acceptance criteria pass
+- [x] Test plan passes
+- [x] `npm run build` passes
+- [x] Committed, merged to main, pushed
+- [x] SESSION_LOG.md updated
+- [x] Journey file updated (slice 2 marked complete)

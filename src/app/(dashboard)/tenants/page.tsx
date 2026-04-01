@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download } from 'lucide-react'
+import { Phone, Mail, Building2, CheckCircle, Users, MoreHorizontal, Download, Send, Loader2 } from 'lucide-react'
 import { exportToCSV, TENANT_EXPORT_COLUMNS } from '@/lib/export'
 import { PageShell } from '@/components/page-shell'
 import { CommandSearchInput } from '@/components/command-search-input'
@@ -33,6 +33,7 @@ import { useEditMode, useCreateMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { TENANT_ROLES } from '@/lib/constants'
 import { TenantOnboarding } from '@/components/onboarding/tenant-onboarding'
+import { SendBlastDialog } from '@/components/onboarding/send-blast-dialog'
 
 interface Tenant {
   id: string
@@ -86,6 +87,9 @@ export default function TenantsPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [showTenantOnboarding, setShowTenantOnboarding] = useState(false)
+  const [blastDialogOpen, setBlastDialogOpen] = useState(false)
+  const [blastSending, setBlastSending] = useState(false)
+  const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
   const filteredTenants = useMemo(() => {
     if (!search) return tenants
@@ -218,6 +222,7 @@ export default function TenantsPage() {
     if (!propertyManager) return
     fetchTenants()
     fetchProperties()
+    fetchBlastTargets()
   }, [propertyManager])
 
   useEffect(() => {
@@ -259,6 +264,14 @@ export default function TenantsPage() {
       setShowTenantOnboarding(true)
     }
     setLoading(false)
+  }
+
+  const fetchBlastTargets = async () => {
+    const { data } = await supabase.rpc('get_onboarding_send_targets', {
+      p_pm_id: propertyManager!.id,
+      p_entity_type: 'tenant',
+    })
+    if (data) setBlastTargets(data as typeof blastTargets)
   }
 
   const fetchProperties = async () => {
@@ -527,6 +540,27 @@ export default function TenantsPage() {
             onChange={setSearch}
             className="w-64"
           />
+          {(blastTargets.length > 0 || blastSending) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBlastDialogOpen(true)}
+              disabled={blastSending}
+              className="gap-1.5"
+            >
+              {blastSending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  Send Onboarding Message ({blastTargets.length})
+                </>
+              )}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -690,6 +724,16 @@ export default function TenantsPage() {
         description="Are you sure you want to delete this tenant? This action cannot be undone. Any closed tickets will remain in history."
         itemName={selectedTenant?.full_name || undefined}
         onConfirm={handleDelete}
+      />
+
+      {/* Send Onboarding Blast Dialog */}
+      <SendBlastDialog
+        open={blastDialogOpen}
+        onOpenChange={setBlastDialogOpen}
+        entityType="tenant"
+        targets={blastTargets}
+        onSending={setBlastSending}
+        onComplete={() => { fetchTenants(); fetchBlastTargets() }}
       />
     </PageShell>
     </>

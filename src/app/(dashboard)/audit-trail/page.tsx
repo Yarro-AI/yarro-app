@@ -25,6 +25,44 @@ function formatEventType(type: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// Causal ordering for same-ticket events with near-identical timestamps.
+// DB triggers fire at different microseconds within the same transaction,
+// so CONTRACTOR_ASSIGNED can appear before ISSUE_CREATED without this.
+const CAUSAL_ORDER: Record<string, number> = {
+  ISSUE_CREATED: 0,
+  ISSUE_REPORTED: 0,
+  PRIORITY_CLASSIFIED: 1,
+  PRIORITY_CHANGED: 1,
+  HANDOFF_CREATED: 2,
+  HANDOFF_CHANGED: 2,
+  CONTRACTOR_ASSIGNED: 3,
+  OOH_DISPATCHED: 3,
+  LANDLORD_ALLOCATED: 3,
+  LANDLORD_APPROVED: 4,
+  LANDLORD_DECLINED: 4,
+  QUOTE_RECEIVED: 5,
+  QUOTE_APPROVED: 5,
+  QUOTE_DECLINED: 5,
+  JOB_SCHEDULED: 6,
+  JOB_COMPLETED: 7,
+  TICKET_CLOSED: 8,
+  TICKET_ARCHIVED: 9,
+}
+
+function sortWithCausalOrder(events: AuditEvent[]): AuditEvent[] {
+  return [...events].sort((a, b) => {
+    // Primary: occurred_at descending (newest first)
+    const timeDiff = new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+    // Only apply causal tie-breaker for same-ticket events within 2 seconds
+    if (Math.abs(timeDiff) < 2000 && a.ticket_id && a.ticket_id === b.ticket_id) {
+      const orderA = CAUSAL_ORDER[a.event_type] ?? 5
+      const orderB = CAUSAL_ORDER[b.event_type] ?? 5
+      if (orderA !== orderB) return orderB - orderA // descending: later events first
+    }
+    return timeDiff
+  })
+}
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
   return date.toLocaleDateString('en-GB', {
@@ -93,7 +131,7 @@ export default function AuditTrailPage() {
       .limit(500)
 
     if (data) {
-      setEvents(data as AuditEvent[])
+      setEvents(sortWithCausalOrder(data as AuditEvent[]))
     }
 
     setLoading(false)

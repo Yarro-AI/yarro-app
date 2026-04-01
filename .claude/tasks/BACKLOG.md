@@ -12,6 +12,9 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-04-01] UX: Add loading states/skeletons to all pages — dashboard is top priority, but every page that fetches data should show immediate loading signal (spinner, skeleton, etc.) [priority: high]
+- [2026-04-01] BUG: Compliance reminder and job reminder notifications persist across account deletion/switching — stale notification state not cleared on auth change [priority: high]
+- [2026-04-01] BUG: Tenant onboarding button shows count off by +1 (e.g. 6-tenant HMO says "add 7 tenants", single let says "add 2 tenants"). The start button count is always N+1. Needs analysis [priority: high]
 - [2026-03-31] Bulk CSV upload doesn't dismiss tenant onboarding overlay — navigating to /import while onboarding overlay is active leaves the overlay mounted. Need to gate the overlay off when navigating away or use a layout-level state [priority: high]
 - [2026-03-31] Tenant verification onboarding — build WhatsApp/email verification message templates + send flow. "Verify contact details" button on tenant summary card is currently a dead end [priority: high]
 - [2026-03-27] Dashboard compliance summary card — aggregate expiring/expired certs across all properties, new card on main dashboard [priority: high]
@@ -50,6 +53,7 @@ Review each morning when writing the day's PRD.
 - [2026-03-29] Ghost notifications on Jobs & Compliance after data wipe — pages still show notification badges/counts even though all tickets and certs have been deleted. Likely stale cache, client-side state, or queries not returning empty correctly. Diagnose and fix. [priority: high]
 - [2026-03-30] Zapier CLI integration — download Zapier CLI, build custom API integration for Yarro (expose key actions/triggers to Zapier ecosystem) [priority: medium]
 - [2026-03-30] Onboarding role selection — capture whether the user is a property manager or a landlord during onboarding. Use this to tailor what's shown in the app (e.g. landlords may not need contractor dispatch, PMs need multi-property views). Ties into SSO/onboarding flow design. [priority: high]
+- [2026-04-01] Landlord approval skip for solo operators — `c1_message_next_action` should also skip landlord approval when `landlord_id IS NULL` (not just when `require_landlord_approval = false`). Currently defaults to requiring approval even with no landlord linked, which causes Twilio SMS failure on null phone. One-line fix in the RPC's IF condition. [priority: high]
 - [2026-03-30] Table scroll / page scroll fix — tenants page (and likely all table pages) has broken scroll behaviour. Table should scroll independently or page should scroll naturally. Key pre-demo UI fix. [priority: high]
 - [2026-03-30] Compliance onboarding flow — focus on ONE property: pick a property → select which certs are needed → upload those certs (they may only have 1-2 to hand, option to add rest later) → complete that property's compliance in full. Then send a test reminder message (WhatsApp/email) showing what happens when a cert is about to expire. Gets them to the "aha" moment fast — see the full loop on one property before scaling to the rest. [priority: high]
 

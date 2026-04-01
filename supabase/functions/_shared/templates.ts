@@ -23,7 +23,7 @@ export const TEMPLATES = {
   // ─── Scheduling (yarro-scheduling) ───
   contractor_job_schedule: "HXe1297b1dbd016012026d21cfbddd3308", // 4_contractor_schedule
   pm_landlord_approved: "HX5248963ca973dfaa1880b216f336e863",   // 4b_pm_landlord_approved
-  pm_auto_approved: "HXe2f046212f2c4a9b7809e85cf0eb0816",      // 4c_pm_auto_approved
+  pm_auto_approved: "HX8229a3ad88829b8d5e90ba9b088f47a8",      // copy_4c_pm_auto_approved
   landlord_declined: "HX5cc6505f993cfccd9f8e1e5089bef940",      // 3c_landlord_declined
   pm_job_booked: "HX564f0801aae8a3e9ded1af83efa251d9",          // 5_pm_job_booked
   ll_job_booked: "HXcdb92e07b25d8b27ff8637502aac0784",           // 5b_ll_job_booked
@@ -35,7 +35,7 @@ export const TEMPLATES = {
 
   // ─── Completion (yarro-completion) ───
   pm_job_completed: "HX3a0180411b1dca11e958c23b6945f4d4",        // 7_pm_job_completed
-  ll_job_completed: "HX27c049df0d097f3be7579c201b6453e3",        // 7b_ll_job_completed
+  ll_job_completed: "HXe85f1308e6e9080a2e794a4f82a02ac8",        // copy_7b_ll_job_completed
   pm_job_not_completed: "HXc8356f238f3d6974b639c3a1e236ef1b",    // 7c_pm_job_not_completed
   tenant_job_completed: "HXb8f048607a9084cc6101ae629da4b8af",    // 7d_tenant_job_completed
 
@@ -52,10 +52,14 @@ export const TEMPLATES = {
   compliance_expiry_operator: "HX8f836e6e12955e849bf09b00e9f71295",  // compliance_expiry_operator_contractor
 
   // ─── Rent Reminders (yarro-rent-reminder) ───
-  // TODO: Create these in Twilio Content API and replace PLACEHOLDER SIDs
   rent_reminder_before:  "HXb413545f2da07b74058e874c66ea605d",   // 3 days before due
-  rent_reminder_due:     "PLACEHOLDER_rent_reminder_due",      // on due date — awaiting Twilio approval
-  rent_reminder_overdue: "HXf6910c8f67b2d36b6aa22af42e860dd8",  // 3 days overdue
+  rent_reminder_due:     "HX8c7233c5378f6a55d1c9440fbbd722a1",   // on due date
+  rent_reminder_overdue: "HXf6910c8f67b2d36b6aa22af42e860dd8",   // 3 days overdue
+
+  // ─── Onboarding (yarro-onboarding-send) ───
+  onboarding_tenant:     "HXfdba8e6f489aaceb19b3c40b29d75c81",
+  onboarding_contractor: "HXd196e842edd771c3d557570985eb8c47",
+  onboarding_landlord:   "HXfed69a57608724002695ced3248e2b74",
 
   // ─── Followups (yarro-followups) ───
   contractor_reminder: "HXf09513c99a0af31ae036e7e4c1c69676",     // 9a_contractor_reminder

@@ -302,7 +302,7 @@ function PropertyDetailInner() {
             <TabsTrigger
               key={value}
               value={value}
-              className="gap-1.5 px-3.5 py-2.5 rounded-none border-b-2 border-transparent shadow-none data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-[13px] text-muted-foreground data-[state=active]:text-primary data-[state=active]:font-medium shrink-0 -mb-[0.5px] focus-visible:ring-0 focus-visible:outline-none"
+              className="gap-1.5 px-3.5 py-2.5 rounded-none border-b-2 border-transparent shadow-none data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent text-[13px] text-muted-foreground data-[state=active]:text-primary data-[state=active]:font-medium shrink-0 -mb-[0.5px]"
             >
               <Icon className="h-[13px] w-[13px]" />
               {label}

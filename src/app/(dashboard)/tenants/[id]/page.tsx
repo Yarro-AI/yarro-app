@@ -18,9 +18,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { SendBlastDialog } from '@/components/onboarding/send-blast-dialog'
+import { Button } from '@/components/ui/button'
 import { TENANT_ROLES } from '@/lib/constants'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Send, CheckCircle } from 'lucide-react'
 
 // --- Types ---
 
@@ -31,6 +33,8 @@ interface TenantDetail {
   email: string | null
   role_tag: string | null
   verified_by: string | null
+  verification_sent_at: string | null
+  verified_at: string | null
   property_id: string | null
   room_id: string | null
   created_at: string
@@ -71,6 +75,7 @@ export default function TenantDetailPage() {
   const [loading, setLoading] = useState(true)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [blastDialogOpen, setBlastDialogOpen] = useState(false)
   const [room, setRoom] = useState<{ id: string; room_number: string; room_name: string | null } | null>(null)
 
   const fetchTenant = useCallback(async () => {
@@ -171,13 +176,46 @@ export default function TenantDetailPage() {
         onDelete={() => setDeleteDialogOpen(true)}
       />
 
-      {/* Verification banner */}
-      {!tenant.verified_by && !isEditing && (
-        <div className="mx-8 mb-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
-          <p className="text-[13px] text-warning">
-            Identity not verified. Send {tenant.full_name} a verification link to complete their profile.
-          </p>
-        </div>
+      {/* Onboarding / verification banner */}
+      {!isEditing && (
+        <>
+          {tenant.verification_sent_at && !tenant.verified_at && (
+            <div className="mx-8 mb-4 flex items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[13px] text-muted-foreground">
+                  Onboarding message sent {new Date(tenant.verification_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} — awaiting verification.
+                </p>
+              </div>
+            </div>
+          )}
+          {!tenant.verification_sent_at && tenant.phone && (
+            <div className="mx-8 mb-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+              <p className="text-[13px] text-warning">
+                Onboarding message not sent yet.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBlastDialogOpen(true)}
+                className="gap-1.5"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Send Onboarding Message
+              </Button>
+            </div>
+          )}
+          {tenant.verified_at && (
+            <div className="mx-8 mb-4 flex items-center justify-between rounded-xl border border-success/30 bg-success/10 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-success" />
+                <p className="text-[13px] text-success">
+                  Verified on {new Date(tenant.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.
+                </p>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex-1 min-h-0 overflow-y-auto px-8 pb-6">
@@ -286,6 +324,20 @@ export default function TenantDetailPage() {
       </div>
 
       <ConfirmDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Tenant" description="Are you sure you want to delete this tenant? This action cannot be undone." itemName={tenant.full_name || undefined} onConfirm={handleDelete} />
+
+      <SendBlastDialog
+        open={blastDialogOpen}
+        onOpenChange={setBlastDialogOpen}
+        entityType="tenant"
+        targets={tenant.phone ? [{
+          id: tenant.id,
+          name: tenant.full_name,
+          phone: tenant.phone,
+          verification_sent_at: tenant.verification_sent_at,
+          verified_at: tenant.verified_at,
+        }] : []}
+        onComplete={fetchTenant}
+      />
     </div>
   )
 }

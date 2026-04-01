@@ -253,7 +253,7 @@ export function TicketForm({
     const isPropertyAssigned = (c: Contractor) =>
       c.property_ids === null || (formData.property_id && c.property_ids?.includes(formData.property_id))
     const isCategoryMatch = (c: Contractor) =>
-      formData.category && (c.categories?.includes(formData.category) || c.category === formData.category)
+      formData.category && (c.categories?.some(cat => cat.toLowerCase() === formData.category.toLowerCase()) || c.category?.toLowerCase() === formData.category.toLowerCase())
 
     // Sort: property-assigned first, then category matches, then alphabetically
     const sorted = [...contractors].sort((a, b) => {
@@ -806,7 +806,7 @@ export function TicketForm({
           </label>
           <MultiCombobox
             options={filteredContractors.map((c) => {
-              const isCategoryMatch = formData.category && (c.categories?.includes(formData.category) || c.category === formData.category)
+              const isCategoryMatch = formData.category && (c.categories?.some(cat => cat.toLowerCase() === formData.category.toLowerCase()) || c.category?.toLowerCase() === formData.category.toLowerCase())
               const isPropertyAssigned = isAssignedToProperty(c)
               const displayCats = c.categories?.length ? c.categories.join(', ') : c.category
               return {
@@ -844,7 +844,7 @@ export function TicketForm({
         {formData.category && formData.contractor_ids.length > 0 && (() => {
           const mismatchedContractors = formData.contractor_ids
             .map(id => contractors.find(c => c.id === id))
-            .filter(c => c && !(c.categories?.includes(formData.category) || c.category === formData.category)) as Contractor[]
+            .filter(c => c && !(c.categories?.some(cat => cat.toLowerCase() === formData.category.toLowerCase()) || c.category?.toLowerCase() === formData.category.toLowerCase())) as Contractor[]
           if (mismatchedContractors.length === 0) return null
           return (
             <div className="col-span-2 p-3 bg-amber-50 rounded-lg border border-amber-200">

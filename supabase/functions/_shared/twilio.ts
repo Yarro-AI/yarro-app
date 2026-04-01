@@ -102,7 +102,7 @@ export async function sendWhatsApp(
 // ─── Log + sendAndLog ────────────────────────────────────────────────────
 
 export interface LogParams {
-  ticketId: string;
+  ticketId: string | null;
   messageType: string;
   recipientPhone: string;
   recipientRole: string;
@@ -135,7 +135,7 @@ export async function logOutbound(
 }
 
 export interface SendAndLogParams {
-  ticketId: string;
+  ticketId: string | null;
   recipientPhone: string;
   recipientRole: string;
   messageType: string;

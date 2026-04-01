@@ -123,7 +123,7 @@ Onboarding complete. The operator has a useful dashboard with real data, real au
 | # | Slice | Phase | What ships | Depends On | Status | Est |
 |---|-------|-------|-----------|-----------|--------|-----|
 | 1 | Landing page | 1 | Marketing page, "Start for free" CTA → `/signup` | — | Deferred (website/marketing journey) | Small |
-| 2 | Account + property cards | 2 | Card-based onboarding: account details → property with room count + type. Replaces current wizard steps 1+3 | — | Next | Medium |
+| 2 | Account + property cards | 2 | Card-based onboarding: account details → property with room count + type. Replaces current wizard steps 1+3 | — | **Shipped** | Medium |
 | 3 | Tenant + room cards | 2 | Room-linked tenant creation: "Room 1: [form]", "Room 2: [form]". Register-style, skip vacant rooms | Slice 2 | Pending | Medium |
 | 4 | Tenant verification send | 2 | "Send onboarding message to N tenants?" button. WhatsApp/SMS via existing `generate_verification_token` RPC | Slice 3 | Pending | Small |
 | 5 | Success + dashboard first-run | 3 | Confetti finish screen. Dashboard pre-populates to-do (automations, compliance, verify tenants, add contractor). In-progress shows "Onboarding 3/6". Stat cards show real occupancy/compliance data | Slices 3, 4 | Pending | Medium |

@@ -34,7 +34,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        'flex flex-col h-dvh lg:h-full overflow-hidden',
+        'flex flex-col h-full overflow-hidden',
         className
       )}
     >

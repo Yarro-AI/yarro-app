@@ -8,7 +8,14 @@ import { normalizePhone, isValidUKPhone } from '@/lib/normalize'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, ChevronLeft, SkipForward, Users, Upload, MessageCircle, Mail, Send, CheckCircle } from 'lucide-react'
+import { Loader2, ChevronLeft, SkipForward, Users, Upload, MessageCircle, Mail, Send, CheckCircle, ExternalLink } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 // Keep OptionButton consistent with account-card.tsx onboarding style
 function OnboardingOptionButton({ label, onClick }: { label: string; onClick: () => void }) {
@@ -51,6 +58,10 @@ export function TenantOnboarding() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dismissing, setDismissing] = useState(false)
+
+  const [onboardDialogOpen, setOnboardDialogOpen] = useState(false)
+  const [onboardSending, setOnboardSending] = useState(false)
+  const [onboardSent, setOnboardSent] = useState(false)
 
   const [propertyId, setPropertyId] = useState<string | null>(null)
   const [propertyAddress, setPropertyAddress] = useState('')
@@ -229,6 +240,54 @@ export function TenantOnboarding() {
     } catch {
       setError('Something went wrong. Please try again.')
       setSaving(false)
+    }
+  }
+
+  const whatsappTenants = entries.filter(e => !e.skipped && e.name.trim() && e.contactMethod === 'whatsapp' && e.phone.trim())
+
+  const handleSendOnboarding = async () => {
+    if (!propertyManager) return
+    setOnboardSending(true)
+
+    try {
+      // Fetch the tenant IDs that were just created (match by phone + PM)
+      const phones = whatsappTenants.map(e => normalizePhone(e.phone))
+      const { data: tenants } = await supabase
+        .from('c1_tenants')
+        .select('id')
+        .eq('property_manager_id', propertyManager.id)
+        .in('phone', phones)
+
+      if (!tenants || tenants.length === 0) {
+        toast.error('No matching tenants found')
+        setOnboardSending(false)
+        return
+      }
+
+      const { data, error: fnError } = await supabase.functions.invoke('yarro-onboarding-send', {
+        body: {
+          entity_type: 'tenant',
+          entity_ids: tenants.map(t => t.id),
+          pm_id: propertyManager.id,
+        },
+      })
+
+      if (fnError) {
+        toast.error(`Failed to send: ${fnError.message}`)
+      } else {
+        const resp = data as { sent: number; failed: number; warning?: string }
+        if (resp.warning) {
+          toast.warning(resp.warning)
+        } else if (resp.sent > 0) {
+          toast.success(`Sent ${resp.sent} onboarding message${resp.sent > 1 ? 's' : ''}`)
+        }
+        setOnboardSent(true)
+      }
+    } catch {
+      toast.error('Failed to send onboarding messages')
+    } finally {
+      setOnboardSending(false)
+      setOnboardDialogOpen(false)
     }
   }
 
@@ -467,16 +526,43 @@ export function TenantOnboarding() {
                 )}
               </div>
 
-              {/* Verify button — dead end for now */}
-              <Button
-                variant="outline"
-                className="w-full mb-3"
-                size="lg"
-                onClick={() => toast.info('Tenant verification coming soon')}
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Verify contact details
-              </Button>
+              {/* Send onboarding message */}
+              {whatsappTenants.length > 0 && !onboardSent && (
+                <Button
+                  variant="outline"
+                  className="w-full mb-3"
+                  size="lg"
+                  disabled={onboardSending}
+                  onClick={() => setOnboardDialogOpen(true)}
+                >
+                  {onboardSending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Onboarding Message ({whatsappTenants.length})
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {onboardSent && (
+                <Button
+                  variant="outline"
+                  className="w-full mb-3"
+                  size="lg"
+                  onClick={() => {
+                    setDismissing(true)
+                    setTimeout(() => router.push('/tenants'), 600)
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Tenants
+                </Button>
+              )}
 
               <Button onClick={handleDismiss} className="w-full" size="lg">
                 Done
@@ -485,6 +571,60 @@ export function TenantOnboarding() {
           </div>
         )}
       </div>
+
+      {/* Onboarding message preview dialog */}
+      <Dialog open={onboardDialogOpen} onOpenChange={setOnboardDialogOpen}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Send Onboarding Message</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-muted-foreground mb-4">
+            The following WhatsApp message will be sent to {whatsappTenants.length} tenant{whatsappTenants.length !== 1 ? 's' : ''}:
+          </p>
+
+          {/* Message preview */}
+          <div className="rounded-xl bg-muted/50 border border-border p-4 text-sm space-y-2">
+            <p>Hi <span className="font-medium">[First name]</span>, Adam from Yarro here.</p>
+            <p><span className="font-medium">{propertyManager?.business_name || propertyManager?.name || 'Your property manager'}</span> has added you as a tenant at <span className="font-medium">{streetAddress}</span>.</p>
+            <p>When you need to report a maintenance issue, send a WhatsApp message to <span className="font-mono font-medium">+44 7446 904822</span> describing the problem.</p>
+            <p>We&apos;ll log it, and your property manager will be notified straight away.</p>
+            <p>No sign-up required!</p>
+          </div>
+
+          {/* Recipient list */}
+          <div className="max-h-40 overflow-y-auto space-y-1.5 mt-2">
+            {whatsappTenants.map((entry) => (
+              <div
+                key={entry.room_id}
+                className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+              >
+                <span className="font-medium truncate">{entry.name}</span>
+                <span className="font-mono text-xs text-muted-foreground ml-2">{entry.phone}</span>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOnboardDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendOnboarding} disabled={onboardSending} className="gap-2">
+              {onboardSending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Send Onboarding Message ({whatsappTenants.length})
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
