@@ -205,30 +205,33 @@ function CertFormCard({
           {propertyAddress.split(',')[0]}
         </p>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Expiry date *</label>
+            <label className="text-sm font-medium mb-2 block">Expiry date *</label>
             <Input
               type="date"
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
+              className="h-12 rounded-xl text-base"
               autoFocus
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Issued by</label>
+            <label className="text-sm font-medium mb-2 block">Issued by</label>
             <Input
               value={issuedBy}
               onChange={(e) => setIssuedBy(e.target.value)}
               placeholder="e.g. British Gas, Lambeth Council"
+              className="h-12 rounded-xl text-base placeholder:text-base"
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Certificate number</label>
+            <label className="text-sm font-medium mb-2 block">Certificate number</label>
             <Input
               value={certNumber}
               onChange={(e) => setCertNumber(e.target.value)}
               placeholder="Optional"
+              className="h-12 rounded-xl text-base placeholder:text-base"
             />
           </div>
           <div>
@@ -455,7 +458,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
       }`}
     >
       <div
-        className={`w-full max-w-lg px-4 transition-all duration-500 ${
+        className={`w-full max-w-xl px-4 transition-all duration-500 ${
           dismissing ? 'opacity-0 scale-95 translate-y-4' : 'opacity-100 scale-100 translate-y-0'
         }`}
       >
@@ -508,16 +511,10 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
               )}
 
               <h2 className={`${typography.pageTitle} text-center`}>
-                Which certificates does this property need?
+                What certificates does {currentProperty.address.split(',')[0]} need?
               </h2>
-              <p className={`${typography.bodyText} text-center mt-1 mb-1`}>
-                {currentProperty.address.split(',')[0]}
-              </p>
-              <p className="text-xs text-muted-foreground text-center mb-6">
-                Legally required ones are pre-selected
-              </p>
 
-              <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto mb-6">
+              <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto mt-6 mb-6">
                 {CERTIFICATE_TYPES.map(ct => (
                   <ToggleOptionButton
                     key={ct}
