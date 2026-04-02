@@ -164,7 +164,7 @@ export type Database = {
           created_at: string
           external_ref: string | null
           id: string
-          is_demo: boolean
+          is_demo: boolean | null
           property_ids: string[] | null
           property_manager_id: string | null
           service_areas: string[] | null
@@ -187,7 +187,7 @@ export type Database = {
           created_at?: string
           external_ref?: string | null
           id?: string
-          is_demo?: boolean
+          is_demo?: boolean | null
           property_ids?: string[] | null
           property_manager_id?: string | null
           service_areas?: string[] | null
@@ -210,7 +210,7 @@ export type Database = {
           created_at?: string
           external_ref?: string | null
           id?: string
-          is_demo?: boolean
+          is_demo?: boolean | null
           property_ids?: string[] | null
           property_manager_id?: string | null
           service_areas?: string[] | null
@@ -659,6 +659,10 @@ export type Database = {
           phone: string | null
           property_manager_id: string | null
           updated_at: string
+          verification_sent_at: string | null
+          verification_token: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           _audit_log?: Json | null
@@ -673,6 +677,10 @@ export type Database = {
           phone?: string | null
           property_manager_id?: string | null
           updated_at?: string
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           _audit_log?: Json | null
@@ -687,6 +695,10 @@ export type Database = {
           phone?: string | null
           property_manager_id?: string | null
           updated_at?: string
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -907,7 +919,7 @@ export type Database = {
           emergency_access_contact: string | null
           external_ref: string | null
           id: string
-          is_demo: boolean
+          is_demo: boolean | null
           landlord_email: string | null
           landlord_id: string | null
           landlord_name: string | null
@@ -929,7 +941,7 @@ export type Database = {
           emergency_access_contact?: string | null
           external_ref?: string | null
           id?: string
-          is_demo?: boolean
+          is_demo?: boolean | null
           landlord_email?: string | null
           landlord_id?: string | null
           landlord_name?: string | null
@@ -951,7 +963,7 @@ export type Database = {
           emergency_access_contact?: string | null
           external_ref?: string | null
           id?: string
-          is_demo?: boolean
+          is_demo?: boolean | null
           landlord_email?: string | null
           landlord_id?: string | null
           landlord_name?: string | null
@@ -1245,7 +1257,7 @@ export type Database = {
           external_ref: string | null
           full_name: string | null
           id: string
-          is_demo: boolean
+          is_demo: boolean | null
           phone: string | null
           property_id: string | null
           property_manager_id: string | null
@@ -1265,7 +1277,7 @@ export type Database = {
           external_ref?: string | null
           full_name?: string | null
           id?: string
-          is_demo?: boolean
+          is_demo?: boolean | null
           phone?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -1285,7 +1297,7 @@ export type Database = {
           external_ref?: string | null
           full_name?: string | null
           id?: string
-          is_demo?: boolean
+          is_demo?: boolean | null
           phone?: string | null
           property_id?: string | null
           property_manager_id?: string | null
@@ -1351,7 +1363,7 @@ export type Database = {
           held_at: string | null
           id: string
           images: Json | null
-          is_demo: boolean
+          is_demo: boolean | null
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
@@ -1424,6 +1436,7 @@ export type Database = {
           held_at?: string | null
           id?: string
           images?: Json | null
+          is_demo?: boolean | null
           is_manual?: boolean | null
           issue_description?: string | null
           issue_title?: string | null
@@ -1496,6 +1509,7 @@ export type Database = {
           held_at?: string | null
           id?: string
           images?: Json | null
+          is_demo?: boolean | null
           is_manual?: boolean | null
           issue_description?: string | null
           issue_title?: string | null
@@ -1830,7 +1844,7 @@ export type Database = {
           held_at: string | null
           id: string
           images: Json | null
-          is_demo: boolean
+          is_demo: boolean | null
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
@@ -1922,6 +1936,7 @@ export type Database = {
         Returns: Json[]
       }
       c1_get_landlord_ticket: { Args: { p_token: string }; Returns: Json }
+      c1_get_onboarding_checklist: { Args: { p_pm_id: string }; Returns: Json }
       c1_get_ooh_contacts: {
         Args: { p_pm_id: string }
         Returns: {
@@ -2267,6 +2282,10 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: string
       }
+      generate_verification_tokens_batch: {
+        Args: { p_entity_ids: string[]; p_entity_type: string; p_pm_id: string }
+        Returns: Json
+      }
       get_ai_actions_count: { Args: { p_pm_id: string }; Returns: Json }
       get_compliance_expiring: {
         Args: { p_days_ahead?: number; p_pm_id?: string }
@@ -2290,6 +2309,10 @@ export type Database = {
         }[]
       }
       get_occupancy_summary: { Args: { p_pm_id: string }; Returns: Json }
+      get_onboarding_send_targets: {
+        Args: { p_entity_type: string; p_pm_id: string }
+        Returns: Json
+      }
       get_pm_id: { Args: never; Returns: string }
       get_rent_dashboard_summary: { Args: { p_pm_id: string }; Returns: Json }
       get_rent_income_summary: { Args: { p_pm_id: string }; Returns: Json }
@@ -2377,10 +2400,6 @@ export type Database = {
         }
         Returns: Json
       }
-      c1_get_onboarding_checklist: {
-        Args: { p_pm_id: string }
-        Returns: Json
-      }
       onboarding_create_property: {
         Args: {
           p_address: string
@@ -2393,10 +2412,16 @@ export type Database = {
         Returns: Json
       }
       onboarding_create_tenants: {
+        Args: { p_pm_id: string; p_property_id: string; p_tenants: Json }
+        Returns: Json
+      }
+      onboarding_seed_demo: {
         Args: {
+          p_category?: string
+          p_issue_description?: string
+          p_issue_title?: string
           p_pm_id: string
-          p_property_id: string
-          p_tenants: Json
+          p_priority?: string
         }
         Returns: Json
       }
