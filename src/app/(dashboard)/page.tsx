@@ -142,11 +142,11 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [complianceSummary, setComplianceSummary] = useState<{
-    actions_needed: number; expired: number; expiring_unscheduled: number;
+    actions_needed: number; expired: number; expiring_soon: number;
     review: number; missing: number; renewal_scheduled: number; valid: number;
     compliant_properties: number; total_properties: number; total_required: number
   }>({
-    actions_needed: 0, expired: 0, expiring_unscheduled: 0,
+    actions_needed: 0, expired: 0, expiring_soon: 0,
     review: 0, missing: 0, renewal_scheduled: 0, valid: 0,
     compliant_properties: 0, total_properties: 0, total_required: 0,
   })
@@ -236,7 +236,7 @@ export default function DashboardPage() {
     setComplianceSummary({
       actions_needed: summaryData?.actions_needed ?? 0,
       expired: summaryData?.expired ?? 0,
-      expiring_unscheduled: summaryData?.expiring_unscheduled ?? 0,
+      expiring_soon: summaryData?.expiring_soon ?? 0,
       review: summaryData?.review ?? 0,
       missing: summaryData?.missing ?? 0,
       renewal_scheduled: summaryData?.renewal_scheduled ?? 0,
@@ -549,8 +549,8 @@ export default function DashboardPage() {
           <StatCard
             label="Compliance"
             value={complianceSummary.actions_needed > 0 ? `${complianceSummary.actions_needed} actions` : complianceSummary.total_required > 0 ? 'All clear' : '—'}
-            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring_unscheduled > 0 ? `${complianceSummary.expiring_unscheduled} expiring` : complianceSummary.missing > 0 ? `${complianceSummary.missing} missing` : complianceSummary.total_required > 0 ? `${complianceSummary.compliant_properties}/${complianceSummary.total_properties} properties compliant` : 'No certificates'}
-            accentColor={complianceSummary.expired > 0 || complianceSummary.missing > 0 ? 'danger' : complianceSummary.expiring_unscheduled > 0 || complianceSummary.review > 0 ? 'warning' : 'success'}
+            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring_soon > 0 ? `${complianceSummary.expiring_soon} expiring` : complianceSummary.missing > 0 ? `${complianceSummary.missing} missing` : complianceSummary.total_required > 0 ? `${complianceSummary.compliant_properties}/${complianceSummary.total_properties} properties compliant` : 'No certificates'}
+            accentColor={complianceSummary.expired > 0 || complianceSummary.missing > 0 ? 'danger' : complianceSummary.expiring_soon > 0 || complianceSummary.review > 0 ? 'warning' : 'success'}
             icon={ShieldCheck}
           />
           <StatCard
