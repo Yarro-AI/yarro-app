@@ -290,7 +290,7 @@ export default function CompliancePage() {
     >
       <DataTable data={filteredCertificates} columns={columns}
         getRowId={(row) => row.cert_id || `${row.property_id}-${row.certificate_type}`}
-        onRowClick={(row) => { window.location.href = row.cert_id ? `/compliance/${row.cert_id}` : `/properties/${row.property_id}` }}
+        onRowClick={(row) => { window.location.href = row.cert_id ? `/compliance/${row.cert_id}` : `/compliance/new?property_id=${row.property_id}&type=${row.certificate_type}` }}
         loading={loading}
         emptyMessage={
           <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
