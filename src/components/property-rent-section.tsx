@@ -41,6 +41,18 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
 
   const fetchSummary = useCallback(async () => {
     setLoading(true)
+
+    // Auto-generate entries for current month (idempotent, silent)
+    const today = new Date()
+    if (month === today.getMonth() + 1 && year === today.getFullYear()) {
+      await supabase.rpc('create_rent_ledger_entries', {
+        p_property_id: propertyId,
+        p_pm_id: pmId,
+        p_month: month,
+        p_year: year,
+      })
+    }
+
     const { data, error } = await supabase.rpc('get_rent_summary_for_property', {
       p_property_id: propertyId,
       p_pm_id: pmId,
@@ -220,7 +232,7 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
                 No rent entries for {shortMonthLabel}
               </p>
             )}
-            <button
+            {!hasLedgerEntries && <button
               type="button"
               onClick={handleGenerate}
               disabled={generating}
@@ -228,7 +240,7 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
             >
               {generating && <Loader2 className="h-3 w-3 animate-spin" />}
               Generate {shortMonthLabel} Rent
-            </button>
+            </button>}
           </div>
 
           {/* Table */}

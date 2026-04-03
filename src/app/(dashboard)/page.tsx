@@ -154,6 +154,9 @@ export default function DashboardPage() {
     total_rooms: number; occupied: number; vacant: number; ending_soon: number
   }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
   const [aiActionsCount, setAiActionsCount] = useState(0)
+  const [rentIncome, setRentIncome] = useState<{
+    expected_amount: number; collected_amount: number; outstanding_amount: number; overdue_amount: number
+  }>({ expected_amount: 0, collected_amount: 0, outstanding_amount: 0, overdue_amount: 0 })
   const [onboardingChecklist, setOnboardingChecklist] = useState<OnboardingChecklistItem[]>([])
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [spotlightVisible, setSpotlightVisible] = useState(false)
@@ -165,7 +168,15 @@ export default function DashboardPage() {
 
     try {
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes, onboardingRes] = await Promise.all([
+    // Fire-and-forget: auto-generate rent entries for current month (idempotent)
+    const now = new Date()
+    supabase.rpc('auto_generate_rent_entries' as never, {
+      p_pm_id: propertyManager.id,
+      p_month: now.getMonth() + 1,
+      p_year: now.getFullYear(),
+    } as never)
+
+    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes, onboardingRes, rentIncomeRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -229,6 +240,8 @@ export default function DashboardPage() {
       propertyManager.onboarding_completed_at
         ? Promise.resolve({ data: null })
         : supabase.rpc('c1_get_onboarding_checklist', { p_pm_id: propertyManager.id }),
+      // Rent income — £ amounts for current month
+      supabase.rpc('get_rent_income_summary' as never, { p_pm_id: propertyManager.id } as never),
     ])
 
     // Process compliance summary — RPC returns action-based counts
@@ -258,6 +271,15 @@ export default function DashboardPage() {
     // Process AI actions count
     const aiData = aiActionsRes?.data as Record<string, number> | null
     setAiActionsCount(aiData?.count ?? 0)
+
+    // Process rent income summary
+    const rentData = rentIncomeRes?.data as Record<string, number> | null
+    setRentIncome({
+      expected_amount: rentData?.expected_amount ?? 0,
+      collected_amount: rentData?.collected_amount ?? 0,
+      outstanding_amount: rentData?.outstanding_amount ?? 0,
+      overdue_amount: rentData?.overdue_amount ?? 0,
+    })
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
@@ -535,7 +557,16 @@ export default function DashboardPage() {
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-6">
         {/* Stat row */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+          <Link href="/rent">
+            <StatCard
+              label="Rent"
+              value={rentIncome.expected_amount > 0 ? `£${Math.round(rentIncome.collected_amount).toLocaleString('en-GB')}` : '—'}
+              subtitle={rentIncome.overdue_amount > 0 ? `£${Math.round(rentIncome.overdue_amount).toLocaleString('en-GB')} overdue` : rentIncome.outstanding_amount > 0 ? `£${Math.round(rentIncome.outstanding_amount).toLocaleString('en-GB')} outstanding` : rentIncome.expected_amount > 0 ? 'All collected' : 'No rent configured'}
+              accentColor={rentIncome.overdue_amount > 0 ? 'danger' : rentIncome.outstanding_amount > 0 ? 'warning' : 'success'}
+              icon={Banknote}
+            />
+          </Link>
           <StatCard
             label="Occupancy"
             value={occupancySummary.total_rooms > 0 ? `${Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100)}%` : '—'}

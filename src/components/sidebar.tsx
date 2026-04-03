@@ -104,9 +104,7 @@ const navGroups: NavGroup[] = [
     icon: Banknote,
     defaultOpen: false,
     children: [
-      { href: '/rent', label: 'Rent', comingSoon: true },
-      { href: '/invoices', label: 'Invoices', comingSoon: true },
-      { href: '/expenses', label: 'Expense Tracker', comingSoon: true },
+      { href: '/rent', label: 'Rent' },
     ],
   },
   {
@@ -116,7 +114,6 @@ const navGroups: NavGroup[] = [
     children: [
       { href: '/compliance', label: 'Certificates', badgeKey: 'complianceIssues' },
       { href: '/audit-trail', label: 'Audit Trail' },
-      { href: '/tenancies', label: 'Tenancies', comingSoon: true },
     ],
   },
   {

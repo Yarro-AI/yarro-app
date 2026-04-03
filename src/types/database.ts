@@ -25,9 +25,11 @@ export type Database = {
           id: string
           issued_by: string | null
           issued_date: string | null
+          last_reminder_at: string | null
           notes: string | null
           property_id: string
           property_manager_id: string | null
+          reminder_count: number
           reminder_days_before: number | null
           reminder_sent_at: string | null
           status: string
@@ -43,9 +45,11 @@ export type Database = {
           id?: string
           issued_by?: string | null
           issued_date?: string | null
+          last_reminder_at?: string | null
           notes?: string | null
           property_id: string
           property_manager_id?: string | null
+          reminder_count?: number
           reminder_days_before?: number | null
           reminder_sent_at?: string | null
           status?: string
@@ -61,9 +65,11 @@ export type Database = {
           id?: string
           issued_by?: string | null
           issued_date?: string | null
+          last_reminder_at?: string | null
           notes?: string | null
           property_id?: string
           property_manager_id?: string | null
+          reminder_count?: number
           reminder_days_before?: number | null
           reminder_sent_at?: string | null
           status?: string
@@ -1716,6 +1722,11 @@ export type Database = {
       }
     }
     Functions: {
+      auto_generate_rent_all_pms: { Args: never; Returns: undefined }
+      auto_generate_rent_entries: {
+        Args: { p_month: number; p_pm_id: string; p_year: number }
+        Returns: number
+      }
       bulk_import_properties: {
         Args: { p_data: Json; p_pm_id: string }
         Returns: Json
@@ -2253,6 +2264,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      compliance_submit_contractor_renewal: {
+        Args: {
+          p_certificate_number?: string
+          p_document_url: string
+          p_expiry_date: string
+          p_issued_by?: string
+          p_notes?: string
+          p_token: string
+        }
+        Returns: Json
+      }
       compliance_upsert_certificate: {
         Args: {
           p_certificate_number?: string
@@ -2308,6 +2330,7 @@ export type Database = {
           property_address: string
           property_id: string
           property_manager_id: string
+          reminder_count: number
           reminder_days_before: number
         }[]
       }
@@ -2317,8 +2340,63 @@ export type Database = {
         Returns: Json
       }
       get_pm_id: { Args: never; Returns: string }
+      get_rent_cashflow_distribution: {
+        Args: { p_month: number; p_pm_id: string; p_year: number }
+        Returns: {
+          collected_amount: number
+          due_day: number
+          entry_count: number
+          expected_amount: number
+        }[]
+      }
+      get_rent_collection_trend: {
+        Args: { p_months_back?: number; p_pm_id: string }
+        Returns: {
+          collection_rate: number
+          entry_count: number
+          month: number
+          month_label: string
+          total_collected: number
+          total_due: number
+          total_overdue: number
+          year: number
+        }[]
+      }
       get_rent_dashboard_summary: { Args: { p_pm_id: string }; Returns: Json }
       get_rent_income_summary: { Args: { p_pm_id: string }; Returns: Json }
+      get_rent_ledger_for_month: {
+        Args: { p_month: number; p_pm_id: string; p_year: number }
+        Returns: {
+          amount_due: number
+          amount_paid: number
+          due_date: string
+          effective_status: string
+          property_address: string
+          property_id: string
+          rent_ledger_id: string
+          room_number: string
+          tenant_id: string
+          tenant_name: string
+        }[]
+      }
+      get_rent_portfolio_summary: {
+        Args: { p_month: number; p_pm_id: string; p_year: number }
+        Returns: {
+          collection_rate: number
+          occupied_rooms: number
+          outstanding: number
+          overdue_amount: number
+          overdue_count: number
+          paid_count: number
+          partial_count: number
+          pending_count: number
+          property_address: string
+          property_id: string
+          total_due: number
+          total_paid: number
+          total_rooms: number
+        }[]
+      }
       get_rent_reminders_due: {
         Args: never
         Returns: {
@@ -2359,6 +2437,22 @@ export type Database = {
           room_number: string
           tenant_id: string
           tenant_name: string
+        }[]
+      }
+      get_rent_tenant_health: {
+        Args: { p_months_back?: number; p_pm_id: string }
+        Returns: {
+          current_month_status: string
+          late_count: number
+          months_tracked: number
+          on_time_count: number
+          on_time_rate: number
+          property_address: string
+          room_number: string
+          tenant_id: string
+          tenant_name: string
+          total_owed: number
+          unpaid_count: number
         }[]
       }
       get_rooms_for_property: {
