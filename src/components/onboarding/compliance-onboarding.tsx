@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
@@ -50,6 +50,11 @@ function ToggleOptionButton({ label, selected, onClick }: {
 
 // --- Cert form card (local sub-component) ---
 
+interface ContractorOption {
+  id: string
+  contractor_name: string
+}
+
 interface CertFormCardProps {
   certType: CertificateType
   propertyAddress: string
@@ -62,12 +67,14 @@ interface CertFormCardProps {
   onBack: () => void
   onSaveAndReturn: () => void
   isFirst: boolean
+  contractors: ContractorOption[]
 }
 
 function CertFormCard({
   certType, propertyAddress, propertyId, pmId,
   stepNumber, totalSteps,
   onNext, onSkip, onBack, onSaveAndReturn, isFirst,
+  contractors,
 }: CertFormCardProps) {
   const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -76,6 +83,8 @@ function CertFormCard({
   const [certNumber, setCertNumber] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
+  const [contractorId, setContractorId] = useState<string>('')
+  const [reminderDays, setReminderDays] = useState<number>(60)
 
   const label = CERTIFICATE_LABELS[certType] || certType
 
@@ -133,8 +142,8 @@ function CertFormCard({
       p_certificate_number: certNumber || null,
       p_issued_by: issuedBy || null,
       p_notes: null,
-      p_reminder_days_before: 60,
-      p_contractor_id: null,
+      p_reminder_days_before: reminderDays,
+      p_contractor_id: contractorId || null,
     })
 
     if (error) {
@@ -264,6 +273,33 @@ function CertFormCard({
               </button>
             )}
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Remind me</label>
+              <select
+                value={reminderDays}
+                onChange={(e) => setReminderDays(Number(e.target.value))}
+                className="w-full h-12 rounded-xl text-sm bg-background border border-border px-3"
+              >
+                <option value={30}>30 days before</option>
+                <option value={60}>60 days before</option>
+                <option value={90}>90 days before</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Auto-dispatch</label>
+              <select
+                value={contractorId}
+                onChange={(e) => setContractorId(e.target.value)}
+                className="w-full h-12 rounded-xl text-sm bg-background border border-border px-3"
+              >
+                <option value="">None</option>
+                {contractors.map((c) => (
+                  <option key={c.id} value={c.id}>{c.contractor_name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Actions */}
@@ -320,6 +356,21 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [dismissing, setDismissing] = useState(false)
+  const [contractors, setContractors] = useState<ContractorOption[]>([])
+
+  // Fetch contractors for this PM (once)
+  useEffect(() => {
+    async function fetchContractors() {
+      const { data } = await supabase
+        .from('c1_contractors')
+        .select('id, contractor_name')
+        .eq('property_manager_id', pmId)
+        .order('contractor_name')
+      if (data) setContractors(data)
+    }
+    fetchContractors()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pmId])
 
   // Select-types state
   const [currentPropertyIndex, setCurrentPropertyIndex] = useState(0)
@@ -557,6 +608,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
               onBack={() => setCurrentCertIndex(prev => Math.max(0, prev - 1))}
               onSaveAndReturn={handleSaveAndReturn}
               isFirst={currentCertIndex === 0}
+              contractors={contractors}
             />
           </div>
         )}
