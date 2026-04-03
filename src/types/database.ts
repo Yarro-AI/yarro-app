@@ -2189,6 +2189,10 @@ export type Database = {
         Args: { p_cert_id: string; p_pm_id: string }
         Returns: boolean
       }
+      compliance_dispatch_renewal: {
+        Args: { p_cert_id: string; p_contractor_id?: string; p_pm_id: string }
+        Returns: Json
+      }
       compliance_get_all_statuses: {
         Args: { p_pm_id: string }
         Returns: {
@@ -2497,17 +2501,28 @@ export type Database = {
         }
         Returns: Json
       }
-      onboarding_create_property: {
-        Args: {
-          p_address: string
-          p_city: string
-          p_pm_id: string
-          p_postcode: string
-          p_property_type?: string
-          p_room_count?: number
-        }
-        Returns: Json
-      }
+      onboarding_create_property:
+        | {
+            Args: {
+              p_address: string
+              p_city?: string
+              p_pm_id: string
+              p_property_type?: string
+              p_room_count?: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address: string
+              p_city: string
+              p_pm_id: string
+              p_postcode: string
+              p_property_type?: string
+              p_room_count?: number
+            }
+            Returns: Json
+          }
       onboarding_create_tenants: {
         Args: { p_pm_id: string; p_property_id: string; p_tenants: Json }
         Returns: Json

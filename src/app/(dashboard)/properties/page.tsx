@@ -125,7 +125,7 @@ export default function PropertiesPage() {
   const [landlordOptions, setLandlordOptions] = useState<LandlordOption[]>([])
   // Map of property_id → worst compliance status
   const [complianceByProperty, setComplianceByProperty] = useState<
-    Map<string, 'valid' | 'expiring' | 'expired' | 'missing'>
+    Map<string, 'valid' | 'expiring' | 'expired' | 'incomplete'>
   >(new Map())
   const supabase = createClient()
 
@@ -275,17 +275,17 @@ export default function PropertiesPage() {
 
     // Group by property_id and find the worst status per property
     const severityRank: Record<string, number> = {
-      expired: 5, missing: 4, expiring_soon: 3, review: 2,
-      renewal_scheduled: 1, valid: 0,
+      expired: 5, incomplete: 4, expiring_soon: 3, review: 2,
+      renewal_requested: 1, renewal_scheduled: 1, valid: 0,
     }
-    const statusMap = new Map<string, 'valid' | 'expiring' | 'expired' | 'missing'>()
+    const statusMap = new Map<string, 'valid' | 'expiring' | 'expired' | 'incomplete'>()
 
     for (const row of data as unknown as Array<{ property_id: string; display_status: string }>) {
-      const displayToLegacy: Record<string, 'valid' | 'expiring' | 'expired' | 'missing'> = {
+      const displayToLegacy: Record<string, 'valid' | 'expiring' | 'expired' | 'incomplete'> = {
         valid: 'valid', expiring_soon: 'expiring', expired: 'expired',
-        missing: 'missing', review: 'expiring', renewal_scheduled: 'valid',
+        incomplete: 'incomplete', review: 'expiring', renewal_requested: 'valid', renewal_scheduled: 'valid',
       }
-      const mapped = displayToLegacy[row.display_status] || 'missing'
+      const mapped = displayToLegacy[row.display_status] || 'incomplete'
       const current = statusMap.get(row.property_id)
       const currentRank = current ? (severityRank[current] ?? 0) : -1
       if ((severityRank[row.display_status] ?? 0) > currentRank) {

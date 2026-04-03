@@ -17,12 +17,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,9 +32,10 @@ import {
   CERTIFICATE_LABELS,
   type CertificateType,
 } from '@/lib/constants'
-import { ShieldCheck, Printer, Settings2, Check } from 'lucide-react'
+import { ShieldCheck, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+
 import Link from 'next/link'
 import { ComplianceOnboarding } from '@/components/onboarding/compliance-onboarding'
 
@@ -57,18 +52,8 @@ interface ComplianceRow {
   property_address: string
 }
 
-type StatusFilter = 'all' | 'expired' | 'expiring_soon' | 'missing' | 'valid'
+type StatusFilter = 'all' | 'expired' | 'expiring_soon' | 'incomplete' | 'valid'
 
-interface RequirementRow {
-  property_id: string
-  certificate_type: string
-  is_required: boolean
-}
-
-interface PropertyOption {
-  id: string
-  address: string
-}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—'
@@ -86,9 +71,7 @@ export default function CompliancePage() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportProperty, setExportProperty] = useState<string>('all')
   const [exportCertType, setExportCertType] = useState<string>('all')
-  const [configOpen, setConfigOpen] = useState(false)
-  const [configRequirements, setConfigRequirements] = useState<Map<string, Map<string, boolean>>>(new Map())
-  const [configProperties, setConfigProperties] = useState<PropertyOption[]>([])
+
 
   // Auto-open create dialog from global "+" menu
   useEffect(() => {
@@ -124,12 +107,12 @@ export default function CompliancePage() {
 
   // Counts derived from actual data (single source of truth)
   const counts = useMemo(() => {
-    const c = { expired: 0, expiring_soon: 0, missing: 0, valid: 0 }
+    const c = { expired: 0, expiring_soon: 0, incomplete: 0, valid: 0 }
     for (const cert of certificates) {
       if (cert.display_status === 'expired') c.expired++
       else if (cert.display_status === 'expiring_soon') c.expiring_soon++
-      else if (cert.display_status === 'missing') c.missing++
-      else if (cert.display_status === 'valid' || cert.display_status === 'renewal_scheduled') c.valid++
+      else if (cert.display_status === 'incomplete') c.incomplete++
+      else if (cert.display_status === 'valid' || cert.display_status === 'renewal_scheduled' || cert.display_status === 'renewal_requested') c.valid++
     }
     return c
   }, [certificates])
@@ -137,8 +120,9 @@ export default function CompliancePage() {
   const filteredCertificates = useMemo(() => {
     if (activeFilter === 'all') return certificates
     return certificates.filter((c) => {
-      if (activeFilter === 'valid') return c.display_status === 'valid' || c.display_status === 'renewal_scheduled'
+      if (activeFilter === 'valid') return c.display_status === 'valid' || c.display_status === 'renewal_scheduled' || c.display_status === 'renewal_requested'
       if (activeFilter === 'expiring_soon') return c.display_status === 'expiring_soon'
+      if (activeFilter === 'incomplete') return c.display_status === 'incomplete'
       return c.display_status === activeFilter
     })
   }, [certificates, activeFilter])
@@ -185,50 +169,11 @@ export default function CompliancePage() {
     window.open(url, '_blank')
   }
 
-  // Config sheet
-  const fetchConfig = useCallback(async () => {
-    if (!propertyManager) return
-    const [reqRes, propRes] = await Promise.all([
-      supabase.from('c1_compliance_requirements').select('property_id, certificate_type, is_required').eq('property_manager_id', propertyManager.id),
-      supabase.from('c1_properties').select('id, address').eq('property_manager_id', propertyManager.id).order('address'),
-    ])
-    if (propRes.data) setConfigProperties(propRes.data as PropertyOption[])
-    if (reqRes.data) {
-      const reqs = new Map<string, Map<string, boolean>>()
-      for (const row of reqRes.data as RequirementRow[]) {
-        if (!reqs.has(row.property_id)) reqs.set(row.property_id, new Map())
-        reqs.get(row.property_id)!.set(row.certificate_type, row.is_required)
-      }
-      setConfigRequirements(reqs)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propertyManager])
-
-  const handleConfigToggle = async (propertyId: string, certType: string) => {
-    if (!propertyManager) return
-    const current = configRequirements.get(propertyId)?.get(certType) ?? false
-    const newValue = !current
-    setConfigRequirements((prev) => {
-      const next = new Map(prev)
-      if (!next.has(propertyId)) next.set(propertyId, new Map())
-      next.get(propertyId)!.set(certType, newValue)
-      return next
-    })
-    const { error } = await supabase.rpc('compliance_upsert_requirements', {
-      p_property_id: propertyId, p_pm_id: propertyManager.id,
-      p_requirements: [{ certificate_type: certType, is_required: newValue }],
-    })
-    if (error) {
-      toast.error('Failed to update requirement')
-      setConfigRequirements((prev) => { const next = new Map(prev); next.get(propertyId)?.set(certType, current); return next })
-    }
-  }
-
   const filters: { key: StatusFilter; label: string; count: number; color: string }[] = [
     { key: 'all', label: 'All', count: certificates.length, color: '' },
     { key: 'expired', label: 'Expired', count: counts.expired, color: 'text-danger' },
     { key: 'expiring_soon', label: 'Expiring', count: counts.expiring_soon, color: 'text-warning' },
-    { key: 'missing', label: 'Missing', count: counts.missing, color: 'text-muted-foreground' },
+    { key: 'incomplete', label: 'Incomplete', count: counts.incomplete, color: 'text-muted-foreground' },
     { key: 'valid', label: 'Valid', count: counts.valid, color: 'text-success' },
   ]
 
@@ -277,10 +222,6 @@ export default function CompliancePage() {
             ))}
           </div>
           <div className="w-px h-6 bg-border" />
-          <Button variant="outline" size="sm" onClick={() => { fetchConfig(); setConfigOpen(true) }} className="gap-1.5">
-            <Settings2 className="h-3.5 w-3.5" />
-            Configure
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setExportDialogOpen(true)} className="gap-1.5">
             <Printer className="h-3.5 w-3.5" />
             Export
@@ -339,39 +280,6 @@ export default function CompliancePage() {
         </DialogContent>
       </Dialog>
 
-      <Sheet open={configOpen} onOpenChange={(open) => { if (!open) { setConfigOpen(false); fetchData() } }}>
-        <SheetContent className="w-[480px] sm:w-[540px] overflow-y-auto" title="Configure Requirements">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Certificate Requirements</SheetTitle>
-            <p className="text-sm text-muted-foreground">Choose which certificates are required for each property</p>
-          </SheetHeader>
-          <div className="flex flex-col gap-6">
-            {configProperties.map((prop) => {
-              const propReqs = configRequirements.get(prop.id) || new Map()
-              return (
-                <div key={prop.id}>
-                  <h4 className="text-sm font-semibold mb-2">{prop.address}</h4>
-                  <div className="grid grid-cols-2 gap-1">
-                    {CERTIFICATE_TYPES.map((ct) => {
-                      const isRequired = propReqs.get(ct) ?? false
-                      return (
-                        <button key={ct} type="button" onClick={() => handleConfigToggle(prop.id, ct)}
-                          className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors text-left">
-                          <div className={cn('h-4 w-4 rounded border flex items-center justify-center flex-shrink-0',
-                            isRequired ? 'bg-primary border-primary' : 'border-input')}>
-                            {isRequired && <Check className="h-3 w-3 text-primary-foreground" />}
-                          </div>
-                          <span className="truncate text-xs">{CERTIFICATE_LABELS[ct]}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </SheetContent>
-      </Sheet>
     </PageShell>
   )
 }

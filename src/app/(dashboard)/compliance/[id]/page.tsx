@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
-import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
+import { CERTIFICATE_LABELS, CERT_TYPE_CONTRACTOR_CATEGORIES, type CertificateType } from '@/lib/constants'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -19,11 +19,13 @@ import {
   Loader2,
   ShieldCheck,
   Pencil,
+  Send,
 } from 'lucide-react'
 import {
   CertificateFormDialog,
   type CertificateFormData,
 } from '@/components/certificate-form-dialog'
+import { ContractorSelect } from '@/components/contractor-select'
 
 interface CertificateDetail {
   id: string
@@ -40,6 +42,7 @@ interface CertificateDetail {
   updated_at: string | null
   status: string
   contractor_id: string | null
+  contractor_name: string | null
   reminder_days_before: number | null
 }
 
@@ -75,16 +78,35 @@ export default function CertificateDetailPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [hasActiveTicket, setHasActiveTicket] = useState(false)
+  const [dispatching, setDispatching] = useState(false)
+  const [showContractorPicker, setShowContractorPicker] = useState(false)
+  const [pickerContractorId, setPickerContractorId] = useState<string | null>(null)
+  const [pickerContractorName, setPickerContractorName] = useState<string | null>(null)
 
   const fetchCertificate = useCallback(async () => {
     if (!propertyManager) return
 
-    const { data, error } = await supabase
-      .from('c1_compliance_certificates')
-      .select('*, c1_properties(address)')
-      .eq('id', certId)
-      .eq('property_manager_id', propertyManager.id)
-      .single()
+    const [certResult, ticketResult] = await Promise.all([
+      supabase
+        .from('c1_compliance_certificates')
+        .select('*, c1_properties(address), c1_contractors(contractor_name)')
+        .eq('id', certId)
+        .eq('property_manager_id', propertyManager.id)
+        .single(),
+      supabase
+        .from('c1_tickets')
+        .select('id, job_stage')
+        .eq('compliance_certificate_id', certId)
+        .eq('status', 'open')
+        .eq('archived', false)
+        .limit(1),
+    ])
+
+    const activeTicket = ticketResult.data?.[0] ?? null
+    setHasActiveTicket(!!activeTicket)
+
+    const { data, error } = certResult
 
     if (error || !data) {
       toast.error('Certificate not found')
@@ -93,9 +115,12 @@ export default function CertificateDetailPage() {
     }
 
     // Compute display status — matches RPC CASE logic exactly
-    // Document + expiry = valid. No review/verify step.
-    let status = 'missing'
-    if (data.document_url && data.expiry_date) {
+    let status = 'incomplete'
+    if (activeTicket && ['booked', 'scheduled'].includes(activeTicket.job_stage ?? '')) {
+      status = 'renewal_scheduled'
+    } else if (activeTicket) {
+      status = 'renewal_requested'
+    } else if (data.document_url && data.expiry_date) {
       const expiry = new Date(data.expiry_date)
       const now = new Date()
       const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
@@ -104,7 +129,12 @@ export default function CertificateDetailPage() {
       else status = 'valid'
     }
 
-    setCertificate({ ...data, status } as CertificateDetail)
+    const contractorData = data.c1_contractors as unknown as { contractor_name: string } | null
+    setCertificate({
+      ...data,
+      status,
+      contractor_name: contractorData?.contractor_name ?? null,
+    } as CertificateDetail)
     setPropertyAddress((data.c1_properties as unknown as { address: string })?.address || 'Unknown')
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,6 +233,37 @@ export default function CertificateDetailPage() {
     await fetchCertificate()
   }
 
+  const handleDispatch = async (contractorId?: string | null) => {
+    if (!certificate || !propertyManager) return
+    setDispatching(true)
+    try {
+      const { data, error } = await supabase.rpc('compliance_dispatch_renewal', {
+        p_cert_id: certificate.id,
+        p_pm_id: propertyManager.id,
+        p_contractor_id: contractorId || null,
+      })
+      if (error) throw new Error(error.message)
+      const result = data as { ticket_id: string; contractor_name: string }
+      toast.success(`Renewal dispatched to ${result.contractor_name}`)
+      setShowContractorPicker(false)
+      setPickerContractorId(null)
+      setPickerContractorName(null)
+      await fetchCertificate()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to dispatch renewal')
+    } finally {
+      setDispatching(false)
+    }
+  }
+
+  const canDispatch = certificate &&
+    !hasActiveTicket &&
+    !['valid', 'renewal_requested', 'renewal_scheduled'].includes(certificate.status)
+
+  const showContractorDropdown = certificate?.certificate_type
+    ? CERT_TYPE_CONTRACTOR_CATEGORIES[certificate.certificate_type] !== null
+    : false
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -243,6 +304,29 @@ export default function CertificateDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canDispatch && showContractorDropdown && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (certificate.contractor_id) {
+                    handleDispatch(certificate.contractor_id)
+                  } else {
+                    setShowContractorPicker(true)
+                  }
+                }}
+                disabled={dispatching}
+                className="gap-1.5"
+              >
+                {dispatching ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                {certificate.contractor_id && certificate.contractor_name
+                  ? `Dispatch to ${certificate.contractor_name}`
+                  : 'Assign & Dispatch'}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -274,7 +358,7 @@ export default function CertificateDetailPage() {
       )}
 
       {/* Missing hint — what's needed to be compliant */}
-      {certificate.status === 'missing' && (certificate.document_url || certificate.expiry_date) && (
+      {certificate.status === 'incomplete' && (
         <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 mb-6 text-sm text-warning">
           To mark this certificate as compliant, add:
           {!certificate.expiry_date && !certificate.document_url
@@ -282,6 +366,53 @@ export default function CertificateDetailPage() {
             : !certificate.expiry_date
               ? ' an expiry date.'
               : ' the document.'}
+        </div>
+      )}
+
+      {/* Contractor picker for dispatch (shown when no contractor assigned) */}
+      {showContractorPicker && certificate && (
+        <div className="bg-card rounded-xl border border-border p-6 mb-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Select Contractor for Dispatch
+          </h2>
+          <ContractorSelect
+            pmId={certificate.property_manager_id}
+            certType={certificate.certificate_type}
+            value={pickerContractorId}
+            onChange={(id, name) => { setPickerContractorId(id); setPickerContractorName(name) }}
+            label="Contractor"
+            placeholder="Select a contractor..."
+            showNone={false}
+          />
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setShowContractorPicker(false); setPickerContractorId(null); setPickerContractorName(null) }}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!pickerContractorId || dispatching}
+              onClick={() => handleDispatch(pickerContractorId)}
+            >
+              {dispatching && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+              Dispatch to {pickerContractorName || 'contractor'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Renewal status info */}
+      {certificate.status === 'renewal_requested' && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 mb-6 text-sm text-warning">
+          Renewal request sent to contractor. Awaiting response.
+        </div>
+      )}
+      {certificate.status === 'renewal_scheduled' && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 mb-6 text-sm text-primary">
+          Contractor has booked the renewal.
         </div>
       )}
 

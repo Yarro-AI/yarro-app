@@ -595,13 +595,11 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
               Set up your compliance
             </h2>
             <p className={`${typography.bodyText} text-center mt-3 mb-4 max-w-xs mx-auto`}>
-              We&apos;ll walk you through each property and its required certificates.
-              Upload what you have, skip what you don&apos;t.
+              Set your notification preference so we can alert you when certificates
+              are approaching expiry. Add certificates anytime from the compliance page.
             </p>
             <div className="flex items-center justify-center gap-4 mb-8 text-sm text-muted-foreground">
               <span>{properties.length} {properties.length === 1 ? 'property' : 'properties'}</span>
-              <span>&middot;</span>
-              <span>{totalCerts} certificates</span>
             </div>
             {contractors.length === 0 && (
               <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 mb-4 text-sm text-warning text-left">
@@ -611,8 +609,8 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
                 </p>
               </div>
             )}
-            <Button onClick={() => setPhase('select-types')} size="lg" className="w-full">
-              Start now
+            <Button onClick={() => setPhase('notification')} size="lg" className="w-full">
+              Continue
             </Button>
           </div>
         )}

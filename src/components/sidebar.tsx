@@ -224,7 +224,7 @@ export function Sidebar() {
 
     const complianceIssues = (complianceRes.data ?? []).filter(
       (c: { display_status: string }) =>
-        c.display_status === 'expired' || c.display_status === 'expiring_soon' || c.display_status === 'missing'
+        c.display_status === 'expired' || c.display_status === 'expiring_soon' || c.display_status === 'incomplete'
     ).length
 
     setBadgeCounts({

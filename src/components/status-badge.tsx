@@ -81,8 +81,10 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   'expiring soon':   { border: 'border-warning/40',  text: 'text-warning' },
   expired:           { border: 'border-danger/40',   text: 'text-danger' },
   missing:           { border: 'border-border',      text: 'text-muted-foreground' },
+  incomplete:        { border: 'border-warning/40',  text: 'text-warning' },
   review:            { border: 'border-primary/40',  text: 'text-primary' },
   verified:          { border: 'border-success/40',  text: 'text-success' },
+  'renewal requested': { border: 'border-warning/40',  text: 'text-warning' },
   'renewal scheduled': { border: 'border-primary/40', text: 'text-primary' },
 
   // Default

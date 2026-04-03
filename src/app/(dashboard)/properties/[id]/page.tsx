@@ -208,14 +208,6 @@ function PropertyDetailInner() {
     const normalized = normalizeRecord('properties', { address: data.address, auto_approve_limit: data.auto_approve_limit, require_landlord_approval: data.require_landlord_approval, access_instructions: data.access_instructions, emergency_access_contact: data.emergency_access_contact })
     const { error } = await supabase.from('c1_properties').update({ ...normalized, landlord_id: data.landlord_id, landlord_name: selectedLl?.full_name || null, landlord_phone: selectedLl?.phone || null, landlord_email: selectedLl?.email || null, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
-    // If property type changed, sync compliance requirements via RPC
-    if (property && data.property_type !== (property.property_type || 'hmo') && propertyManager) {
-      await supabase.rpc('compliance_set_property_type', {
-        p_property_id: data.id,
-        p_pm_id: propertyManager.id,
-        p_property_type: data.property_type,
-      })
-    }
     toast.success('Property updated')
     await fetchProperty()
   }, [supabase, landlordOptions, fetchProperty, property, propertyManager])

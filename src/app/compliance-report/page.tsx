@@ -59,7 +59,7 @@ function ComplianceReportContent() {
   }, [filtered])
 
   const actionsNeeded = filtered.filter((r) =>
-    r.display_status === 'expired' || r.display_status === 'missing' ||
+    r.display_status === 'expired' || r.display_status === 'incomplete' ||
     r.display_status === 'expiring_soon' || r.display_status === 'review'
   ).length
 
@@ -113,7 +113,7 @@ function ComplianceReportContent() {
             </thead>
             <tbody>
               {prop.certs.map((cert) => {
-                const isGap = cert.display_status === 'expired' || cert.display_status === 'missing'
+                const isGap = cert.display_status === 'expired' || cert.display_status === 'incomplete'
                 return (
                   <tr key={cert.certificate_type} className={isGap ? 'text-red-600 font-medium' : 'text-gray-700'}>
                     <td className="py-1.5">{CERTIFICATE_LABELS[cert.certificate_type as CertificateType] || cert.certificate_type}</td>

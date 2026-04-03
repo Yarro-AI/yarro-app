@@ -60,9 +60,10 @@ These power the entire ticket journey from WhatsApp intake to job completion.
 
 ### c1_inbound_reply
 - **Purpose:** Processes inbound WhatsApp replies to outbound messages.
-- **Live in:** `20260327041845_remote_schema.sql`
+- **Live in:** `20260404000000_fix_flows_null_items.sql` (was `20260327041845_remote_schema.sql`)
 - **Called by:** `yarro-outbound-monitor` edge function (Twilio webhook)
 - **Breaks:** Contractor/tenant/landlord replies not processed
+- **Last modified:** 2026-04-04 — Fixed Flows parsing crash when page items are JSON null (PM skips markup step)
 
 ### c1_ticket_context
 - **Purpose:** Fetches complete ticket data (tenant, property, contractor, dates).
