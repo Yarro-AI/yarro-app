@@ -531,6 +531,14 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
               <span>&middot;</span>
               <span>{totalCerts} certificates</span>
             </div>
+            {contractors.length === 0 && (
+              <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 mb-4 text-sm text-warning text-left">
+                <p className="font-medium mb-1">No contractors added yet</p>
+                <p className="text-xs">
+                  To auto-dispatch renewals, <a href="/contractors" className="underline font-medium hover:text-foreground transition-colors">add a contractor first</a> — then come back here.
+                </p>
+              </div>
+            )}
             <Button onClick={() => setPhase('select-types')} size="lg" className="w-full">
               Start now
             </Button>
