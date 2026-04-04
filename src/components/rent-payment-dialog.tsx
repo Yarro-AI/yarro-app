@@ -82,10 +82,10 @@ export function RentPaymentDialog({ open, onOpenChange, entry, pmId, onSuccess }
     setSaving(true)
     setError(null)
 
-    const { error: rpcError } = await supabase.rpc('mark_rent_paid', {
+    const { error: rpcError } = await supabase.rpc('record_rent_payment', {
       p_rent_ledger_id: entry.rent_ledger_id,
       p_pm_id: pmId,
-      p_amount_paid: parseFloat(amountPaid),
+      p_amount: parseFloat(amountPaid),
       p_payment_method: paymentMethod,
       p_notes: notes || null,
     })

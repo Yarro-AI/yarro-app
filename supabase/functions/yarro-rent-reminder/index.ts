@@ -252,16 +252,86 @@ Deno.serve(async (_req: Request) => {
     const skipped = results.filter((r) => r.skipped).length;
     const failed = results.filter((r) => !r.sent && !r.skipped).length;
 
-    const summary = { total: results.length, sent, skipped, failed, results };
+    // ─── Escalation pass: create tickets for tenants past all reminders ───
+    let escalated = 0;
+    try {
+      // Get distinct PM IDs from the entries we just processed
+      const pmIds = [...new Set((entries as RentReminder[]).map((e) => e.property_manager_id))];
+
+      for (const pmId of pmIds) {
+        const { data: escalations, error: escError } = await supabase.rpc(
+          "rent_escalation_check",
+          { p_pm_id: pmId },
+        );
+
+        if (escError) {
+          console.error(`[${FN}] rent_escalation_check failed for PM ${pmId}:`, escError.message);
+          await alertTelegram(FN, "rent_escalation_check", escError.message, { pm_id: pmId });
+          continue;
+        }
+
+        if (!escalations || escalations.length === 0) continue;
+
+        for (const esc of escalations as Array<{
+          tenant_id: string;
+          property_manager_id: string;
+          property_id: string;
+          tenant_name: string;
+          property_address: string;
+          months_overdue: number;
+          total_arrears: number;
+          earliest_overdue: string;
+        }>) {
+          const title = `Rent arrears: ${esc.tenant_name || "Unknown tenant"}`;
+          const desc = `${esc.months_overdue} month(s) overdue, £${Number(esc.total_arrears).toFixed(2)} total arrears since ${esc.earliest_overdue}`;
+
+          const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
+            p_property_manager_id: esc.property_manager_id,
+            p_property_id: esc.property_id,
+            p_tenant_id: esc.tenant_id,
+            p_issue_title: title,
+            p_issue_description: desc,
+          });
+
+          if (ticketError) {
+            console.error(`[${FN}] create_rent_arrears_ticket failed for tenant ${esc.tenant_id}:`, ticketError.message);
+            await alertTelegram(FN, "create_rent_arrears_ticket", ticketError.message, {
+              tenant: esc.tenant_name,
+              property: esc.property_address,
+            });
+          } else {
+            escalated++;
+            console.log(`[${FN}] Created rent arrears ticket for ${esc.tenant_name} at ${esc.property_address}`);
+
+            await supabase.rpc("c1_log_system_event", {
+              p_pm_id: esc.property_manager_id,
+              p_event_type: "RENT_ARREARS_ESCALATED",
+              p_property_label: esc.property_address,
+              p_metadata: {
+                tenant_name: esc.tenant_name,
+                months_overdue: esc.months_overdue,
+                total_arrears: esc.total_arrears,
+              },
+            });
+          }
+        }
+      }
+    } catch (escErr) {
+      const msg = escErr instanceof Error ? escErr.message : String(escErr);
+      console.error(`[${FN}] Escalation pass error:`, msg);
+      await alertTelegram(FN, "Escalation pass", msg);
+    }
+
+    const summary = { total: results.length, sent, skipped, failed, escalated, results };
 
     console.log(
-      `[${FN}] Done: ${sent} sent, ${skipped} skipped, ${failed} failed`,
+      `[${FN}] Done: ${sent} sent, ${skipped} skipped, ${failed} failed, ${escalated} escalated`,
     );
 
-    if (sent > 0) {
+    if (sent > 0 || escalated > 0) {
       await alertInfo(
         FN,
-        `Rent reminders: ${sent} sent, ${skipped} skipped, ${failed} failed`,
+        `Rent reminders: ${sent} sent, ${skipped} skipped, ${failed} failed, ${escalated} escalated to tickets`,
       );
     }
 
