@@ -35,6 +35,12 @@ c1_allocate_to_landlord
 c1_complete_handoff_ticket
 c1_completion_followup_check
 c1_compute_next_action
+compute_compliance_next_action
+compute_landlord_next_action
+compute_maintenance_next_action
+compute_ooh_next_action
+compute_rent_arrears_next_action
+create_rent_arrears_ticket
 c1_context_logic
 c1_contractor_context
 c1_contractor_mark_sent
@@ -91,6 +97,7 @@ c1_trigger_recompute_next_action
 c1_upsert_contact
 get_pm_id
 norm_uk_postcode
+record_rent_payment
 ```
 
 ## Category Files

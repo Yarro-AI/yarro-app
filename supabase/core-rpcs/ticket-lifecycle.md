@@ -53,9 +53,11 @@ These power the entire ticket journey from WhatsApp intake to job completion.
 - **Breaks:** Tickets stuck — no state transitions after any event
 
 ### c1_compute_next_action
-- **Purpose:** Core state computation — determines ticket's next required action.
-- **Live in:** `20260327041845_remote_schema.sql`
+- **Purpose:** Router — dispatches to domain-specific sub-routines for ticket state computation.
+- **Live in:** `20260404400000_compute_next_action_router.sql` (was monolithic in `20260327041845_remote_schema.sql`)
 - **Called by:** `c1_trigger_recompute_next_action` (trigger), `c1_message_next_action`
+- **Dispatches to:** `compute_compliance_next_action`, `compute_rent_arrears_next_action`, `compute_landlord_next_action`, `compute_ooh_next_action`, `compute_maintenance_next_action`
+- **Rollback:** `supabase/rollbacks/rollback_phase_c.sql` (original monolithic version)
 - **Breaks:** next_action field never set — UI can't show what to do next
 
 ### c1_inbound_reply
