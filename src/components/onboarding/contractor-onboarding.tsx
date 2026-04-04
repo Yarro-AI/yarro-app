@@ -10,7 +10,8 @@ import { typography } from '@/lib/typography'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, ChevronLeft, Wrench, MessageCircle, Mail, CheckCircle, Building2 } from 'lucide-react'
+import { Loader2, ChevronLeft, Wrench, MessageCircle, Mail, CheckCircle, Building2, Upload } from 'lucide-react'
+import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 
 // Single-select option (contact method) — same as tenant-onboarding
 function OnboardingOptionButton({ label, onClick }: { label: string; onClick: () => void }) {
@@ -66,6 +67,8 @@ export function ContractorOnboarding() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dismissing, setDismissing] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [refetchKey, setRefetchKey] = useState(0)
 
   // Fetch PM's properties on mount
   useEffect(() => {
@@ -234,6 +237,19 @@ export function ContractorOnboarding() {
             <Button onClick={() => setStep('name')} size="lg" className="w-full">
               Start now
             </Button>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="flex items-center justify-center gap-2 mt-6 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <Upload className="w-4 h-4" />
+              Bulk upload from CSV
+            </button>
+            <BulkImportDialog
+              entityType="contractors"
+              open={importOpen}
+              onOpenChange={setImportOpen}
+              onComplete={() => window.location.reload()}
+            />
           </div>
         )}
 

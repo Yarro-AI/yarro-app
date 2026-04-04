@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, ChevronLeft, SkipForward, Users, Upload, MessageCircle, Mail, Send, CheckCircle, ExternalLink } from 'lucide-react'
+import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,8 @@ export function TenantOnboarding() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dismissing, setDismissing] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [refetchKey, setRefetchKey] = useState(0)
 
   const [onboardDialogOpen, setOnboardDialogOpen] = useState(false)
   const [onboardSending, setOnboardSending] = useState(false)
@@ -117,7 +120,7 @@ export function TenantOnboarding() {
     }
 
     fetchData()
-  }, [propertyManager, supabase])
+  }, [propertyManager, supabase, refetchKey])
 
   const current = entries[currentIndex]
   const isLast = currentIndex === entries.length - 1
@@ -341,15 +344,18 @@ export function TenantOnboarding() {
               Start now
             </Button>
             <button
-              onClick={() => {
-                setDismissing(true)
-                setTimeout(() => router.push('/import'), 600)
-              }}
+              onClick={() => setImportOpen(true)}
               className="flex items-center justify-center gap-2 mt-6 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
             >
               <Upload className="w-4 h-4" />
               Bulk upload from CSV
             </button>
+            <BulkImportDialog
+              entityType="tenants"
+              open={importOpen}
+              onOpenChange={setImportOpen}
+              onComplete={() => window.location.reload()}
+            />
           </div>
         )}
 

@@ -122,6 +122,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: false,
     children: [
       { href: '/integrations', label: 'Integrations' },
+      { href: '/integrations/import', label: 'Import Data' },
       { href: '/guide/rules', label: 'Settings' },
     ],
   },
