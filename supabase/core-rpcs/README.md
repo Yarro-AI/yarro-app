@@ -118,5 +118,6 @@ These RPCs are newer and actively being developed:
   - **Contractor portal:** `compliance_submit_contractor_renewal` (new 2026-04-03). Contractor uploads renewed cert via portal token.
   - **Protected RPC change:** `c1_get_contractor_ticket` extended (2026-04-03) with `compliance_certificate_id`, `compliance_cert_type`, `compliance_expiry_date` — safe addition, existing keys unchanged.
 - Rooms: `get_rooms_for_property`, `room_upsert`, `room_delete`, `room_assign_tenant`, `room_remove_tenant`
-- Rent: `create_rent_ledger_entries`, `get_rent_summary_for_property`, `mark_rent_paid`, `get_rent_dashboard_summary`, `get_rent_reminders_due`
+- Rent: `create_rent_ledger_entries`, `get_rent_summary_for_property`, `get_rent_dashboard_summary`, `get_rent_reminders_due`
+  - **Deprecated:** `mark_rent_paid` — replaced by `record_rent_payment` (protected)
 - Dashboard stats: `get_occupancy_summary`, `get_rent_income_summary`, `get_ai_actions_count`

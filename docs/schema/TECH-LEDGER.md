@@ -1,6 +1,6 @@
 # Yarro — Tech Ledger
 *Full data schema, existing + new tables, relationships, and RPC inventory*
-*Last updated: March 2026*
+*Last updated: April 2026*
 
 ---
 
@@ -56,6 +56,7 @@ Root entity. One row per PM account.
 - Landlord/OOH/reschedule workflow
 - Portal tokens
 - **Phase 2: gains `room_id` foreign key (nullable — backwards compatible)**
+- **CHECK constraint:** `chk_next_action_reason` — enforces ~25 valid values. New sub-routine states must be added to this constraint via migration.
 
 **`c1_conversations`** → properties, property_managers, tenants
 - WhatsApp conversation state machine
@@ -65,6 +66,13 @@ Root entity. One row per PM account.
 
 **`c1_job_completions`** → tickets (1:1)
 - Completion evidence, media, financials
+
+**`c1_rent_payments`** → rent_ledger, tenants, property_managers
+- Full audit trail for every payment received
+- `rent_ledger_id` (FK), `tenant_id` (FK), `amount`, `payment_method`, `paid_at`
+- Trigger `trg_rent_payment_update_ledger` auto-computes `c1_rent_ledger.amount_paid` + `status` from payment sum
+- Multiple partial payments accumulate correctly
+- Indexes on `(rent_ledger_id)` and `(tenant_id)`
 
 **`c1_events`** → property_managers, tickets
 - Audit event log — every action written here
@@ -238,8 +246,16 @@ Returns all rooms with their rent status for a given month. Used by rent trackin
 **`create_rent_ledger_entries(property_id, month, year)`**
 Generates `c1_rent_ledger` rows for all occupied rooms in a property for a given period. Called monthly by cron or manually by operator.
 
-**`mark_rent_paid(rent_ledger_id, amount_paid, payment_method)`**
-Marks a rent ledger entry as paid. Updates `paid_at`, `amount_paid`, `status`.
+**`mark_rent_paid(rent_ledger_id, amount_paid, payment_method)`** — **DEPRECATED.** Replaced by `record_rent_payment` which uses `c1_rent_payments` audit table instead of direct ledger update.
+
+**`record_rent_payment(p_rent_ledger_id, p_pm_id, p_amount, p_payment_method, p_notes)`**
+Inserts payment into `c1_rent_payments`. Trigger handles ledger update. Auto-closes tenant's `rent_arrears` ticket if all arrears cleared. Returns payment UUID. **Protected.**
+
+**`create_rent_arrears_ticket(p_property_manager_id, p_property_id, p_tenant_id, p_issue_title, p_issue_description)`**
+Creates consolidated rent arrears ticket per tenant. Dedup built-in — returns existing ticket if one is already open. No `c1_messages` row (no contractor dispatch). **Protected.**
+
+**`rent_escalation_check()`**
+Returns tenants with overdue rent ready for ticket escalation (all 3 reminders exhausted, 7+ day grace period). Groups by tenant, excludes those with existing open tickets.
 
 **`get_compliance_expiring(days_ahead, property_manager_id)`**
 Returns certificates expiring within N days that haven't had a reminder sent. Used by compliance reminder cron.

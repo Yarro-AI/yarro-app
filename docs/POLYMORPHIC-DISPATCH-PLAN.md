@@ -1,3 +1,5 @@
+> **Living Document.** This is the architectural reference for the polymorphic dispatch system. Update this document when sub-routines change, new sub-routines are added, or the CHECK constraint is modified.
+
 # Polymorphic Ticket Dispatch — Full Architecture
 
 ## Context

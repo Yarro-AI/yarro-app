@@ -37,6 +37,12 @@ All business logic lives in Supabase RPCs, not the frontend.
 - Never compute derived state (status, counts, summaries) in the frontend
 - Every new feature starts with the RPC, then UI consumes it
 - Direct `.from().select()` only for simple reads with no logic
+- **Polymorphic Dispatch Pattern** for all ticket state logic:
+  - `c1_compute_next_action` is a ~30-line router — dispatches to domain-specific sub-routines
+  - Never add IF/ELSE branches to the router — add logic to the appropriate sub-routine
+  - New ticket categories get a new sub-routine registered in the router
+  - Every workflow (intake, dispatch, reminders, followups) flows through the ticket system
+  - Reference: `docs/POLYMORPHIC-DISPATCH-PLAN.md`
 
 RPC development workflow: `.claude/docs/architecture.md#rpc-development-workflow`
 
@@ -44,7 +50,7 @@ RPC development workflow: `.claude/docs/architecture.md#rpc-development-workflow
 
 ## Protected RPCs — Hard Stop
 Before writing `CREATE OR REPLACE FUNCTION` in any migration:
-1. Check `supabase/core-rpcs/README.md` for the protected list (61 functions)
+1. Check `supabase/core-rpcs/README.md` for the protected list (69 functions)
 2. If it's listed, **STOP and ask Adam**
 3. Details & dependency graph: `.claude/docs/protected-rpcs.md`
 
@@ -104,4 +110,5 @@ Specs: `docs/PRD.md` · `docs/BUILD-ORDER.md` · `docs/modules/01–04*.md` · `
 | `.claude/docs/infrastructure.md` | Service credentials and URLs |
 | `.claude/tasks/BACKLOG.md` | Captured ideas for future sessions |
 | `supabase/core-rpcs/README.md` | Before writing ANY migration |
+| `docs/POLYMORPHIC-DISPATCH-PLAN.md` | Polymorphic dispatch architecture, sub-routines, rent flow |
 | `docs/stability/` | Edge functions, error handling, incident response |

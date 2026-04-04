@@ -22,6 +22,37 @@ Tenant messages WhatsApp
   -> Ticket closed
 ```
 
+### Ticket State Machine — Polymorphic Dispatch
+
+`c1_compute_next_action` is a router. Universal states are handled inline (archived, closed, on_hold), then dispatch by category or lifecycle flag:
+
+```
+c1_compute_next_action routes by category:
+   ├─ compliance_renewal → cert renewal lifecycle
+   ├─ rent_arrears → arrears tracking (no contractor)
+   └─ default → standard contractor dispatch flow
+```
+
+| Route | Sub-routine | Handles |
+|-------|-------------|---------|
+| `compliance_renewal` | `compute_compliance_next_action` | Cert renewal lifecycle |
+| `rent_arrears` | `compute_rent_arrears_next_action` | Per-tenant arrears tracking |
+| `landlord_allocated` flag | `compute_landlord_next_action` | Landlord-managed outcomes |
+| `ooh_dispatched` flag | `compute_ooh_next_action` | Emergency outcomes |
+| _(default)_ | `compute_maintenance_next_action` | Standard contractor dispatch |
+
+**Dispatch order:** universal states → category → lifecycle flags → simple flags → maintenance fallback.
+
+**How to add a new ticket category:**
+1. Create `compute_{category}_next_action()` in a new migration (SECURITY DEFINER)
+2. Add `IF v_ticket.category = '{category}' THEN ...` to the router (protected — Safe Modification Protocol)
+3. Add new `next_action_reason` values to the CHECK constraint via migration
+4. Add the sub-routine to `supabase/core-rpcs/README.md` protected list
+5. Add entries to `supabase/core-rpcs/ticket-lifecycle.md`
+6. If non-contractor ticket type: create a dedicated `create_{category}_ticket()` function (pattern: `create_rent_arrears_ticket`)
+
+Full spec: `docs/POLYMORPHIC-DISPATCH-PLAN.md`.
+
 ---
 
 ## Tech Stack
@@ -51,6 +82,8 @@ Tenant messages WhatsApp
 | `yarro-job-reminder` | Day-of job reminders to contractors |
 | `yarro-inbound` | Inbound WhatsApp message processing |
 | `yarro-ai` | AI conversation handler (OpenAI) |
+| `yarro-compliance-reminder` | Daily compliance expiry check → PM notification + renewal ticket creation |
+| `yarro-rent-reminder` | Daily rent reminders + escalation → rent arrears ticket creation |
 
 ---
 
@@ -68,6 +101,8 @@ Tenant messages WhatsApp
 | `c1_messages` | Outbound message log + contractor JSONB entries |
 | `c1_profiles` | OOH emergency contacts |
 | `c1_job_completions` | Completion form submissions |
+| `c1_rent_payments` | Payment audit trail — trigger auto-updates c1_rent_ledger totals |
+| `c1_rent_payments` | Payment audit trail — trigger auto-updates c1_rent_ledger totals |
 
 ---
 
@@ -152,3 +187,9 @@ Every new feature that involves business logic starts here:
 - Never compute derived state (status, counts, summaries) in React
 - Direct `.from().select()` only for simple reads with no logic
 - Frontend is a display layer — it calls RPCs and renders results
+
+**Ticket state logic:**
+- Add to the appropriate sub-routine, not the router
+- New ticket categories need a new sub-routine + router registration
+- Sub-routines are SECURITY DEFINER and protected
+- See `docs/POLYMORPHIC-DISPATCH-PLAN.md` for the dispatch pattern and all 5 sub-routines

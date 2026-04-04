@@ -39,6 +39,7 @@ Read the file thoroughly before modifying. Understand the existing pattern. Test
 | `package.json` | Dependencies | New packages affect bundle size and build |
 | `supabase/migrations/` (new files) | Database migrations | Check `supabase/core-rpcs/README.md` FIRST. Use `IF NOT EXISTS`. Test locally. |
 | `src/types/database.ts` | Auto-generated types | Manual edits get overwritten. Regenerate with `supabase gen types typescript`. |
+| `c1_rent_payments` trigger (`trg_rent_payment_update_ledger`) | Auto-computes rent ledger totals | Modifying changes payment accounting behavior — test accumulation logic before pushing |
 
 ## RED — Hard Stop (Do Not Touch Without Approval)
 
@@ -46,7 +47,8 @@ A bad change here takes down WhatsApp intake, breaks tenant conversations, or co
 
 | Path | What It Is | Why It's Dangerous |
 |------|-----------|-------------------|
-| **61 Protected RPCs** | Listed in `supabase/core-rpcs/README.md` | `CREATE OR REPLACE` silently overwrites. No undo. `get_pm_id` used by 33+ RLS policies. |
+| **69 Protected RPCs** | Listed in `supabase/core-rpcs/README.md` | `CREATE OR REPLACE` silently overwrites. No undo. `get_pm_id` used by 33+ RLS policies. |
+| **5 Sub-routines + rent RPCs** | `compute_*_next_action`, `create_rent_arrears_ticket`, `record_rent_payment` | Protected as of 2026-04-04. Same rules as `c1_compute_next_action` — they form a single atomic unit. |
 | `supabase/migrations/20260327041845_remote_schema.sql` | Core schema (72 functions) | Original production definitions of all RPCs, triggers, RLS. |
 | `supabase/migrations/20260329000000_whatsapp_room_awareness.sql` | c1_context_logic + c1_create_ticket | Current production versions of the 2 most critical RPCs. |
 | `supabase/functions/yarro-tenant-intake/` | WhatsApp intake state machine | AI + Twilio + RPCs. Load-bearing phrases in `prompts.ts` — backend parses exact emoji + phrases. See `.claude/docs/hmo-pivot-plan.md` Section 10 for the full list. See AD-8. |

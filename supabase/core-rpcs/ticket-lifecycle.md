@@ -60,6 +60,67 @@ These power the entire ticket journey from WhatsApp intake to job completion.
 - **Rollback:** `supabase/rollbacks/rollback_phase_c.sql` (original monolithic version)
 - **Breaks:** next_action field never set — UI can't show what to do next
 
+---
+
+## Polymorphic Sub-routines (State Machine)
+
+All 5 are SECURITY DEFINER and protected. Called only by `c1_compute_next_action` (router).
+
+### compute_compliance_next_action
+- **Purpose:** Compliance renewal lifecycle — cert verification, contractor dispatch, renewal detection.
+- **Signature:** `(p_ticket_id uuid, p_ticket c1_tickets) RETURNS TABLE(next_action text, next_action_reason text)`
+- **Live in:** `20260404300000_polymorphic_subroutines.sql`
+- **Reads:** `c1_compliance_certificates`, `c1_job_completions`, `c1_messages`
+- **Breaks:** Compliance tickets stuck — no state progression
+
+### compute_rent_arrears_next_action
+- **Purpose:** Rent arrears tracking — aggregates overdue entries per tenant, detects partial payments.
+- **Signature:** `(p_ticket_id uuid, p_ticket c1_tickets) RETURNS TABLE(next_action text, next_action_reason text)`
+- **Live in:** `20260404300000_polymorphic_subroutines.sql`
+- **Reads:** `c1_rent_ledger` (aggregation by tenant_id)
+- **Breaks:** Rent arrears tickets never update state, never auto-close
+
+### compute_landlord_next_action
+- **Purpose:** Landlord-managed ticket outcomes (need_help, resolved, in_progress).
+- **Signature:** `(p_ticket_id uuid, p_ticket c1_tickets) RETURNS TABLE(next_action text, next_action_reason text)`
+- **Live in:** `20260404300000_polymorphic_subroutines.sql`
+- **Reads:** `c1_tickets` (p_ticket passed in — no extra query)
+- **Breaks:** Landlord-allocated tickets stuck at initial state
+
+### compute_ooh_next_action
+- **Purpose:** Out-of-hours emergency outcomes (resolved, unresolved, in_progress).
+- **Signature:** `(p_ticket_id uuid, p_ticket c1_tickets) RETURNS TABLE(next_action text, next_action_reason text)`
+- **Live in:** `20260404300000_polymorphic_subroutines.sql`
+- **Reads:** `c1_tickets` (p_ticket passed in — no extra query)
+- **Breaks:** OOH tickets stuck — emergency handling never progresses
+
+### compute_maintenance_next_action
+- **Purpose:** Standard contractor dispatch lifecycle (extracted from original branches 9-11). Zero logic change from monolithic version.
+- **Signature:** `(p_ticket_id uuid, p_ticket c1_tickets) RETURNS TABLE(next_action text, next_action_reason text)`
+- **Live in:** `20260404300000_polymorphic_subroutines.sql`
+- **Reads:** `c1_job_completions`, `c1_messages`
+- **Breaks:** All standard maintenance tickets stuck — no state progression
+
+---
+
+## Rent Arrears Functions
+
+### create_rent_arrears_ticket
+- **Purpose:** Creates consolidated rent arrears ticket per tenant. Dedup built-in — returns existing ticket if open.
+- **Signature:** `(p_property_manager_id uuid, p_property_id uuid, p_tenant_id uuid, p_issue_title text, p_issue_description text) RETURNS uuid`
+- **Live in:** `20260404300000_polymorphic_subroutines.sql`
+- **Called by:** `yarro-rent-reminder` edge function (escalation pass)
+- **Breaks:** Rent escalation creates no tickets — overdue tenants invisible on dashboard
+
+### record_rent_payment
+- **Purpose:** Records payment with audit trail. Trigger recomputes ledger. Auto-closes ticket if all arrears cleared.
+- **Signature:** `(p_rent_ledger_id uuid, p_pm_id uuid, p_amount numeric, p_payment_method text, p_notes text) RETURNS uuid`
+- **Live in:** `20260404200000_rent_payments_table.sql`
+- **Called by:** Rent tracking UI (`property-rent-section.tsx`, `rent-payment-dialog.tsx`)
+- **Breaks:** Payments not recorded, ledger not updated, tickets never auto-close
+
+---
+
 ### c1_inbound_reply
 - **Purpose:** Processes inbound WhatsApp replies to outbound messages.
 - **Live in:** `20260404000000_fix_flows_null_items.sql` (was `20260327041845_remote_schema.sql`)

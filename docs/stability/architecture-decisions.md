@@ -107,3 +107,30 @@ They authenticate internally using `SERVICE_ROLE_KEY` to create admin Supabase c
 **Why:** It handles tenant identification, property matching, conversation routing, room awareness, and context assembly in one transaction. Breaking it into smaller functions would require passing complex intermediate state between them, and any failure in a sub-function would leave the conversation in an inconsistent state.
 
 **Rule:** Do not modify this function without explicit approval. It has 9+ callers and drives the entire WhatsApp intake flow. A broken version silently breaks all tenant conversations.
+
+---
+
+## AD-9: Polymorphic Ticket Dispatch (Router + Sub-routines)
+
+**Files:** `supabase/migrations/20260404400000_compute_next_action_router.sql` (router), `supabase/migrations/20260404300000_polymorphic_subroutines.sql` (5 sub-routines)
+
+**Decision:** `c1_compute_next_action` was refactored from a 150-line monolithic function with 11 sequential IF/ELSE branches into a ~30-line router that dispatches to 5 domain-specific sub-routines.
+
+**Why:** The monolithic function made every new ticket category (compliance, rent arrears) a risk to all existing branches. Adding compliance required scattering exceptions across other functions (`c1_contractor_timeout_check`). Rent arrears had no escalation path. Each new category would have increased the function's complexity and blast radius.
+
+**Dispatch order:**
+1. Universal states (archived, closed, on_hold) — inline in router
+2. Category dispatch (`compliance_renewal` → compliance handler, `rent_arrears` → rent handler)
+3. Lifecycle flags (`landlord_allocated`, `ooh_dispatched`) — flag-specific handlers
+4. Simple flags (`handoff`, `pending_review`) — inline, single-state
+5. Maintenance fallback — standard contractor dispatch
+
+**Rules:**
+- Never add IF/ELSE branches to the router itself — add logic to the appropriate sub-routine
+- New ticket categories get a new sub-routine registered in the router
+- Category dispatch runs before lifecycle flags — a `compliance_renewal` ticket that's also `landlord_allocated` routes to compliance, not landlord
+- All sub-routines are SECURITY DEFINER and protected
+- Rollback: `supabase/rollbacks/rollback_phase_c.sql` restores the original monolithic function
+- CHECK constraint on `next_action_reason` enforces ~25 valid values at DB level
+
+**Full architecture:** `docs/POLYMORPHIC-DISPATCH-PLAN.md`

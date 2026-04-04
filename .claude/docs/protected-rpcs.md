@@ -14,6 +14,14 @@ wins — earlier definitions are dead code.
 |----------|---------------|--------|
 | `c1_context_logic` | `20260329000000_whatsapp_room_awareness.sql` (lines 10-971) | `20260327041845` has the original but it's been replaced |
 | `c1_create_ticket` | `20260329000000_whatsapp_room_awareness.sql` (lines 977-end) | `20260327041845` has the original but it's been replaced |
+| `c1_compute_next_action` | `20260404400000_compute_next_action_router.sql` | `20260327041845` has the original monolithic version (dead code) |
+| `compute_compliance_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
+| `compute_rent_arrears_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
+| `compute_landlord_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
+| `compute_ooh_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
+| `compute_maintenance_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
+| `create_rent_arrears_ticket` | `20260404300000_polymorphic_subroutines.sql` | — |
+| `record_rent_payment` | `20260404200000_rent_payments_table.sql` | Replaces `mark_rent_paid` |
 | `c1_log_system_event` | `20260327041845_remote_schema.sql` | Was renamed from `c1_log_compliance_event` in `20260329140000` |
 | All other core RPCs | `20260327041845_remote_schema.sql` | — |
 
@@ -75,13 +83,33 @@ yarro-scheduling edge function
   -> c1_msg_merge_contractor (updates contractor data)
 ```
 
-### State Machine Core
+### State Machine Core — Polymorphic Dispatch
 ```
 c1_message_next_action (9+ callers)
-  -> c1_compute_next_action (determines next step)
+  → c1_compute_next_action (ROUTER — dispatches by category/flag)
+    → compute_compliance_next_action (category = 'compliance_renewal')
+    → compute_rent_arrears_next_action (category = 'rent_arrears')
+    → compute_landlord_next_action (landlord_allocated = true)
+    → compute_ooh_next_action (ooh_dispatched = true)
+    → compute_maintenance_next_action (default fallback)
 
 c1_trigger_recompute_next_action (trigger)
-  -> c1_compute_next_action
+  → c1_compute_next_action
+```
+
+### Rent Arrears Chain
+```
+yarro-rent-reminder edge function (daily 9am)
+  → get_rent_reminders_due (sends reminders)
+  → rent_escalation_check (finds tenants with exhausted reminders)
+    → create_rent_arrears_ticket (dedup per tenant)
+      → TRIGGER: c1_trigger_recompute_next_action
+        → c1_compute_next_action → compute_rent_arrears_next_action
+
+record_rent_payment (PM records payment)
+  → INSERT c1_rent_payments
+    → TRIGGER: trg_rent_payment_update_ledger (recomputes ledger totals)
+  → Auto-close rent_arrears ticket if all arrears cleared
 ```
 
 ### High-Dependency Functions
@@ -106,6 +134,7 @@ c1_trigger_recompute_next_action (trigger)
 | `c1_messages` | INSERT/UPDATE | `trg_c1_events_on_message` | Emits event for activity feed |
 | `c1_job_completions` | INSERT/UPDATE | `c1_trigger_recompute_next_action` | Recomputes ticket state |
 | `c1_contractors` | INSERT/UPDATE | `auto_sync_property_mappings` | Syncs categories to properties |
+| `c1_rent_payments` | INSERT | `trg_rent_payment_update_ledger` | Recomputes c1_rent_ledger totals + status from payment sum |
 
 ---
 

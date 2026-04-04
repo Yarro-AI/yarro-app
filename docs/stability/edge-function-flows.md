@@ -188,3 +188,138 @@ Tenant WhatsApp msg
 **Total external API calls:** 1 OpenAI + 4-6 Twilio SMS
 **Failure points:** 10+ (each with Telegram alert)
 **Time budget:** 60 seconds (Supabase Edge Function timeout)
+
+### Alternative Paths (Non-Maintenance)
+
+**Compliance Renewal:**
+```
+yarro-compliance-reminder (daily cron 8am)
+  → get_compliance_expiring
+    → c1_create_manual_ticket (creates ticket + c1_messages)
+      → TRIGGER: c1_trigger_recompute_next_action
+        → c1_compute_next_action → compute_compliance_next_action
+      → yarro-ticket-notify → yarro-dispatcher
+```
+
+**Rent Arrears:**
+```
+yarro-rent-reminder (daily cron 9am)
+  → rent_escalation_check
+    → create_rent_arrears_ticket (no c1_messages, no contractor)
+      → TRIGGER: c1_trigger_recompute_next_action
+        → c1_compute_next_action → compute_rent_arrears_next_action
+```
+
+---
+
+## 4. Compliance Reminder Flow
+
+**Function:** `supabase/functions/yarro-compliance-reminder/index.ts`
+**Trigger:** pg_cron daily at 8am UTC
+
+```
+yarro-compliance-reminder runs daily
+        │
+        ▼
+┌─ Compliance Logic ─────────────────────────────────────┐
+│                                                         │
+│  1. Call get_compliance_expiring(days_ahead=90)          │
+│     ├─ Returns certs within reminder window              │
+│     └─ On failure → alertTelegram, return 200            │
+│                                                         │
+│  2. For each expiring certificate:                      │
+│     ├─ If contractor_id set on certificate:              │
+│     │   ├─ Call c1_create_manual_ticket                  │
+│     │   │   category = 'compliance_renewal'              │
+│     │   │   priority = high if < 14 days, else medium    │
+│     │   ├─ Dispatcher auto-triggers from c1_messages     │
+│     │   └─ On failure: fall through to PM notification   │
+│     │                                                    │
+│     ├─ Send PM notification via sendAndLog               │
+│     │   (WhatsApp or email, auto-detected)               │
+│     │                                                    │
+│     ├─ Increment reminder_count on certificate           │
+│     └─ Log to c1_events via c1_log_system_event          │
+│                                                         │
+│  3. Per-cert error handling — batch continues on failure │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key:** Compliance dispatch reuses the existing ticket + dispatcher pipeline. No new notification system. Compliance tickets route through `compute_compliance_next_action` sub-routine.
+
+---
+
+## 5. Rent Reminder + Escalation Flow
+
+**Function:** `supabase/functions/yarro-rent-reminder/index.ts`
+**Trigger:** pg_cron daily at 9am UTC
+
+```
+yarro-rent-reminder runs daily
+        │
+        ▼
+┌─ Reminder Phase ───────────────────────────────────────┐
+│                                                         │
+│  1. Call get_rent_reminders_due                          │
+│     ├─ Returns ledger entries matching reminder          │
+│     │   schedule (3 days before, on due date,            │
+│     │   3 days overdue)                                  │
+│     └─ On failure → alertTelegram, return 200            │
+│                                                         │
+│  2. For each entry: send WhatsApp to tenant              │
+│     ├─ Template varies by reminder level (1/2/3)         │
+│     ├─ Update reminder_N_sent_at                         │
+│     ├─ If level 3 + status=pending → flip to overdue     │
+│     └─ Log via c1_log_system_event                       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─ Escalation Phase ─────────────────────────────────────┐
+│                                                         │
+│  3. Call rent_escalation_check()                         │
+│     ├─ Returns tenants with exhausted reminders          │
+│     │   (reminder_3 sent 7+ days ago, still overdue)     │
+│     └─ Excludes tenants with existing open ticket        │
+│                                                         │
+│  4. For each tenant:                                     │
+│     ├─ create_rent_arrears_ticket (dedup per tenant)     │
+│     ├─ Notify PM via sendAndLog                          │
+│     └─ Log via c1_log_system_event                       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key:** Escalation creates tickets only after all 3 reminders exhausted + 7 day grace period. Dedup built into `create_rent_arrears_ticket`. Rent tickets route through `compute_rent_arrears_next_action`.
+
+---
+
+## 6. Rent Payment Flow
+
+**Trigger:** PM calls `record_rent_payment` from dashboard rent UI
+
+```
+PM records payment via rent UI
+        │
+        ▼
+┌─ record_rent_payment RPC ──────────────────────────────┐
+│                                                         │
+│  1. Ownership check (pm_id matches ledger entry)        │
+│     └─ On failure → RAISE EXCEPTION                     │
+│                                                         │
+│  2. INSERT into c1_rent_payments                        │
+│     └─ TRIGGER: trg_rent_payment_update_ledger          │
+│        ├─ SUMs all payments for this ledger entry        │
+│        ├─ Updates c1_rent_ledger.amount_paid + status    │
+│        └─ Sets paid_at if fully paid                     │
+│                                                         │
+│  3. Check if ALL arrears for tenant cleared              │
+│     └─ If yes: auto-close rent_arrears ticket            │
+│        ├─ c1_trigger_recompute_next_action fires         │
+│        └─ next_action = 'completed' / 'rent_cleared'     │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key:** Payment accumulates — multiple partial payments are summed by trigger. Auto-close only fires when ALL overdue entries for the tenant are resolved, not just the one being paid.
