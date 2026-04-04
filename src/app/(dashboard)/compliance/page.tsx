@@ -66,6 +66,7 @@ export default function CompliancePage() {
   const supabase = createClient()
   const [certificates, setCertificates] = useState<ComplianceRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [propertyCount, setPropertyCount] = useState(0)
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -84,7 +85,7 @@ export default function CompliancePage() {
   const fetchData = useCallback(async () => {
     if (!propertyManager) return
     const { data } = await supabase.rpc('compliance_get_all_statuses', { p_pm_id: propertyManager.id })
-    if (data) {
+    if (data && data.length > 0) {
       setCertificates((data as unknown as Array<{
         cert_id: string | null; property_id: string; property_address: string
         certificate_type: string; display_status: string; expiry_date: string | null
@@ -98,6 +99,12 @@ export default function CompliancePage() {
         issued_by: r.issued_by, certificate_number: r.certificate_number,
         property_address: r.property_address || 'Unknown',
       })))
+    } else {
+      setCertificates([])
+      const { count } = await supabase.from('c1_properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_manager_id', propertyManager.id)
+      setPropertyCount(count ?? 0)
     }
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,12 +202,11 @@ export default function CompliancePage() {
       getValue: (row) => row.display_status },
   ]
 
-  // Show setup wizard if no certificates have been uploaded yet
-  const hasAnyCerts = !loading && certificates.some(c => c.cert_id !== null)
-  if (!loading && !hasAnyCerts && certificates.length > 0) {
+  // Show setup wizard when PM has properties but no certificates yet
+  if (!loading && certificates.length === 0 && propertyCount > 0) {
     return (
       <ComplianceOnboarding
-        certificates={certificates}
+        certificates={[]}
         pmId={propertyManager?.id || ''}
         onComplete={fetchData}
       />
