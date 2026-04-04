@@ -142,11 +142,6 @@ export const NEXT_STEPS: Record<string, string> = {
   landlord_needs_help: 'Landlord needs help — take over',
 }
 
-export const IN_PROGRESS_REASONS = new Set([
-  'awaiting_contractor', 'awaiting_booking', 'awaiting_landlord',
-  'allocated_to_landlord', 'landlord_in_progress', 'ooh_dispatched', 'ooh_in_progress',
-  'scheduled',
-])
 
 // ─────────────────────────────────────────────────────────
 // Filtering helpers (used in parent to lift counts)
@@ -166,8 +161,10 @@ export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
   })
 }
 
-export function filterInProgress(allTickets: TicketSummary[]): TicketSummary[] {
-  return allTickets.filter(t => IN_PROGRESS_REASONS.has(t.next_action_reason || ''))
+export function filterInProgress(todoItems: TodoItem[]): TodoItem[] {
+  return todoItems.filter(i =>
+    (!i.source_type || i.source_type === 'ticket') && i.action_type === 'FOLLOW_UP'
+  )
 }
 
 // ─────────────────────────────────────────────────────────
@@ -176,10 +173,10 @@ export function filterInProgress(allTickets: TicketSummary[]): TicketSummary[] {
 
 interface TodoPanelProps {
   actionable: TodoItem[]
-  inProgressTickets: TicketSummary[]
+  inProgressItems: TodoItem[]
 }
 
-export function TodoPanel({ actionable, inProgressTickets }: TodoPanelProps) {
+export function TodoPanel({ actionable, inProgressItems }: TodoPanelProps) {
   const [leftTab, setLeftTab] = useState<'todo' | 'in_progress'>('todo')
   const openTicket = useOpenTicket()
 
@@ -222,12 +219,12 @@ export function TodoPanel({ actionable, inProgressTickets }: TodoPanelProps) {
             )}>
               In Progress
             </span>
-            {inProgressTickets.length > 0 && (
+            {inProgressItems.length > 0 && (
               <span className={cn(
                 'text-xs font-medium transition-colors',
                 leftTab === 'in_progress' ? 'text-primary/60' : 'text-muted-foreground/50'
               )}>
-                {inProgressTickets.length}
+                {inProgressItems.length}
               </span>
             )}
           </button>
@@ -318,28 +315,50 @@ export function TodoPanel({ actionable, inProgressTickets }: TodoPanelProps) {
       )
       ) : (
         /* In Progress tab */
-        inProgressTickets.length === 0 ? (
+        inProgressItems.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-6">
             <p className="text-sm text-muted-foreground">No tickets in progress</p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            {inProgressTickets.map((ticket) => {
-              const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+          <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+            {inProgressItems.map(item => {
+              const ctaText = getCtaText(item)
+              const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
               return (
                 <button
-                  key={ticket.id}
-                  onClick={() => openTicket(ticket.id)}
-                  className="flex items-center gap-3 py-3 px-6 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer"
+                  key={item.id}
+                  onClick={() => openTicket(item.ticket_id)}
+                  className="flex items-start gap-3 py-3 px-6 transition-colors min-w-0 hover:bg-muted/30 group cursor-pointer w-full text-left"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">{ticket.address || '—'}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.issue_description || 'No description'}</p>
-                    <span className="flex items-center gap-1.5 mt-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
-                      <span className="text-[11px] font-medium text-muted-foreground/70">{badge.label}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
+                      {item.priority && (
+                        <StatusBadge
+                          status={item.priority}
+                          size="sm"
+                          className="border-border/50 text-muted-foreground/70"
+                        />
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                        <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
+                      </span>
+                      {(() => {
+                        const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
+                        const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger'
+                          : waitHrs > 24 ? 'text-xs font-medium text-warning'
+                          : 'text-[11px] text-muted-foreground/60'
+                        return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
+                      })()}
+                    </div>
                   </div>
+                  <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">
+                    {ctaText}
+                  </span>
                 </button>
               )
             })}

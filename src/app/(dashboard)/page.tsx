@@ -36,6 +36,7 @@ import {
 import { TicketForm } from '@/components/ticket-form'
 import { ChatHistory } from '@/components/chat-message'
 import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { PageShell } from '@/components/page-shell'
@@ -430,7 +431,7 @@ export default function DashboardPage() {
 
   // Lift filtered lists to parent scope for stat cards + TodoPanel props
   const actionable = filterActionable(todoItems)
-  const inProgressTickets = filterInProgress(allTickets)
+  const inProgressItems = filterInProgress(todoItems)
 
   const showAwaitingTickets = (type: string) => {
     let filtered: TicketSummary[]
@@ -680,29 +681,38 @@ export default function DashboardPage() {
           <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
               <span className="text-base font-semibold text-foreground">In progress</span>
-              {inProgressTickets.length > 0 && (
+              {inProgressItems.length > 0 && (
                 <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                  {inProgressTickets.length}
+                  {inProgressItems.length}
                 </span>
               )}
             </div>
             <div className="flex flex-col divide-y divide-border/30 flex-1 min-h-0 overflow-y-auto">
-              {inProgressTickets.length === 0 ? (
+              {inProgressItems.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center p-6">
                   <p className="text-sm text-muted-foreground">No tickets in progress</p>
                 </div>
               ) : (
-                inProgressTickets.map(ticket => {
-                  const badge = REASON_BADGE[ticket.next_action_reason || ''] || { label: ticket.display_stage || ticket.next_action_reason, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+                inProgressItems.map(item => {
+                  const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
                   return (
-                    <button key={ticket.id} onClick={() => openTicket(ticket.id)} className="flex items-center gap-3 py-3 px-6 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer">
+                    <button key={item.id} onClick={() => openTicket(item.ticket_id)} className="flex items-start gap-3 py-3 px-6 hover:bg-muted/30 transition-colors w-full text-left cursor-pointer">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-card-foreground truncate">{ticket.address || '—'}</p>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{ticket.issue_description || 'No description'}</p>
-                        <span className="flex items-center gap-1.5 mt-1">
-                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                          <span className={`text-[11px] font-medium ${badge.text}`}>{badge.label}</span>
-                        </span>
+                        <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
+                        <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                            <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
+                          </span>
+                          {(() => {
+                            const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
+                            const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger'
+                              : waitHrs > 24 ? 'text-xs font-medium text-warning'
+                              : 'text-[11px] text-muted-foreground/60'
+                            return <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
+                          })()}
+                        </div>
                       </div>
                     </button>
                   )
