@@ -128,12 +128,6 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
         required: false,
         aliases: ['property', 'address', 'flat', 'unit', 'house', 'addr', 'street', 'property addr'],
       },
-      {
-        key: 'role_tag',
-        label: 'Role',
-        required: false,
-        aliases: ['role', 'type', 'tenant_type'],
-      },
     ],
     mergeRules: [
       {
