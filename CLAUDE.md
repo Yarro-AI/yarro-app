@@ -7,27 +7,11 @@ Building an HMO-focused property management platform.
 **Stack:** Next.js 16 App Router · React 19 · TypeScript 5 · Tailwind 4 · shadcn/ui · Supabase (Postgres, Auth, Storage, Edge Functions) · Sonner · date-fns · next-themes
 
 ## Your Role
-- Default to small, focused changes — but never shortcuts or hacky solutions. Always pick the strongest, most scalable option.
+- Default to small, focused changes — but never shortcuts or hacky solutions.
+- Always pick the strongest, most scalable option. Read `.claude/docs/decision-principles.md` for the full decision framework.
 - Reference existing components (check `.claude/docs/patterns.md`) before creating new ones.
-
----
-
-## Session Rules (Non-Negotiable)
-1. **One feature, one merge** — check `.claude/tasks/` for incomplete PRDs first. Ship or abandon before starting new work.
-2. **Branch from main** — `feat/`, `fix/`, `refactor/` branches only. No integration branches.
-3. **Guard the scope** — if it's not in the active PRD, suggest backlog. Only proceed if Adam explicitly expands the PRD.
-4. **Commit often** — nudge after 3+ files changed without a commit.
-5. **Don't build during testing** — log failures, don't fix mid-test. "Backlog it or blocker?"
-
-### Session Start
-1. Read SESSION_LOG.md — check "Next Session Pickup"
-2. Check git state: `git status` and `git branch`
-3. Check `.claude/tasks/` for incomplete PRDs — enforce Rule 1
-4. If pending work exists, mention it
-5. Run `/scope` to create a PRD (or `/scope` lightweight for quick fixes)
-6. Build starts only after Adam confirms the PRD
-
-Session end procedures + done checklist: `.claude/docs/session-procedures.md`
+- Think about the long-term: what happens when parallel features land alongside this change?
+- Each atomic change should be the strongest version of itself — small scope, maximum stability.
 
 ---
 
@@ -45,6 +29,17 @@ All business logic lives in Supabase RPCs, not the frontend.
   - Reference: `docs/POLYMORPHIC-DISPATCH-PLAN.md`
 
 RPC development workflow: `.claude/docs/architecture.md#rpc-development-workflow`
+
+---
+
+## Session Rules (Non-Negotiable)
+1. **One feature, one merge** — check `.claude/tasks/` for incomplete PRDs first. Ship or abandon before starting new work.
+2. **Branch from main** — `feat/`, `fix/`, `refactor/` branches only. No integration branches.
+3. **Guard the scope** — if it's not in the active PRD, suggest backlog. Only proceed if Adam explicitly expands the PRD.
+4. **Commit often** — nudge after 3+ files changed without a commit.
+5. **Don't build during testing** — log failures, don't fix mid-test. "Backlog it or blocker?"
+
+Session start + end procedures: `.claude/docs/session-procedures.md`
 
 ---
 
@@ -95,6 +90,7 @@ Specs: `docs/PRD.md` · `docs/BUILD-ORDER.md` · `docs/modules/01–04*.md` · `
 ## Reference Index
 | File | When to Read |
 |------|-------------|
+| `.claude/docs/decision-principles.md` | Before choosing between approaches, during scoping & plan review |
 | `.claude/docs/product-vision.md` | ICP, positioning, competitive landscape |
 | `docs/PRD.md` | Product requirements, core loop |
 | `docs/BUILD-ORDER.md` | Sprint plan, what to build next |
@@ -105,7 +101,7 @@ Specs: `docs/PRD.md` · `docs/BUILD-ORDER.md` · `docs/modules/01–04*.md` · `
 | `.claude/docs/safe-zones.md` | Before touching sensitive files |
 | `.claude/docs/protected-rpcs.md` | Before modifying SQL functions |
 | `.claude/docs/code-issues.md` | Known code quality issues |
-| `.claude/docs/session-procedures.md` | Session end, done checklist, vision questions |
+| `.claude/docs/session-procedures.md` | Session start/end, done checklist, vision questions |
 | `.claude/docs/git-workflow.md` | Git operations reference |
 | `.claude/docs/infrastructure.md` | Service credentials and URLs |
 | `.claude/tasks/BACKLOG.md` | Captured ideas for future sessions |

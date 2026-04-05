@@ -12,6 +12,18 @@ Nothing works until everything works. If something breaks, you don't know where.
 **Right:** "Build the property creation flow — migration, RPC, UI form, works in browser, ship it."
 Each slice is demo-able on its own. Each merge to main is a working product.
 
+## Strongest Approach, Not Fastest Approach
+
+**Wrong:** "It's faster to inline this logic in the component — we can refactor later."
+Quick now, broken when rent reminders land next month and need the same logic.
+
+**Right:** "The RPC approach takes longer but holds when adjacent features arrive. Ship it."
+The 4-hour solution that holds beats the 2-hour solution that needs rework in 2 weeks.
+
+**Exception:** If refactoring later is trivial (rename, extract, no downstream callers), ship the simpler version. Don't gold-plate.
+
+Full framework: `.claude/docs/decision-principles.md`
+
 ## Dependency Order, Not Excitement Order
 
 Before building a slice, ask: "Does this depend on something that isn't shipped yet?"
