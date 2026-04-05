@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Upload, FileSpreadsheet } from 'lucide-react'
+import { Upload, RotateCcw } from 'lucide-react'
 import { parseText, parseFile, MAX_ROWS } from '@/lib/bulk-import/pipeline'
 
 interface PasteInputProps {
@@ -11,24 +11,23 @@ interface PasteInputProps {
 }
 
 export function PasteInput({ onParsed, onError }: PasteInputProps) {
-  const [text, setText] = useState('')
-  const [rowCount, setRowCount] = useState<number | null>(null)
+  const [hasData, setHasData] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleTextChange = useCallback(
     (rawText: string) => {
-      setText(rawText)
       if (!rawText.trim()) {
-        setRowCount(null)
+        setHasData(false)
         return
       }
       const { rows, error } = parseText(rawText)
       if (error) {
         onError(error)
-        setRowCount(null)
+        setHasData(false)
         return
       }
-      setRowCount(rows.length)
+      setHasData(true)
       onParsed(rows)
     },
     [onParsed, onError]
@@ -43,35 +42,44 @@ export function PasteInput({ onParsed, onError }: PasteInputProps) {
         onError(error)
         return
       }
-      setRowCount(rows.length)
-      setText(`[Loaded from ${file.name}]`)
+      setHasData(true)
       onParsed(rows)
       e.target.value = ''
     },
     [onParsed, onError]
   )
 
+  const handleReset = () => {
+    setHasData(false)
+    if (textareaRef.current) textareaRef.current.value = ''
+  }
+
+  // When data is loaded, hide the textarea
+  if (hasData) {
+    return (
+      <button
+        onClick={handleReset}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <RotateCcw className="h-3 w-3" />
+        Re-paste or upload different data
+      </button>
+    )
+  }
+
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <textarea
-          value={text}
-          onChange={(e) => handleTextChange(e.target.value)}
-          onPaste={(e) => {
-            e.preventDefault()
-            const pasted = e.clipboardData.getData('text/plain')
-            handleTextChange(pasted)
-          }}
-          placeholder="Paste rows from your spreadsheet here..."
-          className="w-full min-h-[200px] rounded-lg border border-border bg-card p-4 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-y"
-        />
-        {rowCount !== null && (
-          <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-card px-2 py-1 rounded border">
-            <FileSpreadsheet className="h-3 w-3 inline mr-1" />
-            {rowCount} rows detected
-          </div>
-        )}
-      </div>
+      <textarea
+        ref={textareaRef}
+        onChange={(e) => handleTextChange(e.target.value)}
+        onPaste={(e) => {
+          e.preventDefault()
+          const pasted = e.clipboardData.getData('text/plain')
+          handleTextChange(pasted)
+        }}
+        placeholder="Paste rows from your spreadsheet here..."
+        className="w-full min-h-[200px] rounded-lg border border-border bg-card p-4 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+      />
 
       <div className="flex items-center gap-3">
         <input
