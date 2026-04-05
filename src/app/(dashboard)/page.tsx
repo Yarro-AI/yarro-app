@@ -443,15 +443,18 @@ export default function DashboardPage() {
     : `Hi, ${firstName}. You're all clear.`
 
   // Autocomplete results for global search in top bar
-  const searchResults = searchTerm.trim()
-    ? allTickets
-        .filter(
-          (t) =>
-            t.issue_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.address?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .slice(0, 8)
-    : []
+  const searchResults = useMemo(() =>
+    searchTerm.trim()
+      ? allTickets
+          .filter(
+            (t) =>
+              t.issue_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              t.address?.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .slice(0, 8)
+      : [],
+    [searchTerm, allTickets]
+  )
 
   if (loading && !stats) {
     return (
