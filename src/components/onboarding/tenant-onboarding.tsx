@@ -353,8 +353,10 @@ export function TenantOnboarding() {
             <BulkImportDialog
               entityType="tenants"
               open={importOpen}
-              onOpenChange={setImportOpen}
-              onComplete={() => window.location.reload()}
+              onOpenChange={(open) => {
+                setImportOpen(open)
+                if (!open) window.location.reload() // reload when dialog closes, not when import completes
+              }}
             />
           </div>
         )}

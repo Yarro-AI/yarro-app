@@ -247,8 +247,10 @@ export function ContractorOnboarding() {
             <BulkImportDialog
               entityType="contractors"
               open={importOpen}
-              onOpenChange={setImportOpen}
-              onComplete={() => window.location.reload()}
+              onOpenChange={(open) => {
+                setImportOpen(open)
+                if (!open) window.location.reload()
+              }}
             />
           </div>
         )}
