@@ -163,10 +163,20 @@ export function ColumnMapper({
               {/* Arrow */}
               <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
-              {/* Right: Target dropdown */}
-              {isMerge ? (
-                <span className="text-sm text-muted-foreground italic">Part of merge</span>
-              ) : (
+              {/* Right: Target dropdown or merge label */}
+              {isMerge ? (() => {
+                const mergeRule = config.mergeRules.find((r) =>
+                  r.sourceSets.some((aliasSet) =>
+                    aliasSet.some((a) => a.toLowerCase().replace(/[_\s-]/g, '') === header.toLowerCase().replace(/[_\s-]/g, ''))
+                  )
+                )
+                const targetCol = mergeRule ? config.columns.find((c) => c.key === mergeRule.targetColumn) : null
+                return (
+                  <span className="text-sm text-muted-foreground">
+                    Merged into <span className="font-medium text-foreground">{targetCol?.label || mergeRule?.targetColumn || 'unknown'}</span>
+                  </span>
+                )
+              })() : (
                 <Select
                   value={currentTarget || '__skip__'}
                   onValueChange={(val) => handleChange(idx, val === '__skip__' ? null : val)}
@@ -178,9 +188,10 @@ export function ColumnMapper({
                     <SelectItem value="__skip__">
                       <span className="text-muted-foreground">Skip (don&apos;t import)</span>
                     </SelectItem>
-                    {TARGET_GROUPS.map((group) => (
+                    {TARGET_GROUPS.map((group, groupIdx) => (
                       <SelectGroup key={group.label}>
-                        <SelectLabel className="text-xs">{group.label}</SelectLabel>
+                        {groupIdx > 0 && <div className="h-px bg-border my-1 mx-2" />}
+                        <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5">{group.label}</SelectLabel>
                         {group.keys.map((key) => {
                           const col = config.columns.find((c) => c.key === key)
                           if (!col) return null
