@@ -201,21 +201,29 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
 
   // ─── Render ──
 
-  const stepLabels = ['Paste', 'Map', 'Confirm', 'Results'] as const
   const stepKeys = ['paste', 'map', 'confirm', 'results'] as const
   const currentStepIdx = stepKeys.indexOf(step === 'importing' ? 'confirm' : step as typeof stepKeys[number])
 
   return (
     <div className="space-y-5">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
-        {stepLabels.map((label, i) => (
-          <span key={label} className={i === currentStepIdx ? 'text-foreground font-medium' : ''}>
-            {i > 0 && <span className="mx-2">→</span>}
-            {label}
-          </span>
+      {/* Progress dots — matches onboarding pattern */}
+      <div className="flex items-center justify-center gap-1.5 pt-1">
+        {stepKeys.map((_, i) => (
+          <div
+            key={i}
+            className={`h-1 rounded-full transition-all ${
+              i === currentStepIdx ? 'w-6 bg-primary' : i < currentStepIdx ? 'w-6 bg-primary/30' : 'w-1.5 bg-border'
+            }`}
+          />
         ))}
       </div>
+
+      {/* Subheader */}
+      {step === 'map' && (
+        <p className="text-sm text-muted-foreground text-center px-2">
+          Link your columns to the right field. Columns that don&apos;t match can be skipped.
+        </p>
+      )}
 
       {/* Step 1: Paste */}
       {step === 'paste' && (
@@ -234,9 +242,6 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
           matches={matches}
           merges={merges}
           entityType={entityType}
-          hasHeaders={hasHeaders}
-          headerConfidence={headerConfidence}
-          onHeaderToggle={handleHeaderToggle}
           onMappingComplete={handleMappingComplete}
         />
       )}
