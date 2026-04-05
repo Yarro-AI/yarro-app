@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Menu } from 'lucide-react'
 import { usePM } from '@/contexts/pm-context'
 import { DateRangeProvider } from '@/contexts/date-range-context'
-import { createClient } from '@/lib/supabase/client'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { TicketDrawerProvider } from '@/components/ticket-drawer-provider'
 import { DashboardHeader } from '@/components/dashboard-header'
@@ -22,7 +21,6 @@ export default function DashboardLayout({
   const router = useRouter()
   const pathname = usePathname()
   const [checkingOnboarding, setCheckingOnboarding] = useState(true)
-  const supabase = createClient()
 
   // Smart redirect after loading completes
   useEffect(() => {
