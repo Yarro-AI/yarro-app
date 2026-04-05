@@ -7,7 +7,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,9 +19,8 @@ interface PreviewTableProps {
   matches: ColumnMatch[]
   merges: MergeInfo[]
   skippedHeaders: string[]
-  sourceHeaders: string[]
   onEdit: (rowIndex: number, field: string, value: string) => void
-  onColumnChange: (targetColumn: string, sourceIndex: number | null) => void
+  onColumnChange: (currentTarget: string, newTarget: string | null) => void
 }
 
 export function PreviewTable({
@@ -31,7 +29,6 @@ export function PreviewTable({
   matches,
   merges,
   skippedHeaders,
-  sourceHeaders,
   onEdit,
   onColumnChange,
 }: PreviewTableProps) {
@@ -50,19 +47,17 @@ export function PreviewTable({
     (col) => col.required || col.requiredHint || rows.some((r) => r.data[col.key])
   )
 
+  // Which target columns are currently mapped (for disabling in dropdown)
+  const mappedTargets = new Set(
+    matches.filter((m) => m.targetColumn && !m.needsReview).map((m) => m.targetColumn!)
+  )
+  // Also include merge targets
+  merges.forEach((m) => mappedTargets.add(m.rule.targetColumn))
+
   // Missing required columns
   const missingRequired = config.columns.filter(
-    (c) => c.required && !matches.some((m) => m.targetColumn === c.key && !m.needsReview)
+    (c) => c.required && !mappedTargets.has(c.key)
   )
-
-  // Get which source column maps to a target
-  const getSourceForTarget = (targetKey: string): string | null => {
-    const match = matches.find((m) => m.targetColumn === targetKey && !m.needsReview && m.confidence !== 'merge')
-    if (match) return match.sourceHeader
-    const merge = merges.find((m) => m.rule.targetColumn === targetKey)
-    if (merge) return merge.sourceIndices.map((i) => sourceHeaders[i]).join(' + ')
-    return null
-  }
 
   const handleBlur = useCallback(
     (rowIndex: number, field: string, value: string) => {
@@ -128,42 +123,43 @@ export function PreviewTable({
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="px-3 py-2 text-left font-medium text-muted-foreground w-10">#</th>
-              {activeColumns.map((col) => {
-                const source = getSourceForTarget(col.key)
-                return (
-                  <th key={col.key} className="px-1 py-1 text-left min-w-[120px]">
-                    <Select
-                      value={col.key}
-                      onValueChange={(val) => {
-                        if (val === '__skip__') {
-                          onColumnChange(col.key, null)
-                        } else {
-                          // val is a source index
-                          onColumnChange(col.key, parseInt(val))
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="h-auto border-0 bg-transparent shadow-none px-2 py-1 text-xs font-medium hover:bg-muted/80">
-                        <span className="flex items-center gap-1">
-                          {col.label}
-                          {col.required && <span className="text-destructive">*</span>}
-                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                        </span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__skip__">
-                          <span className="text-muted-foreground">Skip this column</span>
-                        </SelectItem>
-                        {sourceHeaders.map((h, idx) => (
-                          <SelectItem key={idx} value={String(idx)}>
-                            {h}
+              {activeColumns.map((col) => (
+                <th key={col.key} className="px-1 py-1 text-left min-w-[120px]">
+                  <Select
+                    value={col.key}
+                    onValueChange={(val) => {
+                      if (val === '__none__') {
+                        onColumnChange(col.key, null)
+                      } else {
+                        onColumnChange(col.key, val)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-auto border-0 bg-transparent shadow-none px-2 py-1 text-xs font-medium hover:bg-muted/80">
+                      <span className="flex items-center gap-1">
+                        {col.label}
+                        {col.required && <span className="text-destructive">*</span>}
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">None (skip)</span>
+                      </SelectItem>
+                      {config.columns.map((targetCol) => {
+                        const inUse = mappedTargets.has(targetCol.key) && targetCol.key !== col.key
+                        return (
+                          <SelectItem key={targetCol.key} value={targetCol.key} disabled={inUse}>
+                            {targetCol.label}
+                            {targetCol.required && <span className="text-destructive ml-1">*</span>}
+                            {inUse && <span className="text-muted-foreground ml-1">(in use)</span>}
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </th>
-                )
-              })}
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </th>
+              ))}
               <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12" />
             </tr>
           </thead>

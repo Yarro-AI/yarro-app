@@ -107,21 +107,27 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   )
 
   const handleColumnChange = useCallback(
-    (targetColumn: string, sourceIndex: number | null) => {
+    (currentTarget: string, newTarget: string | null) => {
       const updated = matches.map((m) => {
-        // Clear any existing match to this target (except merges)
-        if (m.targetColumn === targetColumn && m.confidence !== 'merge') {
-          return { ...m, targetColumn: null, confidence: 'unmatched' as const, needsReview: false }
+        if (m.confidence === 'merge') return m // Don't touch merges
+
+        // Find the source that was mapped to currentTarget and reassign it
+        if (m.targetColumn === currentTarget) {
+          return {
+            ...m,
+            targetColumn: newTarget,
+            confidence: newTarget ? ('exact' as const) : ('unmatched' as const),
+            needsReview: false,
+          }
         }
-        // Assign the new source to this target
-        if (sourceIndex !== null && m.sourceIndex === sourceIndex) {
-          return { ...m, targetColumn, confidence: 'exact' as const, needsReview: false }
+        // If newTarget is already claimed by another source, unclaim it
+        if (newTarget && m.targetColumn === newTarget) {
+          return { ...m, targetColumn: null, confidence: 'unmatched' as const, needsReview: false }
         }
         return m
       })
       setMatches(updated)
 
-      // Recalculate skipped
       const newSkipped = updated
         .filter((m) => m.confidence === 'unmatched' && !m.mergedFrom)
         .map((m) => m.sourceHeader)
@@ -239,7 +245,6 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
             matches={matches}
             merges={merges}
             skippedHeaders={skippedHeaders}
-            sourceHeaders={headers}
             onEdit={handleEdit}
             onColumnChange={handleColumnChange}
           />
