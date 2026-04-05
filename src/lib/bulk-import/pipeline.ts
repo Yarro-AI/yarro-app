@@ -368,7 +368,7 @@ export function validateRows(
     // Entity-specific validation
     if (entityType === 'properties') {
       if (data.address && !/[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}/i.test(data.address)) {
-        warnings.address = 'No UK postcode detected in address'
+        errors.address = 'Address must include a UK postcode'
       }
     }
 

@@ -89,7 +89,7 @@ export function PreviewTable({
       {skippedHeaders.length > 0 && (
         <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30 rounded-lg px-3 py-2">
           <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-          {skippedHeaders.length} column{skippedHeaders.length !== 1 ? 's' : ''} skipped: {skippedHeaders.join(', ')}
+          {skippedHeaders.length} column{skippedHeaders.length !== 1 ? 's' : ''} not mapped: {skippedHeaders.join(', ')}
         </div>
       )}
 
@@ -144,19 +144,11 @@ export function PreviewTable({
                       }}
                     >
                       <SelectTrigger className="h-auto border-0 bg-transparent shadow-none px-2 py-1 text-xs font-medium hover:bg-muted/80">
-                        <div className="flex flex-col items-start">
-                          <span className="flex items-center gap-1">
-                            {col.label}
-                            {col.required && <span className="text-destructive">*</span>}
-                            {col.requiredHint && <span className="text-muted-foreground font-normal">({col.requiredHint})</span>}
-                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                          </span>
-                          {source && (
-                            <span className="text-[10px] text-muted-foreground font-normal">
-                              ← {source}
-                            </span>
-                          )}
-                        </div>
+                        <span className="flex items-center gap-1">
+                          {col.label}
+                          {col.required && <span className="text-destructive">*</span>}
+                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        </span>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__skip__">

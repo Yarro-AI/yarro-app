@@ -273,10 +273,10 @@ describe('validateRows', () => {
     expect(result[0].errors.address).toBe('Address is required')
   })
 
-  it('warns on missing postcode in address', () => {
+  it('errors on missing postcode in address', () => {
     const rows = [{ address: '123 High Street Manchester' }]
     const result = validateRows(rows, 'properties')
-    expect(result[0].warnings.address).toContain('No UK postcode')
+    expect(result[0].errors.address).toContain('postcode')
   })
 
   it('allows tenant with name but no phone (soft required)', () => {
