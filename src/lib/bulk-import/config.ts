@@ -226,6 +226,12 @@ export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
         ],
       },
       {
+        key: 'postcode',
+        label: 'Postcode',
+        required: false,
+        aliases: ['post_code', 'pc', 'zip', 'zip_code', 'postal_code'],
+      },
+      {
         key: 'property_type',
         label: 'Property Type',
         required: false,

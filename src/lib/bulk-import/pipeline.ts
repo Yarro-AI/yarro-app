@@ -347,6 +347,22 @@ export function normalizeRows(
       normalized.role_tag = normalized.role_tag.trim()
     }
 
+    // Merge postcode into address if both present (unified import)
+    if (entityType === 'unified' && normalized.postcode && normalized.address) {
+      const pc = normalized.postcode.trim().toUpperCase()
+      // Only append if address doesn't already contain this postcode
+      if (!normalized.address.toUpperCase().includes(pc)) {
+        normalized.address = `${normalized.address.trim()}, ${pc}`
+      }
+      delete normalized.postcode
+    } else if (entityType === 'unified' && normalized.postcode && !normalized.address) {
+      // Postcode without address — move it to address (partial)
+      normalized.address = normalized.postcode.trim().toUpperCase()
+      delete normalized.postcode
+    } else if (entityType === 'unified' && normalized.postcode) {
+      delete normalized.postcode // Clean up — RPC doesn't expect postcode field
+    }
+
     // Remove empty string values
     for (const key of Object.keys(normalized)) {
       if (normalized[key] === '' || normalized[key] === undefined) {

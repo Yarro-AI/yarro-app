@@ -262,6 +262,27 @@ describe('normalizeRows', () => {
     expect(result[0].address).toBe('123 High St')
     expect(result[0].city).toBeUndefined()
   })
+
+  it('merges postcode into address for unified', () => {
+    const rows = [{ address: '123 High St, Manchester', postcode: 'M1 1AA' }]
+    const result = normalizeRows(rows, 'unified')
+    expect(result[0].address).toBe('123 High St, Manchester, M1 1AA')
+    expect(result[0].postcode).toBeUndefined()
+  })
+
+  it('does not duplicate postcode if already in address', () => {
+    const rows = [{ address: '123 High St, M1 1AA', postcode: 'M1 1AA' }]
+    const result = normalizeRows(rows, 'unified')
+    expect(result[0].address).toBe('123 High St, M1 1AA')
+    expect(result[0].postcode).toBeUndefined()
+  })
+
+  it('uses postcode as address if no address provided', () => {
+    const rows = [{ postcode: 'M1 1AA', full_name: 'John' }]
+    const result = normalizeRows(rows, 'unified')
+    expect(result[0].address).toBe('M1 1AA')
+    expect(result[0].postcode).toBeUndefined()
+  })
 })
 
 // ─── validateRows ──────────────────────────────────────────
