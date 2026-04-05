@@ -11,10 +11,10 @@ import {
   MessageSquare,
   Phone,
   User,
-  Users,
+
   Search,
   ShieldCheck,
-  Zap,
+
   Banknote,
   Wrench,
 } from 'lucide-react'
@@ -42,7 +42,7 @@ import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { filterActionable, filterInProgress, REASON_BADGE } from '@/components/dashboard/todo-panel'
 import { TodoRow } from '@/components/dashboard/todo-row'
-import { StatCard } from '@/components/dashboard/stat-card'
+
 import { TodoCategoryCard } from '@/components/dashboard/todo-category-card'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
 import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
@@ -142,22 +142,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
-  const [complianceSummary, setComplianceSummary] = useState<{
-    actions_needed: number; expired: number; expiring_soon: number;
-    review: number; incomplete: number; renewal_requested: number; renewal_scheduled: number; valid: number;
-    compliant_properties: number; total_properties: number; total_required: number
-  }>({
-    actions_needed: 0, expired: 0, expiring_soon: 0,
-    review: 0, incomplete: 0, renewal_requested: 0, renewal_scheduled: 0, valid: 0,
-    compliant_properties: 0, total_properties: 0, total_required: 0,
-  })
-  const [occupancySummary, setOccupancySummary] = useState<{
-    total_rooms: number; occupied: number; vacant: number; ending_soon: number
-  }>({ total_rooms: 0, occupied: 0, vacant: 0, ending_soon: 0 })
-  const [aiActionsCount, setAiActionsCount] = useState(0)
-  const [rentIncome, setRentIncome] = useState<{
-    expected_amount: number; collected_amount: number; outstanding_amount: number; overdue_amount: number
-  }>({ expected_amount: 0, collected_amount: 0, outstanding_amount: 0, overdue_amount: 0 })
   const [onboardingChecklist, setOnboardingChecklist] = useState<OnboardingChecklistItem[]>([])
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [spotlightVisible, setSpotlightVisible] = useState(false)
@@ -177,7 +161,7 @@ export default function DashboardPage() {
       p_year: now.getFullYear(),
     } as never)
 
-    const [ticketsRes, convosRes, todoRes, eventsRes, complianceRes, occupancyRes, aiActionsRes, todoExtrasRes, onboardingRes, rentIncomeRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, todoExtrasRes, onboardingRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -229,59 +213,13 @@ export default function DashboardPage() {
         p_limit: 15,
         p_cursor: null,
       } as never),
-      // Compliance summary — RPC returns counts by status
-      supabase.rpc('compliance_get_summary', { p_pm_id: propertyManager.id }),
-      // Occupancy — portfolio-wide room vacancy
-      supabase.rpc('get_occupancy_summary' as never, { p_pm_id: propertyManager.id } as never),
-      // AI actions — system/AI events this month
-      supabase.rpc('get_ai_actions_count' as never, { p_pm_id: propertyManager.id } as never),
       // Non-ticket to-dos: compliance, rent, tenancy, handoff — same shape as c1_get_dashboard_todo
       supabase.rpc('c1_get_dashboard_todo_extras' as never, { p_pm_id: propertyManager.id } as never),
       // Onboarding checklist — skip if already completed (DB field)
       propertyManager.onboarding_completed_at
         ? Promise.resolve({ data: null })
         : supabase.rpc('c1_get_onboarding_checklist', { p_pm_id: propertyManager.id }),
-      // Rent income — £ amounts for current month
-      supabase.rpc('get_rent_income_summary' as never, { p_pm_id: propertyManager.id } as never),
     ])
-
-    // Process compliance summary — RPC returns action-based counts
-    const summaryData = complianceRes?.data as Record<string, number> | null
-    setComplianceSummary({
-      actions_needed: summaryData?.actions_needed ?? 0,
-      expired: summaryData?.expired ?? 0,
-      expiring_soon: summaryData?.expiring_soon ?? 0,
-      review: summaryData?.review ?? 0,
-      incomplete: summaryData?.incomplete ?? 0,
-      renewal_requested: summaryData?.renewal_requested ?? 0,
-      renewal_scheduled: summaryData?.renewal_scheduled ?? 0,
-      valid: summaryData?.valid ?? 0,
-      compliant_properties: summaryData?.compliant_properties ?? 0,
-      total_properties: summaryData?.total_properties ?? 0,
-      total_required: summaryData?.total_required ?? 0,
-    })
-
-    // Process occupancy summary — portfolio-wide room vacancy
-    const occData = occupancyRes?.data as Record<string, number> | null
-    setOccupancySummary({
-      total_rooms: occData?.total_rooms ?? 0,
-      occupied: occData?.occupied ?? 0,
-      vacant: occData?.vacant ?? 0,
-      ending_soon: occData?.ending_soon ?? 0,
-    })
-
-    // Process AI actions count
-    const aiData = aiActionsRes?.data as Record<string, number> | null
-    setAiActionsCount(aiData?.count ?? 0)
-
-    // Process rent income summary
-    const rentData = rentIncomeRes?.data as Record<string, number> | null
-    setRentIncome({
-      expected_amount: rentData?.expected_amount ?? 0,
-      collected_amount: rentData?.collected_amount ?? 0,
-      outstanding_amount: rentData?.outstanding_amount ?? 0,
-      overdue_amount: rentData?.overdue_amount ?? 0,
-    })
 
     const tickets = ticketsRes.data
     const conversations = convosRes.data
@@ -558,43 +496,6 @@ export default function DashboardPage() {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-6">
-        {/* Stat row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
-          <Link href="/rent">
-            <StatCard
-              label="Rent"
-              value={rentIncome.expected_amount > 0 ? `£${Math.round(rentIncome.collected_amount).toLocaleString('en-GB')}` : '—'}
-              subtitle={rentIncome.overdue_amount > 0 ? `£${Math.round(rentIncome.overdue_amount).toLocaleString('en-GB')} overdue` : rentIncome.outstanding_amount > 0 ? `£${Math.round(rentIncome.outstanding_amount).toLocaleString('en-GB')} outstanding` : rentIncome.expected_amount > 0 ? 'All collected' : 'No rent configured'}
-              accentColor={rentIncome.overdue_amount > 0 ? 'danger' : rentIncome.outstanding_amount > 0 ? 'warning' : 'success'}
-              icon={Banknote}
-            />
-          </Link>
-          <StatCard
-            label="Occupancy"
-            value={occupancySummary.total_rooms > 0 ? `${Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100)}%` : '—'}
-            subtitle={occupancySummary.vacant > 0 ? `${occupancySummary.vacant} vacant` : occupancySummary.ending_soon > 0 ? `${occupancySummary.ending_soon} ending soon` : occupancySummary.total_rooms > 0 ? 'Fully let' : 'No rooms'}
-            accentColor={(() => {
-              const rate = occupancySummary.total_rooms > 0 ? Math.round((occupancySummary.occupied / occupancySummary.total_rooms) * 100) : 0
-              return rate < 60 ? 'danger' : rate < 90 ? 'warning' : 'success'
-            })()}
-            icon={Users}
-          />
-          <StatCard
-            label="Compliance"
-            value={complianceSummary.actions_needed > 0 ? `${complianceSummary.actions_needed} actions` : complianceSummary.total_required > 0 ? 'All clear' : '—'}
-            subtitle={complianceSummary.expired > 0 ? `${complianceSummary.expired} expired` : complianceSummary.expiring_soon > 0 ? `${complianceSummary.expiring_soon} expiring` : complianceSummary.incomplete > 0 ? `${complianceSummary.incomplete} incomplete` : complianceSummary.total_required > 0 ? `${complianceSummary.compliant_properties}/${complianceSummary.total_properties} properties compliant` : 'No certificates'}
-            accentColor={complianceSummary.expired > 0 ? 'danger' : complianceSummary.expiring_soon > 0 || complianceSummary.incomplete > 0 || complianceSummary.review > 0 ? 'warning' : 'success'}
-            icon={ShieldCheck}
-          />
-          <StatCard
-            label="AI actions"
-            value={aiActionsCount}
-            subtitle={aiActionsCount > 0 ? 'this month' : 'No activity yet'}
-            accentColor="primary"
-            icon={Zap}
-          />
-        </div>
-
         {/* Main Content — two-column layout: Needs Action + In Progress */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 lg:items-stretch">
 
