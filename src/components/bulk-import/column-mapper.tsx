@@ -17,7 +17,7 @@ import type { ColumnMatch, MergeInfo } from '@/lib/bulk-import/pipeline'
 
 // Section groups — order matters (Property first, then Tenant near top)
 const SECTION_GROUPS: { label: string; keys: string[] }[] = [
-  { label: 'Property', keys: ['address', 'postcode', 'property_type', 'city'] },
+  { label: 'Property', keys: ['address', 'property_type', 'city'] },
   { label: 'Tenant', keys: ['full_name', 'phone', 'email'] },
   { label: 'Landlord', keys: ['landlord_name', 'landlord_phone', 'landlord_email'] },
   { label: 'Room', keys: ['room_number', 'room_name', 'monthly_rent', 'rent_due_day'] },
@@ -198,7 +198,7 @@ export function ColumnMapper({
   }
 
   return (
-    <div className="space-y-8 px-4">
+    <div className="space-y-6 px-1">
       {/* Grouped mapping rows */}
       {groupedRows.map(([groupLabel, indices]) => (
         <div key={groupLabel} className="space-y-2">

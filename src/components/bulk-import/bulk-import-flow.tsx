@@ -202,7 +202,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
   // ─── Render ──
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="space-y-5">
       {/* Instructional title */}
       {step === 'map' && (
         <div className="text-center space-y-2 py-4">
@@ -215,7 +215,7 @@ export function BulkImportFlow({ entityType, onComplete, onCancel }: BulkImportF
 
       {/* Step 1: Paste */}
       {step === 'paste' && (
-        <div className="px-4">
+        <div className="px-1">
           <PasteInput
             onParsed={handleParsed}
             onError={(err) => toast.error(err)}

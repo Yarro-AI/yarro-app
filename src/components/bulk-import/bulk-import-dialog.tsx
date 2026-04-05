@@ -31,7 +31,7 @@ export function BulkImportDialog({ entityType, open, onOpenChange, onComplete }:
       }}
     >
       <DialogContent
-        className="max-w-4xl max-h-[85vh] overflow-y-auto px-8 pb-8"
+        className="max-w-4xl max-h-[85vh] overflow-y-auto"
         onInteractOutside={(e) => {
           if (importing) e.preventDefault()
         }}
