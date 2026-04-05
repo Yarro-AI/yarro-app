@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowRight, Info, Pencil } from 'lucide-react'
+import { ArrowRight, Info, Pencil, CheckCircle2 } from 'lucide-react'
 import { ENTITY_CONFIGS, type EntityType, type MergeRule } from '@/lib/bulk-import/config'
 import type { ColumnMatch, MergeInfo } from '@/lib/bulk-import/pipeline'
 
@@ -54,6 +54,15 @@ export function ColumnMapper({
 }: ColumnMapperProps) {
   const config = ENTITY_CONFIGS[entityType]
   const [localMatches, setLocalMatches] = useState<ColumnMatch[]>(() => [...matches])
+
+  // Track which indices were auto-matched from initial detection
+  const autoMatchedIndices = useMemo(() => {
+    const set = new Set<number>()
+    matches.forEach((m, idx) => {
+      if (m.targetColumn && m.confidence !== 'unmatched') set.add(idx)
+    })
+    return set
+  }, [matches])
 
   // Which targets are currently used
   const usedTargets = useMemo(() => {
@@ -215,7 +224,15 @@ export function ColumnMapper({
                 key={idx}
                 className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center bg-card border border-border rounded-xl px-4 py-3"
               >
-                <span className="text-sm font-medium text-foreground truncate">{header}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  {autoMatchedIndices.has(idx) && currentTarget && (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                  )}
+                  <span className="text-sm font-medium text-foreground truncate">{header}</span>
+                  {autoMatchedIndices.has(idx) && currentTarget && (
+                    <span className="text-[10px] text-emerald-600 flex-shrink-0">auto-matched</span>
+                  )}
+                </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
                 {isMerge ? (() => {
