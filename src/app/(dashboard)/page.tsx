@@ -376,6 +376,14 @@ export default function DashboardPage() {
   const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
   const inProgressItems = useMemo(() => filterInProgress(todoItems), [todoItems])
 
+  // Pre-compute category sub-filters to avoid inline .filter() on every render
+  const maintenanceTodos = useMemo(() => actionable.filter(i => {
+    const src = i.source_type || 'ticket'
+    return src === 'ticket' || src === 'handoff'
+  }), [actionable])
+  const complianceTodos = useMemo(() => actionable.filter(i => i.source_type === 'compliance'), [actionable])
+  const financeTodos = useMemo(() => actionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy'), [actionable])
+
   const showAwaitingTickets = (type: string) => {
     let filtered: TicketSummary[]
 
@@ -429,7 +437,7 @@ export default function DashboardPage() {
   // During onboarding, only count maintenance items (compliance/finance are hidden)
   const visibleTaskCount = onboardingDone
     ? actionable.length
-    : actionable.filter(i => { const s = i.source_type || 'ticket'; return s === 'ticket' || s === 'handoff' }).length
+    : maintenanceTodos.length
   const propertyAdded = onboardingChecklist.find(i => i.key === 'add_property')?.complete
   const visibleChecklist = onboardingDone
     ? onboardingChecklist
@@ -541,10 +549,7 @@ export default function DashboardPage() {
                     icon={Wrench}
                     title="Maintenance"
                     accentColor="bg-primary"
-                    items={actionable.filter(i => {
-                      const src = i.source_type || 'ticket'
-                      return src === 'ticket' || src === 'handoff'
-                    })}
+                    items={maintenanceTodos}
                     expanded={expandedCategory === 'maintenance'}
                     onToggle={() => setExpandedCategory(expandedCategory === 'maintenance' ? null : 'maintenance')}
                     onHandoffClick={(item) => {
@@ -563,7 +568,7 @@ export default function DashboardPage() {
                         icon={ShieldCheck}
                         title="Compliance"
                         accentColor="bg-warning"
-                        items={actionable.filter(i => i.source_type === 'compliance')}
+                        items={complianceTodos}
                         expanded={expandedCategory === 'compliance'}
                         onToggle={() => setExpandedCategory(expandedCategory === 'compliance' ? null : 'compliance')}
                         onHandoffClick={() => {}}
@@ -573,7 +578,7 @@ export default function DashboardPage() {
                         icon={Banknote}
                         title="Finance"
                         accentColor="bg-danger"
-                        items={actionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy')}
+                        items={financeTodos}
                         expanded={expandedCategory === 'finance'}
                         onToggle={() => setExpandedCategory(expandedCategory === 'finance' ? null : 'finance')}
                         onHandoffClick={() => {}}
