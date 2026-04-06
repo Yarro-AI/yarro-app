@@ -42,12 +42,12 @@
 ## Database Changes
 
 - `c1_properties.property_type` column (default: 'hmo')
-- `c1_compliance_requirements` table (property x cert type x is_required)
+- `c1_compliance_requirements` table (orphaned — kept for rollback safety, no longer queried)
 - `c1_tickets.compliance_certificate_id` FK
-- Auto-populate trigger on property insert
-- RPCs: `compliance_get_property_status`, `compliance_get_all_statuses`, `compliance_get_todos`, `compliance_upsert_requirements`
+- RPCs: `compliance_get_property_status`, `compliance_get_all_statuses`, `compliance_get_todos`
 - Updated: `compliance_get_summary` (action-based counts)
 - Updated: `c1_create_manual_ticket` (accepts optional cert ID)
+- **Dropped (2026-04-04):** `compliance_upsert_requirements`, `compliance_set_property_type`, auto-populate trigger. Requirements are now opt-in — no auto-defaults by property type.
 
 ## Migration Files
 
