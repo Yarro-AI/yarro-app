@@ -80,7 +80,8 @@ WITH expected_rpcs AS (
     'record_rent_payment',
 
     -- Non-protected RPCs (actively iterating)
-    -- Compliance
+    -- Compliance (compliance_set_property_type & compliance_upsert_requirements
+    -- were dropped 2026-04-04 — requirements layer removed, compliance is opt-in)
     'compliance_get_certificates',
     'compliance_upsert_certificate',
     'compliance_delete_certificate',
@@ -88,8 +89,6 @@ WITH expected_rpcs AS (
     'compliance_get_all_statuses',
     'compliance_get_property_status',
     'compliance_get_todos',
-    'compliance_upsert_requirements',
-    'compliance_set_property_type',
     'get_compliance_expiring',
     'compliance_submit_contractor_renewal',
     -- Rooms
