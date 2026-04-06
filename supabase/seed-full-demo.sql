@@ -73,7 +73,7 @@ BEGIN
   -- -------------------------------------------------------
   SELECT id INTO v_pm_id
   FROM public.c1_property_managers
-  WHERE id = '2a4bf89e-e368-4af9-a5f0-86cf16c267c3';
+  WHERE id = '78d307b5-659a-468b-ab3a-99e3ed5bc2cd';
 
   IF v_pm_id IS NULL THEN
     RAISE EXCEPTION 'No property manager found. Sign in first.';
@@ -111,8 +111,8 @@ BEGIN
   -- -------------------------------------------------------
   INSERT INTO public.c1_landlords (id, full_name, email, phone, contact_method, property_manager_id)
   VALUES
-    (v_ll1_id, 'James Okafor',   'james.okafor@example.com',   '+447700100001', 'whatsapp', v_pm_id),
-    (v_ll2_id, 'Sarah Mitchell', 'sarah.mitchell@example.com', '+447700100002', 'email',    v_pm_id);
+    (v_ll1_id, 'James Okafor',   'james.okafor@example.com',   '447700100001', 'whatsapp', v_pm_id),
+    (v_ll2_id, 'Sarah Mitchell', 'sarah.mitchell@example.com', '447700100002', 'email',    v_pm_id);
 
   RAISE NOTICE 'Created 2 landlords';
 
@@ -123,11 +123,11 @@ BEGIN
     id, contractor_name, contractor_email, contractor_phone,
     category, categories, active, property_manager_id, contact_method
   ) VALUES
-    (v_con1_id, 'British Gas',          'bookings@britishgas.example',  '+447700300001',
+    (v_con1_id, 'British Gas',          'bookings@britishgas.example',  '447700300001',
      'gas_engineer', ARRAY['gas_engineer'], true, v_pm_id, 'whatsapp'),
-    (v_con2_id, 'Spark Electrical Ltd', 'info@sparkelectrical.example', '+447700300002',
+    (v_con2_id, 'Spark Electrical Ltd', 'info@sparkelectrical.example', '447700300002',
      'electrician',  ARRAY['electrician','pat_tester'], true, v_pm_id, 'whatsapp'),
-    (v_con3_id, 'AllFix Maintenance',   'jobs@allfix.example',          '+447700300003',
+    (v_con3_id, 'AllFix Maintenance',   'jobs@allfix.example',          '447700300003',
      'general',      ARRAY['general','plumber','locksmith'], true, v_pm_id, 'whatsapp');
 
   RAISE NOTICE 'Created 3 contractors';
@@ -141,13 +141,13 @@ BEGIN
     require_landlord_approval, auto_approve_limit
   ) VALUES
     (v_prop1_id, '14 Brixton Hill, London SW2 1QA',           'London', v_pm_id, 'hmo',
-     v_ll1_id, 'James Okafor', 'james.okafor@example.com', '+447700100001', true, 150),
+     v_ll1_id, 'James Okafor', 'james.okafor@example.com', '447700100001', true, 150),
     (v_prop2_id, '93 Acre Lane, London SW2 5TN',            'London', v_pm_id, 'hmo',
-     v_ll1_id, 'James Okafor', 'james.okafor@example.com', '+447700100001', true, 200),
+     v_ll1_id, 'James Okafor', 'james.okafor@example.com', '447700100001', true, 200),
     (v_prop3_id, '28 Coldharbour Lane, London SE5 9PR',     'London', v_pm_id, 'hmo',
-     v_ll2_id, 'Sarah Mitchell', 'sarah.mitchell@example.com', '+447700100002', false, 300),
+     v_ll2_id, 'Sarah Mitchell', 'sarah.mitchell@example.com', '447700100002', false, 300),
     (v_prop4_id, '11 Tulse Hill, London SW2 2QS',           'London', v_pm_id, 'hmo',
-     v_ll2_id, 'Sarah Mitchell', 'sarah.mitchell@example.com', '+447700100002', false, 250);
+     v_ll2_id, 'Sarah Mitchell', 'sarah.mitchell@example.com', '447700100002', false, 250);
 
   RAISE NOTICE 'Created 4 properties';
 
@@ -157,23 +157,23 @@ BEGIN
   INSERT INTO public.c1_tenants (id, full_name, email, phone, property_id, property_manager_id)
   VALUES
     -- Property 1 tenants (4 of 5 rooms occupied)
-    (v_t1,  'Amara Diallo',    'amara.diallo@example.com',    '+447700200001', v_prop1_id, v_pm_id),
-    (v_t2,  'Ben Carter',      'ben.carter@example.com',      '+447700200002', v_prop1_id, v_pm_id),
-    (v_t3,  'Chloe Nguyen',    'chloe.nguyen@example.com',    '+447700200003', v_prop1_id, v_pm_id),
-    (v_t4,  'Daniel Mensah',   'daniel.mensah@example.com',   '+447700200004', v_prop1_id, v_pm_id),
+    (v_t1,  'Amara Diallo',    'amara.diallo@example.com',    '447700200001', v_prop1_id, v_pm_id),
+    (v_t2,  'Ben Carter',      'ben.carter@example.com',      '447700200002', v_prop1_id, v_pm_id),
+    (v_t3,  'Chloe Nguyen',    'chloe.nguyen@example.com',    '447700200003', v_prop1_id, v_pm_id),
+    (v_t4,  'Daniel Mensah',   'daniel.mensah@example.com',   '447700200004', v_prop1_id, v_pm_id),
     -- Property 2 tenants (3 of 4 rooms occupied)
-    (v_t5,  'Elena Rodriguez', 'elena.rodriguez@example.com', '+447700200005', v_prop2_id, v_pm_id),
-    (v_t6,  'Femi Adebayo',    'femi.adebayo@example.com',    '+447700200006', v_prop2_id, v_pm_id),
-    (v_t7,  'Grace Kim',       'grace.kim@example.com',       '+447700200007', v_prop2_id, v_pm_id),
+    (v_t5,  'Elena Rodriguez', 'elena.rodriguez@example.com', '447700200005', v_prop2_id, v_pm_id),
+    (v_t6,  'Femi Adebayo',    'femi.adebayo@example.com',    '447700200006', v_prop2_id, v_pm_id),
+    (v_t7,  'Grace Kim',       'grace.kim@example.com',       '447700200007', v_prop2_id, v_pm_id),
     -- Property 3 tenants (4 of 4 rooms occupied — fully let)
-    (v_t8,  'Hassan Ali',      'hassan.ali@example.com',      '+447700200008', v_prop3_id, v_pm_id),
-    (v_t9,  'Isla Campbell',   'isla.campbell@example.com',    '+447700200009', v_prop3_id, v_pm_id),
-    (v_t10, 'Jake Williams',   'jake.williams@example.com',   '+447700200010', v_prop3_id, v_pm_id),
-    (v_t11, 'Keiko Tanaka',    'keiko.tanaka@example.com',    '+447700200011', v_prop3_id, v_pm_id),
+    (v_t8,  'Hassan Ali',      'hassan.ali@example.com',      '447700200008', v_prop3_id, v_pm_id),
+    (v_t9,  'Isla Campbell',   'isla.campbell@example.com',    '447700200009', v_prop3_id, v_pm_id),
+    (v_t10, 'Jake Williams',   'jake.williams@example.com',   '447700200010', v_prop3_id, v_pm_id),
+    (v_t11, 'Keiko Tanaka',    'keiko.tanaka@example.com',    '447700200011', v_prop3_id, v_pm_id),
     -- Property 4 tenants (2 of 3 rooms occupied)
-    (v_t12, 'Liam O''Brien',   'liam.obrien@example.com',     '+447700200012', v_prop4_id, v_pm_id),
-    (v_t13, 'Maya Patel',      'maya.patel@example.com',      '+447700200013', v_prop4_id, v_pm_id),
-    (v_t14, 'Noah Adams',      'noah.adams@example.com',      '+447700200014', v_prop4_id, v_pm_id);
+    (v_t12, 'Liam O''Brien',   'liam.obrien@example.com',     '447700200012', v_prop4_id, v_pm_id),
+    (v_t13, 'Maya Patel',      'maya.patel@example.com',      '447700200013', v_prop4_id, v_pm_id),
+    (v_t14, 'Noah Adams',      'noah.adams@example.com',      '447700200014', v_prop4_id, v_pm_id);
 
   RAISE NOTICE 'Created 14 tenants';
 

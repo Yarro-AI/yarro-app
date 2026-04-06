@@ -2,8 +2,6 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
-import { sendEmail } from "../_shared/resend.ts";
-import { buildEmail } from "../_shared/email-templates.ts";
 import { TEMPLATES, formatFriendlyDate } from "../_shared/templates.ts";
 import { logEvent } from "../_shared/events.ts";
 
@@ -150,20 +148,17 @@ async function processCert(
       });
     }
   } else {
-    // PATH B: No ticket — send email directly, log via c1_log_compliance_event
-    if (cert.pm_email) {
-      const emailContent = buildEmail("compliance_expiry_operator", variables);
-      if (emailContent) {
-        const emailResult = await sendEmail(cert.pm_email, emailContent.subject, emailContent.html);
-        sent = emailResult.ok;
-
-        if (!emailResult.ok) {
-          console.error(`[${FN}] Email failed for cert ${cert.cert_id}:`, emailResult.error);
-        }
-      }
-    } else {
-      console.warn(`[${FN}] PM has no email for cert ${cert.cert_id}, skipping notification`);
-    }
+    // PATH B: No ticket — send via sendAndLog for consistent audit trail
+    const result = await sendAndLog(supabase, FN, "compliance_reminder_no_ticket", {
+      ticketId: null,
+      recipientPhone: cert.pm_phone || "",
+      recipientRole: "property_manager",
+      messageType: "compliance_expiry_operator",
+      templateSid: TEMPLATES.compliance_expiry_operator,
+      variables,
+      recipientEmail: cert.pm_email || undefined,
+    });
+    sent = result.ok;
 
     // Log to c1_events via the generic system event RPC (no ticket_id required)
     const { error: logError } = await supabase.rpc("c1_log_system_event", {

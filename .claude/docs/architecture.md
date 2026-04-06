@@ -1,5 +1,7 @@
 # Yarro Architecture Overview
 
+> **Before making architectural decisions, read [`.claude/docs/decision-principles.md`](.claude/docs/decision-principles.md).**
+
 Yarro is a WhatsApp-first property maintenance automation platform. Tenants report issues via WhatsApp, and the system handles the entire lifecycle: triage, contractor dispatch, quotes, approvals, scheduling, and completion tracking.
 
 ---

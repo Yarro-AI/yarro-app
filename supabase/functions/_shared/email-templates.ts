@@ -93,6 +93,40 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     body: `The maintenance job at ${v["1"] || "your property"} has been completed by ${v["3"] || "the contractor"}.`,
   }),
 
+  // ─── Onboarding Messages ───
+
+  // onboarding_contractor: 1=firstName, 2=businessName
+  onboarding_contractor: (v) => ({
+    subject: `Welcome to ${v["2"] || "Yarro"}`,
+    heading: "Welcome",
+    body: `Hi ${v["1"] || "there"}, you've been added as a contractor by ${v["2"] || "your property manager"}. You'll receive job requests and updates through this channel.`,
+  }),
+
+  // onboarding_landlord: 1=firstName, 2=businessName
+  onboarding_landlord: (v) => ({
+    subject: `Welcome to ${v["2"] || "Yarro"}`,
+    heading: "Welcome",
+    body: `Hi ${v["1"] || "there"}, you've been added as a landlord by ${v["2"] || "your property manager"}. You'll receive property updates and approval requests through this channel.`,
+  }),
+
+  // ─── Ticket Notifications ───
+
+  // ll_ticket_created: 1=issue, 2=address, 3=reporter, 4=timestamp
+  ll_ticket_created: (v) => ({
+    subject: `Maintenance Reported — ${v["2"] || "Property"}`,
+    heading: "Maintenance Issue Reported",
+    body: `A maintenance issue has been reported at ${v["2"] || "your property"}: ${v["1"] || "maintenance issue"}. We're handling this and will keep you updated.`,
+  }),
+
+  // ─── Followup Messages ───
+
+  // landlord_followup: 1=address, 2=issue, 3=contractor, 4=total_cost, 5=hours_elapsed
+  landlord_followup: (v) => ({
+    subject: `Approval Needed — ${v["1"] || "Property"}`,
+    heading: "Quote Awaiting Your Approval",
+    body: `A quote of ${v["4"] || "N/A"} from ${v["3"] || "a contractor"} for ${v["2"] || "maintenance"} at ${v["1"] || "your property"} has been awaiting your approval for ${v["5"] || "?"} hours. Please respond at your earliest convenience.`,
+  }),
+
   // ─── Compliance Reminders ───
 
   // compliance_expiry_operator: 1=cert_type, 2=address, 3=expiry_date, 4=days_remaining, 5=action_text

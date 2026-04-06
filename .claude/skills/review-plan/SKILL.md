@@ -87,6 +87,13 @@ Now that you understand the plan's intent and have verified its assumptions, pre
 - Are there steps that sound good but are vague ("update the UI accordingly")?
 - Would you know exactly what to build from this plan, or would you have to guess?
 
+**Stability & scalability — is this the strongest approach? (See `.claude/docs/decision-principles.md`)**
+- Is there a more robust approach that wasn't considered? If so, flag as **[IMPROVE]** with both options and trade-off arguments
+- Does this approach hold up when adjacent features are added to the same tables or flows?
+- Are we taking a shortcut that creates tech debt? If so, is refactoring later genuinely trivial (no schema/boundary implications)?
+- Would this approach survive 10x the current data volume?
+- If a quick approach was chosen, is the justification explicit and sound?
+
 ### Step 4 — Present findings
 Output the review directly in the conversation. Don't write to files.
 
@@ -122,7 +129,7 @@ Output the review directly in the conversation. Don't write to files.
 - **BLOCKER** — implementation will fail or corrupt data. Must fix before building.
 - **RISK** — will work initially but cause problems. Should fix before building.
 - **GAP** — missing but non-critical. Can address during implementation.
-- **IMPROVE** — not wrong, but there's a better approach.
+- **IMPROVE** — not wrong, but a more stable or scalable alternative exists. Present both options with trade-off arguments.
 
 If the plan is solid, say so. "No issues found, ready to build" is a valid review. Don't pad with artificial observations.
 

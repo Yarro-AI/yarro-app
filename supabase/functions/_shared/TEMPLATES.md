@@ -599,7 +599,7 @@ Check the app for full details.
 #### 7b_ll_job_completed
 | Field | Value |
 |-------|-------|
-| SID | `HX27c049df0d097f3be7579c201b6453e3` |
+| SID | `HXe85f1308e6e9080a2e794a4f82a02ac8` |
 | Key | `ll_job_completed` |
 | Type | Text |
 | Recipient | Landlord |
@@ -1091,12 +1091,12 @@ Please ensure payment is made on time to avoid any follow-ups.
 #### 10b_rent_reminder_due
 | Field | Value |
 |-------|-------|
-| SID | *Awaiting Twilio creation* |
+| SID | `HX8c7233c5378f6a55d1c9440fbbd722a1` |
 | Key | `rent_reminder_due` |
 | Type | Text |
 | Recipient | Tenant |
 | Edge Function | `yarro-rent-reminder` |
-| Status | Not yet created |
+| Status | Approved (Mar 28, 2026) |
 
 **Copy:**
 ```

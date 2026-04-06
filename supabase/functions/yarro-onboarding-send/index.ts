@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
-import { sendWhatsApp, logOutbound } from "../_shared/twilio.ts";
+import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES } from "../_shared/templates.ts";
 
 const FN = "yarro-onboarding-send";
@@ -158,30 +158,18 @@ async function processEntity(
     propertyAddress,
   );
 
-  // Send WhatsApp
-  const result = await sendWhatsApp(entry.phone, templateSid, variables);
-
-  // Log to outbound log (ticketId is null for onboarding messages)
-  await logOutbound(supabase, {
+  // Send via sendAndLog (audit trail + channel routing for email-preference entities)
+  const result = await sendAndLog(supabase, FN, `onboarding_${entityType}`, {
     ticketId: null,
-    messageType: `onboarding_${entityType}`,
     recipientPhone: entry.phone,
     recipientRole: entityType,
-    twilioSid: result.messageSid || null,
-    templateSid,
-    contentVariables: variables,
-    twilioBody: result.body || null,
-    status: result.ok ? (result.status || "queued") : "failed",
+    recipientId: entry.id,
+    messageType: `onboarding_${entityType}`,
+    templateSid: templateSid,
+    variables,
   });
 
   if (!result.ok) {
-    console.error(`[${FN}] WhatsApp failed for ${entry.id}:`, result.error);
-    await alertTelegram(FN, `send_${entityType}`, result.error || "unknown", {
-      "Entity ID": entry.id,
-      Name: entry.name || "N/A",
-      Phone: entry.phone,
-    });
-
     return {
       entity_id: entry.id,
       name: entry.name,

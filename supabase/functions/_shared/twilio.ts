@@ -47,8 +47,9 @@ export async function sendWhatsApp(
   }
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const digits = to.replace(/^\+/, "");
   const reqBody = new URLSearchParams({
-    To: `whatsapp:+${to}`,
+    To: `whatsapp:+${digits}`,
     From: TWILIO_FROM,
     ContentSid: templateSid,
     ContentVariables: JSON.stringify(cleanVars),

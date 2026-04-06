@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.ts";
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
-import { sendWhatsApp } from "../_shared/twilio.ts";
+import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, formatFriendlyDate } from "../_shared/templates.ts";
 
 const FN = "yarro-rent-reminder";
@@ -111,21 +111,18 @@ async function processReminder(
     };
   }
 
-  // Send WhatsApp
+  // Send via sendAndLog (audit trail + Telegram alert on failure)
   const variables = buildVariables(entry);
-  const result = await sendWhatsApp(entry.tenant_phone, templateSid, variables);
+  const result = await sendAndLog(supabase, FN, `reminder_${entry.reminder_level}`, {
+    ticketId: null,
+    recipientPhone: entry.tenant_phone,
+    recipientRole: "tenant",
+    messageType: templateKey,
+    templateSid: templateSid,
+    variables,
+  });
 
   if (!result.ok) {
-    console.error(
-      `[${FN}] WhatsApp failed for ledger ${entry.ledger_id}:`,
-      result.error,
-    );
-    await alertTelegram(FN, `reminder_${entry.reminder_level}`, result.error || "unknown", {
-      ledger_id: entry.ledger_id,
-      tenant: entry.tenant_name,
-      property: entry.property_address,
-    });
-
     return {
       ledger_id: entry.ledger_id,
       tenant_name: entry.tenant_name,

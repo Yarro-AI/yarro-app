@@ -51,6 +51,8 @@ Before generating anything, verify:
 - **One session?** If not: "What's the minimum slice that's useful on its own?"
 - **Dependencies shipped?** If this needs something unbuilt: "This depends on [X]. Build that first?"
 - **Testable done?** If vague: "I can't write a test for that. What would you check in the browser?"
+- **Strongest approach, not just fastest?** Apply the decision test from `.claude/docs/decision-principles.md`. If a quicker approach was chosen, document why it's safe.
+- **Holds when adjacent features land?** What breaks if the next slice on the journey touches the same tables or flows?
 
 ### Phase 3 — Generate PRD
 
