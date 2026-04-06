@@ -408,8 +408,8 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setError(null)
 
     try {
-      // Batch 1: ticket context RPC + basic ticket row (always, parallel)
-      const [contextRes, basicRes] = await Promise.all([
+      // All independent queries in one parallel batch
+      const [contextRes, basicRes, messagesRes, completionRes, ledgerRes, outboundRes] = await Promise.all([
         supabase.rpc('c1_ticket_context', { ticket_uuid: id }),
         supabase
           .from('c1_tickets')
@@ -429,11 +429,35 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
           `)
           .eq('id', id)
           .single(),
+        supabase
+          .from('c1_messages')
+          .select('*')
+          .eq('ticket_id', id)
+          .maybeSingle(),
+        supabase
+          .from('c1_job_completions')
+          .select(`
+            *,
+            c1_contractors(contractor_name)
+          `)
+          .eq('id', id)
+          .maybeSingle(),
+        supabase
+          .from('c1_ledger')
+          .select('*')
+          .eq('ticket_id', id)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('c1_outbound_log')
+          .select('*')
+          .eq('ticket_id', id)
+          .order('sent_at', { ascending: true }),
       ])
 
       if (contextRes.error) throw new Error(contextRes.error.message)
       if (basicRes.error) throw new Error(basicRes.error.message)
 
+      // Process context + basic
       const ctx = contextRes.data?.[0] || null
       const basicData = basicRes.data ? {
         ...basicRes.data,
@@ -446,75 +470,43 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       setContext(ctx)
       setBasic(basicData as TicketBasic | null)
 
-      // Batch 2: conditional fetches (parallel)
+      // Process messages
+      if (messagesRes.error) console.error('Messages fetch error:', messagesRes.error)
+      setMessages(messagesRes.data || null)
+
+      // Process completion
+      if (completionRes.error) console.error('Completion fetch error:', completionRes.error)
+      if (completionRes.data) {
+        setCompletion({
+          ...completionRes.data,
+          ticket_id: id,
+          contractor_name: (completionRes.data.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
+        } as CompletionData)
+      } else {
+        setCompletion(null)
+      }
+
+      // Process ledger
+      if (ledgerRes.error) console.error('Ledger fetch error:', ledgerRes.error)
+      setLedger((ledgerRes.data as LedgerEntry[]) || [])
+
+      // Process outbound log
+      if (outboundRes.error) console.error('Outbound log fetch error:', outboundRes.error)
+      setOutboundLog((outboundRes.data as OutboundLogEntry[]) || [])
+
+      // Conversation needs batch result (conversation_id from context or basic)
       const conversationId = ctx?.conversation_id || basicData?.conversation_id
-
-      const fetchConversation = async () => {
-        if (conversationId) {
-          const { data, error } = await supabase
-            .from('c1_conversations')
-            .select('id, phone, status, stage, caller_name, caller_role, handoff, last_updated, log')
-            .eq('id', conversationId)
-            .maybeSingle()
-          if (error) console.error('Conversation fetch error:', error)
-          setConversation(data || null)
-        } else {
-          setConversation(null)
-        }
-      }
-
-      const fetchMessages = async () => {
-        const { data, error: msgError } = await supabase
-          .from('c1_messages')
-          .select('*')
-          .eq('ticket_id', id)
+      if (conversationId) {
+        const { data, error } = await supabase
+          .from('c1_conversations')
+          .select('id, phone, status, stage, caller_name, caller_role, handoff, last_updated, log')
+          .eq('id', conversationId)
           .maybeSingle()
-        if (msgError) console.error('Messages fetch error:', msgError)
-        setMessages(data || null)
+        if (error) console.error('Conversation fetch error:', error)
+        setConversation(data || null)
+      } else {
+        setConversation(null)
       }
-
-      const fetchCompletion = async () => {
-        const { data, error: compError } = await supabase
-          .from('c1_job_completions')
-          .select(`
-            *,
-            c1_contractors(contractor_name)
-          `)
-          .eq('id', id)
-          .maybeSingle()
-        if (compError) console.error('Completion fetch error:', compError)
-        if (data) {
-          setCompletion({
-            ...data,
-            ticket_id: id,
-            contractor_name: (data.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
-          } as CompletionData)
-        } else {
-          setCompletion(null)
-        }
-      }
-
-      const fetchLedger = async () => {
-        const { data, error: ledgerError } = await supabase
-          .from('c1_ledger')
-          .select('*')
-          .eq('ticket_id', id)
-          .order('created_at', { ascending: true })
-        if (ledgerError) console.error('Ledger fetch error:', ledgerError)
-        setLedger((data as LedgerEntry[]) || [])
-      }
-
-      const fetchOutboundLog = async () => {
-        const { data, error: logError } = await supabase
-          .from('c1_outbound_log')
-          .select('*')
-          .eq('ticket_id', id)
-          .order('sent_at', { ascending: true })
-        if (logError) console.error('Outbound log fetch error:', logError)
-        setOutboundLog((data as OutboundLogEntry[]) || [])
-      }
-
-      await Promise.all([fetchConversation(), fetchMessages(), fetchCompletion(), fetchLedger(), fetchOutboundLog()])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ticket details')
     } finally {
@@ -532,7 +524,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     } else {
       reset()
     }
-  }, [ticketId])
+  }, [ticketId, fetchData, reset])
 
   // Derived state
   const hasConversation = !!conversation
