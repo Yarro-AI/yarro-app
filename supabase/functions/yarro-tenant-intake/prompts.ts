@@ -1224,7 +1224,7 @@ You must derive the following:
   - "Boiler not firing, no heating"
   - "Front door lock broken"
 
-- "category": must be one of the categories listed in "Available contractor categories" from the input.
+- "category": MUST be copied EXACTLY (case-sensitive, character-for-character) from the "Available contractor categories" list in the input. Do not rephrase, pluralise, or use synonyms. If the list says "Plumber", output "Plumber" — not "Plumbing", not "plumber".
 
 Category knowledge (use this to decide which trade fits the issue):
 - Plumber → leak, pipe, tap, sink, toilet, shower, drain, radiator, water tank, no hot water, heating not working (unless gas leak).

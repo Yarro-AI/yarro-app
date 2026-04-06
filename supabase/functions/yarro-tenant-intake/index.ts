@@ -514,6 +514,15 @@ Deno.serve(async (req: Request) => {
           .replace(/```$/m, "")
           .trim();
         issueData = JSON.parse(cleanedIssueAI);
+
+        // Normalize category to exact available category (case-insensitive)
+        if (issueData.category && categories) {
+          const catList = categories.split(",").map((c: string) => c.trim()).filter(Boolean);
+          const match = catList.find((c) => c.toLowerCase() === issueData.category.trim().toLowerCase());
+          if (match) {
+            issueData.category = match;
+          }
+        }
       } catch (e) {
         aiFallback = true;
         const msg = e instanceof Error ? e.message : String(e);
