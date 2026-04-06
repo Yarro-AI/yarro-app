@@ -3,6 +3,7 @@ import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.t
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, shortRef } from "../_shared/templates.ts";
+import { signedImageUrl } from "../_shared/image-url.ts";
 
 const FN = "yarro-ticket-notify";
 
@@ -308,7 +309,7 @@ async function handleIntake(
                 "1": ctx.business_name || "Your property manager",
                 "2": ctx.property_address || "Address not available",
                 "3": ctx.issue_description || "Emergency maintenance issue",
-                "4": ctx.has_images ? `https://app.yarro.ai/i/${ticketId}` : "No photos or videos provided",
+                "4": ctx.has_images ? await signedImageUrl(ticketId) : "No photos or videos provided",
                 "5": `${ctx.tenant_name || "Tenant not matched"} — ${ctx.tenant_phone ? `+${ctx.tenant_phone}` : "N/A"}`,
                 "6": ctx.access_instructions || "Contact property manager for access details",
                 "7": token,
