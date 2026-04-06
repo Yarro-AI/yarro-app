@@ -65,30 +65,61 @@ async function handleContractorSms(
     variables,
   });
 
-  // c1_contractor_mark_sent — records Twilio response on the contractor entry
-  const { error: markError } = await supabase.rpc("c1_contractor_mark_sent", {
-    p_ticket_id: ticket.id,
-    p_contractor_id: contractor.id,
-    p_twilio_sid: result.messageSid || null,
-    p_body: result.body || null,
-    p_to: result.to || null,
-    p_has_image: hasImages,
-    p_direction: result.direction || "outbound-api",
-    p_status: result.status || null,
-  });
-
-  if (markError) {
-    await alertTelegram(FN, "contractor-sms → c1_contractor_mark_sent", markError.message, {
-      Ticket: ticket.id,
+  if (result.ok) {
+    // Success — mark contractor as sent
+    const { error: markError } = await supabase.rpc("c1_contractor_mark_sent", {
+      p_ticket_id: ticket.id,
+      p_contractor_id: contractor.id,
+      p_twilio_sid: result.messageSid || null,
+      p_body: result.body || null,
+      p_to: result.to || null,
+      p_has_image: hasImages,
+      p_direction: result.direction || "outbound-api",
+      p_status: result.status || null,
     });
-  }
 
-  // Store portal token in contractor JSONB entry (after mark_sent to avoid re-dispatch trigger)
-  await supabase.rpc("c1_msg_merge_contractor", {
-    p_ticket_id: ticket.id,
-    p_contractor_id: contractor.id,
-    p_patch: { portal_token: portalToken },
-  });
+    if (markError) {
+      await alertTelegram(FN, "contractor-sms → c1_contractor_mark_sent", markError.message, {
+        Ticket: ticket.id,
+      });
+    }
+
+    // Store portal token (after mark_sent to avoid re-dispatch trigger)
+    await supabase.rpc("c1_msg_merge_contractor", {
+      p_ticket_id: ticket.id,
+      p_contractor_id: contractor.id,
+      p_patch: { portal_token: portalToken },
+    });
+  } else {
+    // Failure — mark contractor as send_failed so state machine can advance
+    // Suppress webhook to prevent re-dispatch loop (c1_msg_merge_contractor
+    // doesn't handle this internally, unlike the dedicated mark_sent RPCs)
+    await supabase
+      .from("c1_messages")
+      .update({ suppress_webhook: true })
+      .eq("ticket_id", ticket.id);
+
+    const { error: failError } = await supabase.rpc("c1_msg_merge_contractor", {
+      p_ticket_id: ticket.id,
+      p_contractor_id: contractor.id,
+      p_patch: {
+        status: "send_failed",
+        send_failed_at: new Date().toISOString(),
+        send_error: result.error || "Unknown delivery failure",
+      },
+    });
+
+    if (failError) {
+      await alertTelegram(FN, "contractor-sms → mark send_failed", failError.message, {
+        Ticket: ticket.id,
+      });
+    }
+
+    await supabase
+      .from("c1_messages")
+      .update({ suppress_webhook: false })
+      .eq("ticket_id", ticket.id);
+  }
 
   // ── Send tenant portal link alongside contractor quote dispatch ──
   {
@@ -163,21 +194,23 @@ async function handlePmSms(
     },
   });
 
-  // c1_pm_mark_sent — records review_request_sent_at + Twilio data
-  const { error: markError } = await supabase.rpc("c1_pm_mark_sent", {
-    p_ticket_id: ticket.id,
-    p_contractor_id: contractor.id,
-    p_twilio_sid: result.messageSid || null,
-    p_body: result.body || null,
-    p_to: result.to || null,
-    p_direction: result.direction || "outbound-api",
-    p_status: result.status || null,
-  });
-
-  if (markError) {
-    await alertTelegram(FN, "pm-sms → c1_pm_mark_sent", markError.message, {
-      Ticket: ticket.id,
+  // Only mark PM as sent if delivery actually succeeded
+  if (result.ok) {
+    const { error: markError } = await supabase.rpc("c1_pm_mark_sent", {
+      p_ticket_id: ticket.id,
+      p_contractor_id: contractor.id,
+      p_twilio_sid: result.messageSid || null,
+      p_body: result.body || null,
+      p_to: result.to || null,
+      p_direction: result.direction || "outbound-api",
+      p_status: result.status || null,
     });
+
+    if (markError) {
+      await alertTelegram(FN, "pm-sms → c1_pm_mark_sent", markError.message, {
+        Ticket: ticket.id,
+      });
+    }
   }
 
   return new Response(
@@ -273,20 +306,22 @@ async function handleLandlordSms(
     },
   });
 
-  // c1_landlord_mark_sent
-  const { error: markError } = await supabase.rpc("c1_landlord_mark_sent", {
-    p_ticket_id: ticket.id,
-    p_twilio_sid: result.messageSid || null,
-    p_body: result.body || null,
-    p_to: result.to || null,
-    p_direction: result.direction || "outbound-api",
-    p_status: result.status || null,
-  });
-
-  if (markError) {
-    await alertTelegram(FN, "landlord-sms → c1_landlord_mark_sent", markError.message, {
-      Ticket: ticket.id,
+  // Only mark landlord as sent if delivery actually succeeded
+  if (result.ok) {
+    const { error: markError } = await supabase.rpc("c1_landlord_mark_sent", {
+      p_ticket_id: ticket.id,
+      p_twilio_sid: result.messageSid || null,
+      p_body: result.body || null,
+      p_to: result.to || null,
+      p_direction: result.direction || "outbound-api",
+      p_status: result.status || null,
     });
+
+    if (markError) {
+      await alertTelegram(FN, "landlord-sms → c1_landlord_mark_sent", markError.message, {
+        Ticket: ticket.id,
+      });
+    }
   }
 
   return new Response(
