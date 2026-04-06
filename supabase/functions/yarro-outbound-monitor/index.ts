@@ -11,9 +11,14 @@ const FN = "yarro-outbound-monitor";
 
 Deno.serve(async (req: Request) => {
   try {
-    // Parse Twilio form-encoded POST
-    const formData = await req.text();
-    const params = new URLSearchParams(formData);
+    // Verify Twilio signature + parse form-encoded POST
+    const { parseAndVerifyTwilioWebhook } = await import("../_shared/twilio-verify.ts");
+    const verified = await parseAndVerifyTwilioWebhook(req);
+    if (!verified) {
+      console.warn(`[${FN}] Rejected: invalid or missing Twilio signature`);
+      return new Response("Forbidden", { status: 403 });
+    }
+    const params = verified.params;
     const body = params.get("Body") || "";
     const from = params.get("From") || "";
     const messageSid = params.get("MessageSid") || "";

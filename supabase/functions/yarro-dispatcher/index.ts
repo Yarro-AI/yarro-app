@@ -3,6 +3,7 @@ import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.t
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
+import { signedImageUrl } from "../_shared/image-url.ts";
 
 // ─── Function: yarro-dispatcher ──────────────────────────────────────────
 
@@ -23,7 +24,7 @@ async function handleContractorSms(
 
   // Media summary — gallery link or fallback
   const mediaSummary = hasImages
-    ? `https://app.yarro.ai/i/${ticket.id}`
+    ? await signedImageUrl(ticket.id)
     : "No photos or videos provided";
 
   // Build access info string for {{6}}
@@ -143,7 +144,7 @@ async function handlePmSms(
   const images: string[] = ticket.images || [];
   const hasImages = images.length > 0 && images[0] !== "unprovided";
   const mediaSummary = hasImages
-    ? `https://app.yarro.ai/i/${ticket.id}`
+    ? await signedImageUrl(ticket.id)
     : "No photos or videos provided";
 
   const result = await sendAndLog(supabase, FN, "pm-sms → Twilio send", {
@@ -251,7 +252,7 @@ async function handleLandlordSms(
   const llImages: string[] = ticketData?.images || [];
   const llHasImages = llImages.length > 0 && llImages[0] !== "unprovided";
   const llMediaSummary = llHasImages
-    ? `https://app.yarro.ai/i/${ticket.id}`
+    ? await signedImageUrl(ticket.id)
     : "No photos or videos provided";
 
   const result = await sendAndLog(supabase, FN, "landlord-sms → Twilio send", {

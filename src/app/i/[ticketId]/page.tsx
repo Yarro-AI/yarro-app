@@ -1,17 +1,36 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
+import crypto from 'crypto'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Ticket Photos — Yarro',
 }
 
+function verifyImageToken(ticketId: string, token: string): boolean {
+  const secret = process.env.SUPABASE_JWT_SECRET || process.env.IMAGE_URL_SECRET
+  if (!secret) return false
+  const hmac = crypto.createHmac('sha256', secret)
+  hmac.update(`image:${ticketId}`)
+  const sig = hmac.digest().subarray(0, 12)
+  const expected = sig.toString('base64url')
+  return expected === token
+}
+
 export default async function TicketImagesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ ticketId: string }>
+  searchParams: Promise<{ t?: string }>
 }) {
   const { ticketId } = await params
+  const { t: token } = await searchParams
+
+  // Verify the signed token — reject unsigned or forged links
+  if (!token || !verifyImageToken(ticketId, token)) {
+    notFound()
+  }
 
   // Public anon client — no cookies/auth needed
   // The SECURITY DEFINER RPC handles data access
