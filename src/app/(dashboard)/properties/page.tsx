@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
+import { QueryError } from '@/components/query-error'
 import {
   DetailDrawer,
   DetailSection,
@@ -111,6 +112,7 @@ export default function PropertiesPage() {
   const [properties, setProperties] = useState<PropertyHub[]>([])
   const [selectedProperty, setSelectedProperty] = useState<PropertyHub | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -328,7 +330,8 @@ export default function PropertiesPage() {
       .eq('property_manager_id', propertyManager!.id)
       .order('address')
 
-    if (error) { toast.error('Failed to load properties'); setLoading(false); return }
+    if (error) { setFetchError('Failed to load properties'); setLoading(false); return }
+    setFetchError(null)
     if (data) {
       setProperties(data)
     }
@@ -683,15 +686,19 @@ export default function PropertiesPage() {
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <DataTable
-          data={filteredProperties}
-          columns={columns}
-          onRowClick={handleRowClick}
-          getRowId={(p) => p.property_id || ''}
-          emptyMessage="No properties found"
-          loading={loading}
-          fillHeight
-        />
+        {fetchError ? (
+          <QueryError message={fetchError} onRetry={fetchProperties} />
+        ) : (
+          <DataTable
+            data={filteredProperties}
+            columns={columns}
+            onRowClick={handleRowClick}
+            getRowId={(p) => p.property_id || ''}
+            emptyMessage="No properties found"
+            loading={loading}
+            fillHeight
+          />
+        )}
       </div>
 
       {/* Detail Drawer - View/Edit Mode */}

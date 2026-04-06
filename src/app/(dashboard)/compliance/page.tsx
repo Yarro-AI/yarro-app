@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { PageShell } from '@/components/page-shell'
 import { DataTable, Column } from '@/components/data-table'
+import { QueryError } from '@/components/query-error'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,6 +67,7 @@ export default function CompliancePage() {
   const supabase = createClient()
   const [certificates, setCertificates] = useState<ComplianceRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [propertyCount, setPropertyCount] = useState(0)
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -84,7 +86,9 @@ export default function CompliancePage() {
 
   const fetchData = useCallback(async () => {
     if (!propertyManager) return
-    const { data } = await supabase.rpc('compliance_get_all_statuses', { p_pm_id: propertyManager.id })
+    const { data, error } = await supabase.rpc('compliance_get_all_statuses', { p_pm_id: propertyManager.id })
+    if (error) { setFetchError('Failed to load certificates'); setLoading(false); return }
+    setFetchError(null)
     if (data && data.length > 0) {
       setCertificates((data as unknown as Array<{
         cert_id: string | null; property_id: string; property_address: string
@@ -201,6 +205,15 @@ export default function CompliancePage() {
       render: (row) => <StatusBadge status={row.display_status} />,
       getValue: (row) => row.display_status },
   ]
+
+  // Show error state before onboarding check
+  if (!loading && fetchError) {
+    return (
+      <PageShell title="Certificates">
+        <QueryError message={fetchError} onRetry={fetchData} />
+      </PageShell>
+    )
+  }
 
   // Show setup wizard when PM has properties but no certificates yet
   if (!loading && certificates.length === 0 && propertyCount > 0) {

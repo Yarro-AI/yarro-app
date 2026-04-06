@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
-import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { PageShell } from '@/components/page-shell'
 import { RentPaymentDialog } from '@/components/rent-payment-dialog'
+import { QueryError } from '@/components/query-error'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +63,7 @@ export default function RentPage() {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [entries, setEntries] = useState<LedgerRow[]>([])
   const [paymentTarget, setPaymentTarget] = useState<LedgerRow | null>(null)
   const [filter, setFilter] = useState<StatusFilter>('all')
@@ -108,11 +109,12 @@ export default function RentPage() {
     } as never)
 
     if (error) {
-      toast.error('Failed to load rent data')
-    } else {
-      setEntries((data as unknown as LedgerRow[]) || [])
+      setFetchError('Failed to load rent data')
+      setLoading(false)
+      return
     }
-
+    setFetchError(null)
+    setEntries((data as unknown as LedgerRow[]) || [])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyManager, month, year])
@@ -165,6 +167,8 @@ export default function RentPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
+      ) : fetchError ? (
+        <QueryError message={fetchError} onRetry={fetchData} />
       ) : isFutureMonth ? (
         <div className="bg-card rounded-2xl border border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">Rent for {monthLabel} hasn&apos;t started yet.</p>

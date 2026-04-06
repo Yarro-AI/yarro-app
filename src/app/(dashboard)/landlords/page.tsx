@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
+import { QueryError } from '@/components/query-error'
 import {
   DetailDrawer,
   DetailSection,
@@ -64,6 +65,7 @@ export default function LandlordsPage() {
   const [landlords, setLandlords] = useState<Landlord[]>([])
   const [selectedLandlord, setSelectedLandlord] = useState<Landlord | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -227,7 +229,8 @@ export default function LandlordsPage() {
       .eq('property_manager_id', propertyManager!.id)
       .order('full_name')
 
-    if (error) { toast.error('Failed to load landlords'); setLoading(false); return }
+    if (error) { setFetchError('Failed to load landlords'); setLoading(false); return }
+    setFetchError(null)
     if (data) {
       const mapped = data.map((l) => {
         const props = (l.c1_properties as unknown as { id: string; address: string }[] | null) || []
@@ -469,24 +472,28 @@ export default function LandlordsPage() {
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <DataTable
-          data={filteredLandlords}
-          columns={columns}
-          onRowClick={handleRowClick}
-          getRowId={(l) => l.id}
-          fillHeight
-          emptyMessage={
-            <div className="text-center py-8">
-              <Contact className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="font-medium">No landlords yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add landlords manually or use the{' '}
-                <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
-              </p>
-            </div>
-          }
-          loading={loading}
-        />
+        {fetchError ? (
+          <QueryError message={fetchError} onRetry={fetchLandlords} />
+        ) : (
+          <DataTable
+            data={filteredLandlords}
+            columns={columns}
+            onRowClick={handleRowClick}
+            getRowId={(l) => l.id}
+            fillHeight
+            emptyMessage={
+              <div className="text-center py-8">
+                <Contact className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="font-medium">No landlords yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add landlords manually or use the{' '}
+                  <Link href="/import" className="text-primary hover:underline">Import Wizard</Link>
+                </p>
+              </div>
+            }
+            loading={loading}
+          />
+        )}
       </div>
 
       {/* Detail Drawer - View/Edit Mode */}

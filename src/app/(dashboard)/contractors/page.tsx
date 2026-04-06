@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
+import { QueryError } from '@/components/query-error'
 import {
   DetailDrawer,
   DetailSection,
@@ -92,6 +93,7 @@ export default function ContractorsPage() {
   const [propertyAddresses, setPropertyAddresses] = useState<PropertyAddress[]>([])
   const [allProperties, setAllProperties] = useState<PropertyAddress[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -293,7 +295,8 @@ export default function ContractorsPage() {
       .order('category')
       .order('contractor_name')
 
-    if (error) { toast.error('Failed to load contractors'); setLoading(false); return }
+    if (error) { setFetchError('Failed to load contractors'); setLoading(false); return }
+    setFetchError(null)
     if (data) {
       setContractors(data)
       if (data.length === 0 && !propertyManager?.onboarding_completed_at) {
@@ -717,24 +720,28 @@ export default function ContractorsPage() {
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <DataTable
-          data={filteredContractors}
-          columns={columns}
-          onRowClick={handleRowClick}
-          getRowId={(c) => c.id}
-          fillHeight
-          emptyMessage={
-            <div className="text-center py-8">
-              <Wrench className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="font-medium">No contractors yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add contractors manually or use the{' '}
-                <Link href="/integrations/import" className="text-primary hover:underline">Import Wizard</Link>
-              </p>
-            </div>
-          }
-          loading={loading}
-        />
+        {fetchError ? (
+          <QueryError message={fetchError} onRetry={fetchContractors} />
+        ) : (
+          <DataTable
+            data={filteredContractors}
+            columns={columns}
+            onRowClick={handleRowClick}
+            getRowId={(c) => c.id}
+            fillHeight
+            emptyMessage={
+              <div className="text-center py-8">
+                <Wrench className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="font-medium">No contractors yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add contractors manually or use the{' '}
+                  <Link href="/integrations/import" className="text-primary hover:underline">Import Wizard</Link>
+                </p>
+              </div>
+            }
+            loading={loading}
+          />
+        )}
       </div>
 
       {/* Detail Drawer - View/Edit Mode */}

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
+import { QueryError } from '@/components/query-error'
 import {
   DetailDrawer,
   DetailSection,
@@ -83,6 +84,7 @@ export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [properties, setProperties] = useState<PropertyOption[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
@@ -252,7 +254,8 @@ export default function TenantsPage() {
       .eq('property_manager_id', propertyManager!.id)
       .order('full_name')
 
-    if (error) { toast.error('Failed to load tenants'); setLoading(false); return }
+    if (error) { setFetchError('Failed to load tenants'); setLoading(false); return }
+    setFetchError(null)
     if (data) {
       const mapped = data.map((t) => ({
         ...t,
@@ -600,24 +603,28 @@ export default function TenantsPage() {
 
       {/* Data Table */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <DataTable
-          data={filteredTenants}
-          columns={columns}
-          onRowClick={handleRowClick}
-          getRowId={(t) => t.id}
-          fillHeight
-          emptyMessage={
-            <div className="text-center py-8">
-              <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="font-medium">No tenants yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add tenants manually or use the{' '}
-                <Link href="/integrations/import" className="text-primary hover:underline">Import Wizard</Link>
-              </p>
-            </div>
-          }
-          loading={loading}
-        />
+        {fetchError ? (
+          <QueryError message={fetchError} onRetry={fetchTenants} />
+        ) : (
+          <DataTable
+            data={filteredTenants}
+            columns={columns}
+            onRowClick={handleRowClick}
+            getRowId={(t) => t.id}
+            fillHeight
+            emptyMessage={
+              <div className="text-center py-8">
+                <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="font-medium">No tenants yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add tenants manually or use the{' '}
+                  <Link href="/integrations/import" className="text-primary hover:underline">Import Wizard</Link>
+                </p>
+              </div>
+            }
+            loading={loading}
+          />
+        )}
       </div>
 
       {/* Detail Drawer - View/Edit Mode */}

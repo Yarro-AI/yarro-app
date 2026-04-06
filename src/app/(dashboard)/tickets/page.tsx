@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { DataTable, Column } from '@/components/data-table'
+import { QueryError } from '@/components/query-error'
 import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
@@ -87,6 +88,7 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [selectedTicketBasic, setSelectedTicketBasic] = useState<TicketRow | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
@@ -194,7 +196,8 @@ export default function TicketsPage() {
 
     const { data, error } = await query
 
-    if (error) { toast.error('Failed to load tickets'); setLoading(false); return }
+    if (error) { setFetchError('Failed to load tickets'); setLoading(false); return }
+    setFetchError(null)
     if (data) {
       // Map next_action_reason → display label
       const reasonToDisplayStage: Record<string, string> = {
@@ -851,22 +854,26 @@ export default function TicketsPage() {
 
       {/* Scrollable data region — single table */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <DataTable
-          data={visibleRows}
-          columns={columns}
-          fillHeight
-          getRowId={t => t.id}
-          getRowClassName={getRowClassName}
-          onRowClick={handleRowClick}
-          loading={loading}
-          emptyMessage={
-            <div className="text-center py-12">
-              <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="font-medium">No tickets</p>
-              <p className="text-sm text-muted-foreground mt-1">No tickets match the current filters.</p>
-            </div>
-          }
-        />
+        {fetchError ? (
+          <QueryError message={fetchError} onRetry={fetchTickets} />
+        ) : (
+          <DataTable
+            data={visibleRows}
+            columns={columns}
+            fillHeight
+            getRowId={t => t.id}
+            getRowClassName={getRowClassName}
+            onRowClick={handleRowClick}
+            loading={loading}
+            emptyMessage={
+              <div className="text-center py-12">
+                <Ticket className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="font-medium">No tickets</p>
+                <p className="text-sm text-muted-foreground mt-1">No tickets match the current filters.</p>
+              </div>
+            }
+          />
+        )}
       </div>
 
       {/* Ticket Detail Modal (replaces old DetailDrawer) */}
