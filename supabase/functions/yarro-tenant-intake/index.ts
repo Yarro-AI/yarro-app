@@ -109,22 +109,62 @@ async function callOpenAI(
     body.response_format = { type: "json_object" };
   }
 
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+  const payload = JSON.stringify(body);
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`OpenAI ${resp.status}: ${err}`);
+  // Single retry with 2s backoff on transient errors (matches AD-6 Twilio pattern)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20_000);
+
+    try {
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers,
+        body: payload,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+
+      if (!resp.ok) {
+        const err = await resp.text();
+        if (attempt === 0 && (resp.status === 429 || resp.status >= 500)) {
+          console.warn(`[openai] ${resp.status} on attempt 1, retrying in 2s…`);
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+        throw new Error(`OpenAI ${resp.status}: ${err}`);
+      }
+
+      const data = await resp.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error("OpenAI returned empty content");
+      }
+      return content;
+    } catch (e) {
+      clearTimeout(timer);
+      // Timeout — retry once
+      if (attempt === 0 && e instanceof DOMException && e.name === "AbortError") {
+        console.warn("[openai] Timeout on attempt 1, retrying in 2s…");
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      // Network error — retry once (but not known OpenAI 4xx errors)
+      if (attempt === 0 && !(e instanceof Error && e.message.startsWith("OpenAI "))) {
+        console.warn("[openai] Network error on attempt 1, retrying in 2s:", e);
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      throw e;
+    }
   }
 
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content || "";
+  throw new Error("OpenAI: exhausted retries");
 }
 
 // ─── Normalise: Parse AI response + detect branch ───────────────────────
@@ -460,23 +500,31 @@ Deno.serve(async (req: Request) => {
       };
 
       let issueData: any;
+      let aiFallback = false;
       try {
         const issueAIResponse = await callOpenAI([
           { role: "system", content: getIssueAISystemPrompt() },
           { role: "user", content: buildIssueAIUserPrompt(issueAIContext) },
         ], 0.3, true);
 
-        issueData = JSON.parse(issueAIResponse);
+        // Strip code fences (safety net — jsonMode should prevent them, but defense in depth)
+        const cleanedIssueAI = issueAIResponse.trim()
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/```$/i, "")
+          .replace(/```$/m, "")
+          .trim();
+        issueData = JSON.parse(cleanedIssueAI);
       } catch (e) {
+        aiFallback = true;
         const msg = e instanceof Error ? e.message : String(e);
-        await alertTelegram("IssueAI classification", msg, {
+        await alertTelegram("IssueAI classification FAILED — ticket needs manual triage", msg, {
           Phone: phone,
           ConvoId: ctx.conversation.id,
         });
         // Fall back to basic issue data so ticket still gets created
         issueData = {
           issue_summary: twilioBody,
-          issue_title: "Maintenance request",
+          issue_title: "[Needs review] Maintenance request",
           category: "General / Handyman",
           priority: "Standard",
           access: "UNCLEAR",
@@ -560,7 +608,7 @@ Deno.serve(async (req: Request) => {
             Authorization: `Bearer ${serviceKey}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ticket_id: ticketId }),
+          body: JSON.stringify({ ticket_id: ticketId, ai_fallback: aiFallback }),
         });
 
         if (!notifyResp.ok) {

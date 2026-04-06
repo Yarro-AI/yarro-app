@@ -208,6 +208,7 @@ async function handleMorningDispatch(
 async function handleIntake(
   supabase: SupabaseClient,
   ticketId: string,
+  aiFallback = false,
 ): Promise<Response> {
   const { data: ctxRows, error: ctxError } = await supabase.rpc(
     "c1_ticket_context",
@@ -396,7 +397,49 @@ async function handleIntake(
     }
   }
 
-  if (ctx.handoff) {
+  if (aiFallback) {
+    // ── AI CLASSIFICATION FAILED — force review mode, skip handoff ──
+    const { error: reviewFlagErr } = await supabase
+      .from("c1_tickets")
+      .update({ pending_review: true })
+      .eq("id", ticketId);
+
+    if (reviewFlagErr) {
+      await alertTelegram(FN, "intake → set pending_review (ai_fallback)", reviewFlagErr.message, { Ticket: ticketId });
+    }
+
+    if (ctx.manager_phone) {
+      const r = await sendAndLog(supabase, FN, "intake → AI fallback review SMS", {
+        ticketId,
+        recipientPhone: ctx.manager_phone,
+        recipientRole: "manager",
+        messageType: "pm_ticket_review",
+        templateSid: TEMPLATES.ticket_review,
+        variables: {
+          "1": ctx.issue_description || "Maintenance issue reported",
+          "2": ctx.property_address || "Address not available",
+          "3": reporterName(ctx),
+          "4": formatReportTime(ctx.date_logged),
+        },
+      });
+      results.push({ type: "pm_ticket_review", sent: r.ok, error: r.error });
+    }
+    // NO contractor dispatch — ticket stays in pending_review until PM triages
+  } else if (ctx.handoff) {
+    // ── HANDOFF — classify reason and prefix for PM ──
+    let handoffPrefix = "";
+    if (!ctx.property_id) {
+      handoffPrefix = "[Property not matched] ";
+    } else if (!ctx.category || ctx.category === "") {
+      handoffPrefix = "[Issue type unclear] ";
+    } else {
+      const mapping = ctx.contractor_mapping as Record<string, any> | null;
+      const mapped = mapping?.[ctx.category];
+      if (!mapped || (Array.isArray(mapped) && mapped.length === 0)) {
+        handoffPrefix = `[No ${ctx.category} contractor mapped] `;
+      }
+    }
+
     if (ctx.manager_phone) {
       const r = await sendAndLog(supabase, FN, "intake → handoff PM SMS", {
         ticketId,
@@ -405,10 +448,10 @@ async function handleIntake(
         messageType: "pm_handoff",
         templateSid: TEMPLATES.handoff,
         variables: {
-          "1": ctx.issue_description || "Issue details unavailable",
+          "1": handoffPrefix + (ctx.issue_description || "Issue details unavailable"),
           "2": ctx.property_address || "Address not available",
           "3": reporterName(ctx),
-          "4": formatReportTime(ctx.date_logged)
+          "4": formatReportTime(ctx.date_logged),
         },
       });
       results.push({ type: "pm_handoff", sent: r.ok, error: r.error });
@@ -651,7 +694,8 @@ Deno.serve(async (req: Request) => {
     } else if (source === "manual-ll") {
       return await handleManualLandlord(supabase, ticketId);
     } else {
-      return await handleIntake(supabase, ticketId);
+      const aiFallback = body.ai_fallback === true;
+      return await handleIntake(supabase, ticketId, aiFallback);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
