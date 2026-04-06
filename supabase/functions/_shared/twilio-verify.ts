@@ -47,9 +47,16 @@ export async function verifyTwilioSignature(
 /**
  * Parse form-encoded body and verify Twilio signature in one step.
  * Returns the parsed params if valid, or null if verification fails.
+ *
+ * @param req - The incoming request
+ * @param functionName - The edge function name (e.g. "yarro-tenant-intake").
+ *   Used to construct the public URL that Twilio signed against, since
+ *   req.url inside Supabase edge functions returns an internal URL that
+ *   won't match the Twilio signature.
  */
 export async function parseAndVerifyTwilioWebhook(
   req: Request,
+  functionName: string,
 ): Promise<{ params: URLSearchParams; raw: Record<string, string> } | null> {
   const authToken = Deno.env.get("TWILIO_AUTH_TOKEN")?.trim();
   if (!authToken) {
@@ -72,11 +79,19 @@ export async function parseAndVerifyTwilioWebhook(
     raw[key] = value;
   });
 
-  const url = req.url;
-  const valid = await verifyTwilioSignature(authToken, signature, url, raw);
+  // Construct the public URL Twilio signed against.
+  // req.url is an internal Deno runtime URL and won't match.
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!supabaseUrl) {
+    console.error("[twilio-verify] SUPABASE_URL not set");
+    return null;
+  }
+  const publicUrl = `${supabaseUrl}/functions/v1/${functionName}`;
+
+  const valid = await verifyTwilioSignature(authToken, signature, publicUrl, raw);
 
   if (!valid) {
-    console.warn("[twilio-verify] Invalid signature");
+    console.warn(`[twilio-verify] Invalid signature for ${functionName} (url: ${publicUrl})`);
     return null;
   }
 

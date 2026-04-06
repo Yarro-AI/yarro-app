@@ -13,7 +13,7 @@ Deno.serve(async (req: Request) => {
   try {
     // Verify Twilio signature + parse form-encoded POST
     const { parseAndVerifyTwilioWebhook } = await import("../_shared/twilio-verify.ts");
-    const verified = await parseAndVerifyTwilioWebhook(req);
+    const verified = await parseAndVerifyTwilioWebhook(req, "yarro-outbound-monitor");
     if (!verified) {
       console.warn(`[${FN}] Rejected: invalid or missing Twilio signature`);
       return new Response("Forbidden", { status: 403 });
