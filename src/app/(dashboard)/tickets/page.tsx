@@ -123,29 +123,29 @@ export default function TicketsPage() {
   }, [selectedLifecycle, selectedWorkflow.length])
 
   useEffect(() => {
-    if (selectedId && tickets.length > 0) {
-      const basicTicket = tickets.find((t) => t.id === selectedId)
-      if (basicTicket) {
-        setSelectedTicketBasic(basicTicket)
-        // Auto-open complete drawer if action=complete and ticket is handoff
-        if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
-          setHandoffTicketId(basicTicket.id)
-          setCreateDrawerOpen(true)
-          return
-        }
-        // Auto-open review drawer if action=review and ticket is pending review
-        if (action === 'review' && basicTicket.pending_review && basicTicket.status === 'open') {
-          setReviewTicketId(basicTicket.id)
-          setCreateDrawerOpen(true)
-          return
-        }
+    if (!selectedId || tickets.length === 0) return
+
+    const basicTicket = tickets.find((t) => t.id === selectedId)
+    if (basicTicket) {
+      setSelectedTicketBasic(basicTicket)
+      // Auto-open complete drawer if action=complete and ticket is handoff
+      if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
+        setHandoffTicketId(basicTicket.id)
+        setCreateDrawerOpen(true)
+        return
       }
-      // Only open the detail modal if the create drawer isn't already open
-      if (!createDrawerOpen) {
-        setModalOpen(true)
+      // Auto-open review drawer if action=review and ticket is pending review
+      if (action === 'review' && basicTicket.pending_review && basicTicket.status === 'open') {
+        setReviewTicketId(basicTicket.id)
+        setCreateDrawerOpen(true)
+        return
       }
     }
-  }, [selectedId, tickets, action, createDrawerOpen])
+    // Only open the detail modal if the create drawer isn't already open
+    if (!createDrawerOpen) {
+      setModalOpen(true)
+    }
+  }, [selectedId, tickets, action])
 
   const fetchTickets = async () => {
     setLoading(true)
