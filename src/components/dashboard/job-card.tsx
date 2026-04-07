@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/status-badge'
+import { AlertTriangle } from 'lucide-react'
 import { CategoryBadge } from './category-badge'
 import { getCtaText, getTodoHref, deriveUrgency, deriveCategory } from './todo-panel'
 import type { TodoItem } from './todo-panel'
@@ -12,6 +12,48 @@ interface JobCardProps {
   item: TodoItem
   onHandoffClick: (item: TodoItem) => void
   onTicketClick: (item: TodoItem) => void
+}
+
+/** Circular SLA countdown — only visible when <=24h remain */
+function SlaRing({ slaDueAt }: { slaDueAt: string }) {
+  const hoursLeft = (new Date(slaDueAt).getTime() - Date.now()) / 3_600_000
+  if (hoursLeft > 24) return null
+
+  // Breached — red warning triangle
+  if (hoursLeft <= 0) {
+    return (
+      <div className="flex-shrink-0" title="SLA breached">
+        <AlertTriangle className="w-5 h-5 text-red-500 fill-red-500/20" />
+      </div>
+    )
+  }
+
+  // Countdown ring — fraction remaining out of 24h
+  const fraction = Math.max(0, hoursLeft / 24)
+  const color = hoursLeft <= 2 ? '#EF4444' : hoursLeft <= 8 ? '#F97316' : '#EAB308'
+  const radius = 8
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = circumference * (1 - fraction)
+
+  return (
+    <div className="flex-shrink-0" title={`SLA: ${Math.ceil(hoursLeft)}h remaining`}>
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        {/* Background track */}
+        <circle cx="10" cy="10" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+        {/* Countdown arc */}
+        <circle
+          cx="10" cy="10" r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          transform="rotate(-90 10 10)"
+        />
+      </svg>
+    </div>
+  )
 }
 
 export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
@@ -48,29 +90,10 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
       </div>
       {/* Right section: text content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <p className="text-[15px] font-semibold text-[#111827] truncate">{item.issue_summary}</p>
-          {item.priority && <StatusBadge status={item.priority} size="sm" className="border-border/50 text-muted-foreground/70" />}
-        </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <p className="text-sm text-[#6B7280] truncate">{item.property_label}</p>
-          {(() => {
-            if (!item.sla_due_at) return null
-            const hoursLeft = (new Date(item.sla_due_at).getTime() - Date.now()) / 3_600_000
-            if (hoursLeft > 24) return null
-            if (hoursLeft <= 0) return (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap bg-red-500/15 text-red-600">
-                SLA BREACHED
-              </span>
-            )
-            return (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-amber-500/10 text-amber-700">
-                SLA: {Math.ceil(hoursLeft)}h
-              </span>
-            )
-          })()}
-        </div>
+        <p className="text-[15px] font-semibold text-[#111827] truncate">{item.issue_summary}</p>
+        <p className="text-sm text-[#6B7280] truncate mt-0.5">{item.property_label}</p>
       </div>
+      {item.sla_due_at && <SlaRing slaDueAt={item.sla_due_at} />}
       <Button
         variant="default"
         size="sm"
