@@ -376,13 +376,29 @@ export default function DashboardPage() {
   const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
   const inProgressItems = useMemo(() => filterInProgress(todoItems), [todoItems])
 
+  // Priority filter
+  const [priorityFilter, setPriorityFilter] = useState<'ALL' | 'URGENT' | 'HIGH' | 'NORMAL'>('ALL')
+
+  const priorityCounts = useMemo(() => ({
+    ALL: actionable.length,
+    URGENT: actionable.filter(i => i.priority_bucket === 'URGENT').length,
+    HIGH: actionable.filter(i => i.priority_bucket === 'HIGH').length,
+    NORMAL: actionable.filter(i => i.priority_bucket === 'NORMAL' || i.priority_bucket === 'LOW').length,
+  }), [actionable])
+
+  const filteredActionable = useMemo(() => {
+    if (priorityFilter === 'ALL') return actionable
+    if (priorityFilter === 'NORMAL') return actionable.filter(i => i.priority_bucket === 'NORMAL' || i.priority_bucket === 'LOW')
+    return actionable.filter(i => i.priority_bucket === priorityFilter)
+  }, [actionable, priorityFilter])
+
   // Pre-compute category sub-filters to avoid inline .filter() on every render
-  const maintenanceTodos = useMemo(() => actionable.filter(i => {
+  const maintenanceTodos = useMemo(() => filteredActionable.filter(i => {
     const src = i.source_type || 'ticket'
     return src === 'ticket' || src === 'handoff'
-  }), [actionable])
-  const complianceTodos = useMemo(() => actionable.filter(i => i.source_type === 'compliance'), [actionable])
-  const financeTodos = useMemo(() => actionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy'), [actionable])
+  }), [filteredActionable])
+  const complianceTodos = useMemo(() => filteredActionable.filter(i => i.source_type === 'compliance'), [filteredActionable])
+  const financeTodos = useMemo(() => filteredActionable.filter(i => i.source_type === 'rent' || i.source_type === 'tenancy'), [filteredActionable])
 
   const showAwaitingTickets = (type: string) => {
     let filtered: TicketSummary[]
@@ -436,7 +452,7 @@ export default function DashboardPage() {
   const onboardingDone = !!propertyManager?.onboarding_completed_at
   // During onboarding, only count maintenance items (compliance/finance are hidden)
   const visibleTaskCount = onboardingDone
-    ? actionable.length
+    ? filteredActionable.length
     : maintenanceTodos.length
   const propertyAdded = onboardingChecklist.find(i => i.key === 'add_property')?.complete
   const visibleChecklist = onboardingDone
@@ -525,8 +541,32 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
+            {/* Priority filter pills */}
+            {actionable.length > 0 && (
+              <div className="flex gap-2 px-5 py-3 flex-shrink-0 border-b border-foreground/10">
+                {([
+                  { key: 'ALL', label: 'All' },
+                  { key: 'URGENT', label: 'Urgent' },
+                  { key: 'HIGH', label: 'High' },
+                  { key: 'NORMAL', label: 'Normal' },
+                ] as const).map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setPriorityFilter(f.key)}
+                    className={cn(
+                      'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
+                      priorityFilter === f.key
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-transparent border-border text-muted-foreground hover:bg-muted/50'
+                    )}
+                  >
+                    {f.label} <span className={cn('ml-1', priorityFilter === f.key ? 'opacity-70' : '')}>{priorityCounts[f.key]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex flex-col divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto">
-              {actionable.length === 0 && onboardingChecklist.length === 0 ? (
+              {filteredActionable.length === 0 && onboardingChecklist.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center p-6">
                   <p className="text-sm text-success font-medium">All clear — nothing needs your attention</p>
                 </div>
