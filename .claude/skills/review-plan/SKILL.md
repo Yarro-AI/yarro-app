@@ -39,6 +39,8 @@ This is the only step that touches the codebase. For everything the plan referen
 2. **Does it match?** If the plan says "modify the `fetchCerts` function on line 45" — is that function actually there, at roughly that location, doing what the plan thinks?
 3. **Are there callers?** If the plan changes a function/RPC signature, grep for other code that calls it. The plan must handle these or it'll break things silently
 4. **Does it touch a protected RPC?** If any step writes `CREATE OR REPLACE FUNCTION` for a function listed in `supabase/core-rpcs/README.md`, flag it as a **BLOCKER**. The plan must include: backup of current definition, Adam's explicit approval, and the safe modification protocol from `supabase/core-rpcs/README.md`.
+5. **Does it touch a safe-zone file?** Check `.claude/docs/safe-zones.md` for any file the plan modifies. RED zone files (`pm-context.tsx`, `supabase/` client, `prompts.ts`, `use-ticket-detail.ts`) require extra caution and Adam's approval. YELLOW zone files need careful review. Flag zone violations.
+6. **Does it modify an Edge Function?** All edge functions in `supabase/functions/` are **DO NOT MODIFY** (see `.claude/docs/architecture.md`). If the plan proposes changes to any edge function, flag as a **BLOCKER** unless Adam has explicitly scoped the change.
 
 Don't verify things the plan is **creating** — only things it **depends on**. If something doesn't exist and the plan doesn't create it, that's a blocker.
 
@@ -53,6 +55,18 @@ Now that you understand the plan's intent and have verified its assumptions, pre
 - Direct table access (`.from().select()`) where an RPC should exist because there's logic involved
 - Frontend making multiple round-trips when one RPC could do the job
 - Remember: the frontend is a display layer. It calls RPCs and renders results. If the plan has the frontend deciding, computing, or orchestrating business logic, that's wrong.
+
+**Polymorphic dispatch — does ticket logic flow through the router correctly?** (See `docs/POLYMORPHIC-DISPATCH-PLAN.md`)
+If the plan touches ticket state, categories, or next-action logic:
+- New ticket categories must get a new sub-routine (`compute_{category}_next_action`), not IF/ELSE branches in the router
+- Sub-routines must be SECURITY DEFINER
+- New `next_action_reason` values need a CHECK constraint migration
+- The router registration must follow dispatch order: universal states → category → lifecycle flags → simple flags → maintenance fallback
+- Non-contractor ticket types need a dedicated `create_{category}_ticket()` function
+- If the plan doesn't touch ticket logic, skip this section entirely
+
+**Component patterns — does new UI follow existing patterns?**
+If the plan creates new pages or components, verify it references `.claude/docs/patterns.md`. Flag if it introduces a new pattern where an established one exists (semantic color tokens, card shapes, layout conventions).
 
 **Downstream impact — what breaks or changes elsewhere?**
 - Other pages, components, or hooks that read the same tables or call the same RPCs
@@ -81,6 +95,7 @@ Now that you understand the plan's intent and have verified its assumptions, pre
 - Does it reference something before creating it?
 - Are database changes deployed before frontend code that depends on them?
 - Are types regenerated before the UI code that needs them?
+- If the plan involves RPCs, does it follow the RPC development workflow? The required order is: write SQL migration → test in Supabase SQL editor → `supabase db push` → `supabase gen types` → build UI. Plans that jump to UI before the RPC exists or skip type regeneration will break.
 
 **Completeness — does it actually deliver what it promises?**
 - Does every stated goal map to a concrete step?
@@ -88,11 +103,29 @@ Now that you understand the plan's intent and have verified its assumptions, pre
 - Would you know exactly what to build from this plan, or would you have to guess?
 
 **Stability & scalability — is this the strongest approach? (See `.claude/docs/decision-principles.md`)**
-- Is there a more robust approach that wasn't considered? If so, flag as **[IMPROVE]** with both options and trade-off arguments
-- Does this approach hold up when adjacent features are added to the same tables or flows?
-- Are we taking a shortcut that creates tech debt? If so, is refactoring later genuinely trivial (no schema/boundary implications)?
-- Would this approach survive 10x the current data volume?
-- If a quick approach was chosen, is the justification explicit and sound?
+
+Run the **Decision Test** against every significant choice in the plan:
+1. Is this the strongest approach, or just the fastest?
+2. What breaks when adjacent features land in 1–3 months?
+3. What's the cost of changing this later vs doing it right now?
+4. If the answer to #1 is "just the fastest" — the plan needs the stronger alternative presented with trade-offs.
+
+If a quick approach was chosen, verify it passes **all four** "When Quick Is Acceptable" conditions:
+- Zero downstream risk — nothing else depends on this decision
+- No schema or system boundary implications
+- Trivially refactorable later — no callers affected
+- Doesn't compromise data integrity, security, or correctness
+If any condition fails, flag as **[IMPROVE]** with the robust alternative.
+
+**Present trade-offs** (both options with arguments) when the decision affects: data flow/schema, system boundaries (RPC vs frontend, edge function responsibilities), public interfaces (portals, API contracts, tokens), or patterns other features will build on. For implementation details within settled architecture, just pick the strongest approach.
+
+Does this approach hold up when adjacent features are added to the same tables or flows? Would it survive 10x the current data volume?
+
+**Don't gold-plate** — stability-first does not mean perfection-first. Flag over-engineering too:
+- If something can be cleanly refactored when needed, the simpler version may be correct
+- Three similar lines of code is better than a premature abstraction
+- Build for what's needed now + what's clearly coming next, not hypothetical future requirements
+- If the plan introduces unnecessary abstractions, wrappers, or configurability beyond the stated goal, flag as **[IMPROVE]** recommending the simpler version
 
 ### Step 4 — Present findings
 Output the review directly in the conversation. Don't write to files.
