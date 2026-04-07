@@ -75,7 +75,7 @@ const ACTION_CTA: Record<string, string> = {
 }
 
 // CTA fallback for compliance items (action_label is dynamic, e.g. "Gas Safety (CP12) expired")
-function getCtaText(item: TodoItem): string {
+export function getCtaText(item: TodoItem): string {
   const fromMap = ACTION_CTA[item.action_label]
   if (fromMap) return fromMap
   // Compliance items have dynamic labels — match by reason key
@@ -135,6 +135,43 @@ export const NEXT_STEPS: Record<string, string> = {
   landlord_needs_help: 'Landlord needs help — take over',
 }
 
+
+// ─────────────────────────────────────────────────────────
+// Derivation helpers (shared by JobCard + TodoRow)
+// ─────────────────────────────────────────────────────────
+
+export type Urgency = 'emergency' | 'urgent' | 'high' | 'medium' | 'low'
+export type JobCategory = 'maintenance' | 'compliance' | 'finance'
+
+export function deriveUrgency(item: TodoItem): Urgency {
+  if (item.sla_breached || item.priority === 'Emergency') return 'emergency'
+  if (item.priority === 'Urgent') return 'urgent'
+  if (item.priority === 'High') return 'high'
+  if (item.priority === 'Medium') return 'medium'
+  return 'low'
+}
+
+export function deriveCategory(item: TodoItem): JobCategory {
+  const src = item.source_type || 'ticket'
+  if (src === 'compliance') return 'compliance'
+  if (src === 'rent' || src === 'tenancy') return 'finance'
+  return 'maintenance'
+}
+
+export function getTodoHref(item: TodoItem): string | null {
+  const src = item.source_type || 'ticket'
+  const isTicket = item.id.startsWith('todo_')
+  if (isTicket && (src === 'compliance' || src === 'rent')) return null
+  if (src === 'compliance') {
+    return item.next_action_reason === 'compliance_missing'
+      ? `/properties/${item.property_id}`
+      : `/compliance/${item.entity_id}`
+  }
+  if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
+  if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
+  if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
+  return null
+}
 
 // ─────────────────────────────────────────────────────────
 // Filtering helpers (used in parent to lift counts)

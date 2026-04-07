@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/status-badge'
-import { SlaBadge } from '@/components/sla-badge'
 import { REASON_BADGE } from '@/components/dashboard/todo-panel'
 import type { TodoItem } from '@/components/dashboard/todo-panel'
 import {
@@ -93,9 +92,6 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
             <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
           </span>
           <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
-          {item.sla_due_at && (
-            <SlaBadge slaDueAt={item.sla_due_at} priority={item.priority} />
-          )}
         </div>
       </div>
       <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">{ctaText}</span>
