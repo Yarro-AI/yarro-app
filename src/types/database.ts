@@ -2727,6 +2727,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      strip_uk_postcode: { Args: { addr: string }; Returns: string }
       verify_entity: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {

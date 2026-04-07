@@ -22,6 +22,7 @@ export interface TodoItem {
   priority: string | null
   priority_score?: number
   sla_breached: boolean
+  sla_due_at?: string | null
 }
 
 export interface TicketSummary {
