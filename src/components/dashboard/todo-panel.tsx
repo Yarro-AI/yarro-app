@@ -148,6 +148,11 @@ export function deriveUrgency(item: TodoItem): Urgency {
   if (item.priority === 'Urgent') return 'urgent'
   if (item.priority === 'High') return 'high'
   if (item.priority === 'Medium') return 'medium'
+  // Fallback to priority_bucket for items without a priority text (tenancy, handoff)
+  if (!item.priority) {
+    if (item.priority_bucket === 'URGENT') return 'urgent'
+    if (item.priority_bucket === 'HIGH') return 'high'
+  }
   return 'low'
 }
 
