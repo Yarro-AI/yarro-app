@@ -74,6 +74,7 @@ export function TicketDetailModal({
     : (basic?.category || context?.category) === 'rent_arrears' ? 'rent'
     : 'maintenance'
 
+
   // Reset tab when ticket or template changes
   useEffect(() => {
     setActiveTab(defaultTab || 'overview')
@@ -201,43 +202,17 @@ export function TicketDetailModal({
               {(() => {
                 if (ticketTemplate === 'compliance') {
                   return (
-                    <>
-                      <div className="flex items-end gap-6 border-b border-border/40 px-6 flex-shrink-0 overflow-x-auto">
-                        <button onClick={() => setActiveTab('overview')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                          <span className={cn('text-sm font-medium transition-colors', activeTab === 'overview' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Overview</span>
-                        </button>
-                        {hasCompletion && (
-                          <button onClick={() => setActiveTab('completion')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                            <span className={cn('text-sm font-medium transition-colors', activeTab === 'completion' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Completion</span>
-                          </button>
-                        )}
-                      </div>
-                      {activeTab === 'overview' && (
-                        <div className="flex-1 min-h-0 overflow-y-auto">
-                          <ComplianceOverviewTab context={context} basic={basic} cert={complianceCert} loading={categoryDataLoading} />
-                        </div>
-                      )}
-                      {activeTab === 'completion' && hasCompletion && completion && (
-                        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-                          <TicketCompletionTab completion={completion} />
-                        </div>
-                      )}
-                    </>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <ComplianceOverviewTab context={context} basic={basic} cert={complianceCert} loading={categoryDataLoading} />
+                    </div>
                   )
                 }
 
                 if (ticketTemplate === 'rent') {
                   return (
-                    <>
-                      <div className="flex items-end gap-6 border-b border-border/40 px-6 flex-shrink-0 overflow-x-auto">
-                        <button onClick={() => setActiveTab('overview')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                          <span className="text-sm font-medium text-primary">Overview</span>
-                        </button>
-                      </div>
-                      <div className="flex-1 min-h-0 overflow-y-auto">
-                        <RentOverviewTab context={context} basic={basic} rentLedger={rentLedger} loading={categoryDataLoading} />
-                      </div>
-                    </>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <RentOverviewTab context={context} basic={basic} rentLedger={rentLedger} loading={categoryDataLoading} />
+                    </div>
                   )
                 }
 
