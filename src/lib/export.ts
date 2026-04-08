@@ -6,7 +6,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>
 
-interface ExportColumn {
+export interface ExportColumn {
   key: string
   header: string
   format?: (value: unknown, row: Row) => string

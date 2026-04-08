@@ -5,7 +5,7 @@ import { typography } from '@/lib/typography'
 import { spacing } from '@/styles/spacing'
 
 interface PageShellProps {
-  title: string
+  title?: string
   subtitle?: string
   count?: number
   actions?: React.ReactNode
@@ -40,19 +40,21 @@ export function PageShell({
     >
       {topBar ? (
         <div className={cn('flex-shrink-0 flex flex-col', spacing.pagePaddingX)}>
-          <div className="flex items-center h-16">
-            <div className="min-w-0">
-              <h1 className={typography.pageTitle}>
-                {title}
-                {count != null && (
-                  <span className="ml-3 inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground align-middle">
-                    {count}
-                  </span>
-                )}
-              </h1>
-              {subtitle && <p className={typography.pageSubtitle}>{subtitle}</p>}
+          {title && (
+            <div className="flex items-center h-16">
+              <div className="min-w-0">
+                <h1 className={typography.pageTitle}>
+                  {title}
+                  {count != null && (
+                    <span className="ml-3 inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground align-middle">
+                      {count}
+                    </span>
+                  )}
+                </h1>
+                {subtitle && <p className={typography.pageSubtitle}>{subtitle}</p>}
+              </div>
             </div>
-          </div>
+          )}
           <div className={cn(
             'flex items-center justify-between h-12 gap-3',
             headerBorder ? 'border-b border-foreground/10' : ''
@@ -63,7 +65,7 @@ export function PageShell({
             )}
           </div>
         </div>
-      ) : (
+      ) : title ? (
         <div className={cn(
           'flex-shrink-0 flex items-center justify-between gap-4 h-16 mt-2', spacing.pagePaddingX,
           headerBorder ? 'border-b border-foreground/10' : ''
@@ -83,7 +85,7 @@ export function PageShell({
             <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>
           )}
         </div>
-      )}
+      ) : null}
 
       <div className={cn(
         'flex flex-col flex-1 min-h-0 overflow-hidden',
