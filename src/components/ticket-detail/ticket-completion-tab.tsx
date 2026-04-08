@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { CompletionData } from '@/hooks/use-ticket-detail'
 import { formatCurrency, getMediaUrls } from '@/hooks/use-ticket-detail'
+import { DetailCell } from '@/components/detail-cell'
 
 interface TicketCompletionTabProps {
   completion: CompletionData
@@ -14,27 +15,6 @@ interface TicketCompletionTabProps {
 
 function DashedLine() {
   return <div className="w-full border-t border-dashed border-border/40" aria-hidden="true" />
-}
-
-function DetailCell({ label, value, mono, highlight }: {
-  label: string
-  value: string | null | undefined
-  mono?: boolean
-  highlight?: boolean
-}) {
-  if (!value) return null
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">{label}</p>
-      <p className={cn(
-        'text-[15px]',
-        mono && 'font-mono',
-        highlight ? 'font-semibold text-emerald-600' : 'font-medium text-foreground',
-      )}>
-        {value}
-      </p>
-    </div>
-  )
 }
 
 export function TicketCompletionTab({ completion }: TicketCompletionTabProps) {

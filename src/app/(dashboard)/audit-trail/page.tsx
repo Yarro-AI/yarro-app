@@ -1,229 +1,173 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { PageShell } from '@/components/page-shell'
 import { DataTable, Column } from '@/components/data-table'
-import { CommandSearchInput } from '@/components/command-search-input'
-import { ScrollText } from 'lucide-react'
+import { StatusBadge } from '@/components/status-badge'
+import { Search, ScrollText } from 'lucide-react'
+import { formatDate } from '@/lib/audit-utils'
 
-interface AuditEvent {
+interface AuditTicket {
   id: string
-  event_type: string
-  actor_type: string
-  actor_name: string | null
-  property_label: string | null
-  occurred_at: string
-  metadata: Record<string, unknown> | null
-  ticket_id: string | null
-}
-
-function formatEventType(type: string): string {
-  return type
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-// Causal ordering for same-ticket events with near-identical timestamps.
-// DB triggers fire at different microseconds within the same transaction,
-// so CONTRACTOR_ASSIGNED can appear before ISSUE_CREATED without this.
-const CAUSAL_ORDER: Record<string, number> = {
-  ISSUE_CREATED: 0,
-  ISSUE_REPORTED: 0,
-  PRIORITY_CLASSIFIED: 1,
-  PRIORITY_CHANGED: 1,
-  HANDOFF_CREATED: 2,
-  HANDOFF_CHANGED: 2,
-  CONTRACTOR_ASSIGNED: 3,
-  OOH_DISPATCHED: 3,
-  LANDLORD_ALLOCATED: 3,
-  LANDLORD_APPROVED: 4,
-  LANDLORD_DECLINED: 4,
-  QUOTE_RECEIVED: 5,
-  QUOTE_APPROVED: 5,
-  QUOTE_DECLINED: 5,
-  JOB_SCHEDULED: 6,
-  JOB_COMPLETED: 7,
-  TICKET_CLOSED: 8,
-  TICKET_ARCHIVED: 9,
-}
-
-function sortWithCausalOrder(events: AuditEvent[]): AuditEvent[] {
-  return [...events].sort((a, b) => {
-    // Primary: occurred_at descending (newest first)
-    const timeDiff = new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
-    // Only apply causal tie-breaker for same-ticket events within 2 seconds
-    if (Math.abs(timeDiff) < 2000 && a.ticket_id && a.ticket_id === b.ticket_id) {
-      const orderA = CAUSAL_ORDER[a.event_type] ?? 5
-      const orderB = CAUSAL_ORDER[b.event_type] ?? 5
-      if (orderA !== orderB) return orderB - orderA // descending: later events first
-    }
-    return timeDiff
-  })
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function extractDetail(event: AuditEvent): string {
-  if (!event.metadata) return '—'
-
-  const meta = event.metadata
-  // Common metadata patterns from c1_events triggers
-  if (meta.summary && typeof meta.summary === 'string') return meta.summary
-  if (meta.old_status && meta.new_status) return `${meta.old_status} → ${meta.new_status}`
-  if (meta.message && typeof meta.message === 'string') {
-    const msg = meta.message as string
-    return msg.length > 80 ? msg.slice(0, 80) + '…' : msg
-  }
-
-  // Fallback: show first string value
-  const firstVal = Object.values(meta).find((v) => typeof v === 'string')
-  if (firstVal && typeof firstVal === 'string') {
-    return firstVal.length > 80 ? firstVal.slice(0, 80) + '…' : firstVal
-  }
-
-  return '—'
+  issue_description: string | null
+  status: string
+  priority: string | null
+  category: string | null
+  date_logged: string
+  resolved_at: string | null
+  address: string | null
 }
 
 export default function AuditTrailPage() {
   const { propertyManager } = usePM()
   const supabase = createClient()
-  const [events, setEvents] = useState<AuditEvent[]>([])
-  const [loading, setLoading] = useState(true)
+  const router = useRouter()
   const [search, setSearch] = useState('')
+  const [tickets, setTickets] = useState<AuditTicket[]>([])
+  const [loading, setLoading] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const filteredEvents = useMemo(() => {
-    if (!search) return events
-    const lower = search.toLowerCase()
-    return events.filter(
-      (e) =>
-        formatEventType(e.event_type).toLowerCase().includes(lower) ||
-        e.actor_name?.toLowerCase().includes(lower) ||
-        e.property_label?.toLowerCase().includes(lower) ||
-        extractDetail(e).toLowerCase().includes(lower)
-    )
-  }, [events, search])
-
-  const fetchEvents = useCallback(async () => {
-    if (!propertyManager) return
-
-    const { data } = await supabase
-      .from('c1_events')
-      .select('id, event_type, actor_type, actor_name, property_label, occurred_at, metadata, ticket_id')
-      .eq('portfolio_id', propertyManager.id)
-      .order('occurred_at', { ascending: false })
-      .limit(500)
-
-    if (data) {
-      setEvents(sortWithCausalOrder(data as AuditEvent[]))
+  const searchTickets = useCallback(async (term: string) => {
+    if (!propertyManager || term.length < 2) {
+      setTickets([])
+      setHasSearched(false)
+      return
     }
 
+    setLoading(true)
+    setHasSearched(true)
+
+    const pattern = `%${term}%`
+
+    const { data, error } = await supabase
+      .from('c1_tickets')
+      .select(`
+        id, issue_description, status, priority, category, date_logged, resolved_at,
+        c1_properties!inner(address)
+      `)
+      .eq('property_manager_id', propertyManager.id)
+      .or(`issue_description.ilike.${pattern},c1_properties.address.ilike.${pattern}`)
+      .order('date_logged', { ascending: false })
+      .limit(50)
+
+    if (error) {
+      console.error('Audit search error:', error)
+      setLoading(false)
+      return
+    }
+
+    const mapped: AuditTicket[] = (data || []).map((t) => ({
+      id: t.id,
+      issue_description: t.issue_description,
+      status: t.status,
+      priority: t.priority,
+      category: t.category,
+      date_logged: t.date_logged,
+      resolved_at: t.resolved_at,
+      address: (t.c1_properties as unknown as { address: string } | null)?.address || null,
+    }))
+
+    setTickets(mapped)
     setLoading(false)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propertyManager])
+  }, [propertyManager, supabase])
 
-  useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => searchTickets(value), 300)
+  }, [searchTickets])
 
-  const columns: Column<AuditEvent>[] = [
+  const columns: Column<AuditTicket>[] = [
     {
-      key: 'occurred_at',
-      header: 'Date',
-      sortable: true,
-      width: '140px',
-      render: (row) => (
-        <div>
-          <span className="font-medium">{formatDate(row.occurred_at)}</span>
-          <span className="text-muted-foreground ml-2 text-xs">{formatTime(row.occurred_at)}</span>
-        </div>
-      ),
-      getValue: (row) => row.occurred_at,
-    },
-    {
-      key: 'event_type',
-      header: 'Event',
-      sortable: true,
-      width: '180px',
-      render: (row) => (
-        <span className="font-medium">{formatEventType(row.event_type)}</span>
-      ),
-      getValue: (row) => row.event_type,
-    },
-    {
-      key: 'actor_name',
-      header: 'Actor',
-      sortable: true,
-      width: '160px',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">{row.actor_name || '—'}</span>
-          <span className="text-[10px] text-muted-foreground/60 uppercase">{row.actor_type}</span>
-        </div>
-      ),
-      getValue: (row) => row.actor_name,
-    },
-    {
-      key: 'property_label',
+      key: 'address',
       header: 'Property',
       sortable: true,
       render: (row) => (
-        <span className="text-muted-foreground">{row.property_label || '—'}</span>
+        <span className="font-medium">{row.address || '—'}</span>
       ),
-      getValue: (row) => row.property_label,
+      getValue: (row) => row.address,
     },
     {
-      key: 'detail',
-      header: 'Details',
+      key: 'issue_description',
+      header: 'Issue',
       render: (row) => (
-        <span className="text-muted-foreground text-xs">{extractDetail(row)}</span>
+        <span className="text-muted-foreground text-sm line-clamp-1">
+          {row.issue_description || '—'}
+        </span>
       ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      width: '100px',
+      render: (row) => <StatusBadge status={row.status} size="sm" />,
+      getValue: (row) => row.status,
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      sortable: true,
+      width: '100px',
+      render: (row) => row.priority ? <StatusBadge status={row.priority} size="sm" /> : <span className="text-muted-foreground">—</span>,
+      getValue: (row) => row.priority,
+    },
+    {
+      key: 'date_logged',
+      header: 'Date Logged',
+      sortable: true,
+      width: '130px',
+      render: (row) => (
+        <span className="text-muted-foreground text-sm">{formatDate(row.date_logged)}</span>
+      ),
+      getValue: (row) => row.date_logged,
     },
   ]
 
   return (
-    <PageShell
-      title="Audit Trail"
-      count={filteredEvents.length}
-      actions={
-        <CommandSearchInput
-          placeholder="Search events..."
-          value={search}
-          onChange={setSearch}
-          className="w-64"
+    <PageShell title="Audit Trail">
+      {/* Search-first landing */}
+      <div className="flex flex-col items-center gap-6 pt-8 pb-4">
+        <div className="relative w-full max-w-xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search by property address, issue, or tenant..."
+            className="w-full rounded-xl border border-border bg-card pl-12 pr-4 py-3 text-base placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+            autoFocus
+          />
+        </div>
+        {!hasSearched && (
+          <p className="text-sm text-muted-foreground">
+            Search to find tickets and view their complete audit trail
+          </p>
+        )}
+      </div>
+
+      {/* Results */}
+      {hasSearched && (
+        <DataTable
+          data={tickets}
+          columns={columns}
+          getRowId={(row) => row.id}
+          loading={loading}
+          onRowClick={(row) => router.push(`/audit-trail/${row.id}`)}
+          emptyMessage={
+            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+              <ScrollText className="h-8 w-8 opacity-40" />
+              <p className="text-sm">No tickets found</p>
+              <p className="text-xs">Try a different search term</p>
+            </div>
+          }
+          fillHeight
         />
-      }
-    >
-      <DataTable
-        data={filteredEvents}
-        columns={columns}
-        getRowId={(row) => row.id}
-        loading={loading}
-        emptyMessage={
-          <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
-            <ScrollText className="h-8 w-8 opacity-40" />
-            <p className="text-sm">No audit events found</p>
-            <p className="text-xs">Events are logged automatically as actions occur</p>
-          </div>
-        }
-        fillHeight
-      />
+      )}
     </PageShell>
   )
 }
