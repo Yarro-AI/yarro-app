@@ -145,11 +145,16 @@ export const IN_PROGRESS_REASONS = new Set([
   'ooh_in_progress',
 ])
 
+// Escalation action_types — items that have stalled and need a push
+export const STUCK_ACTION_TYPES = new Set([
+  'CONTRACTOR_UNRESPONSIVE',
+  'STALE_AWAITING',
+  'SCHEDULED_OVERDUE',
+])
+
 export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
-    if (i.action_type === 'CONTRACTOR_UNRESPONSIVE') return true
-    if (i.action_type === 'STALE_AWAITING') return true
-    if (i.action_type === 'SCHEDULED_OVERDUE') return true
+    if (STUCK_ACTION_TYPES.has(i.action_type)) return false
     if (IN_PROGRESS_REASONS.has(i.next_action_reason || '')) return false
     return true
   })
@@ -157,10 +162,12 @@ export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
 
 export function filterInProgress(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
-    if (i.action_type === 'CONTRACTOR_UNRESPONSIVE') return false
-    if (i.action_type === 'STALE_AWAITING') return false
-    if (i.action_type === 'SCHEDULED_OVERDUE') return false
+    if (STUCK_ACTION_TYPES.has(i.action_type)) return false
     return IN_PROGRESS_REASONS.has(i.next_action_reason || '')
   })
+}
+
+export function filterStuck(todoItems: TodoItem[]): TodoItem[] {
+  return todoItems.filter(i => STUCK_ACTION_TYPES.has(i.action_type))
 }
 
