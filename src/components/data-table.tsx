@@ -93,7 +93,7 @@ export function DataTable<T>({
 
   if (loading) {
     return (
-      <div className={cn("bg-card rounded-xl border border-border overflow-hidden", fillHeight && "flex flex-col flex-1 min-h-0")}>
+      <div className={cn("bg-card rounded-xl border border-border overflow-hidden", fillHeight && "flex flex-col flex-1 min-h-0 h-full")}>
         <div className={cn("space-y-1 px-5 pt-4", fillHeight && "flex-1 min-h-0 overflow-hidden")}>
           {[...Array(5)].map((_, i) => (
             <div key={i} className="py-4">
@@ -106,7 +106,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("bg-card rounded-xl border border-border overflow-hidden", fillHeight && "flex flex-col flex-1 min-h-0")}>
+    <div className={cn("bg-card rounded-xl border border-border overflow-hidden", fillHeight && "flex flex-col flex-1 min-h-0 h-full")}>
       {/* Table */}
       <div
         className={cn(disableBodyScroll ? "overflow-visible" : "overflow-auto", fillHeight && "flex-1 min-h-0")}
