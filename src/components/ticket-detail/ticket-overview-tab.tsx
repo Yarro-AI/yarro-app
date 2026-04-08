@@ -1,12 +1,16 @@
 'use client'
 
-import { format, formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow, differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { Users, Wrench, Crown, Phone, Play, Calendar, AlertTriangle, RotateCcw, GitBranch, Check } from 'lucide-react'
+import { Users, Wrench, Crown, Phone, Play, Calendar, AlertTriangle, RotateCcw, Check, Circle, CircleDollarSign, XCircle, HelpCircle, AlertCircle, MessageSquare, CalendarClock, Pause, CheckCircle2 } from 'lucide-react'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
+import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency } from '@/hooks/use-ticket-detail'
 import { StatusBadge } from '@/components/status-badge'
+import { StageApproveAction } from './stage-approve-action'
+import { StageDispatchAction } from './stage-dispatch-action'
+import { StageAllocateAction } from './stage-allocate-action'
 import { ShieldCheck, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -50,7 +54,6 @@ function deriveTimeline(basic: TicketBasic): TimelineStep[] {
 
 function HorizontalTimeline({ steps }: { steps: TimelineStep[] }) {
   const allDone = steps.every(s => s.complete)
-  // Muted blue while in progress, green when fully complete
   const doneCircle = allDone ? 'bg-success/20' : 'bg-primary/15'
   const doneCheck = allDone ? 'text-success' : 'text-primary/60'
   const doneLine = allDone ? 'bg-success/30' : 'bg-primary/20'
@@ -90,48 +93,220 @@ function HorizontalTimeline({ steps }: { steps: TimelineStep[] }) {
   )
 }
 
-// --- Action Map ---
+// --- Stage Config ---
 
-const NEXT_ACTION_MAP: Record<string, {
-  message: string
-  button?: { label: string; action: 'tab' | 'navigate'; destination: string }
-}> = {
-  no_contractors: {
-    message: 'All listed contractors have been contacted. Add a new contractor or handle manually.',
-    button: { label: 'Add Contractor', action: 'navigate', destination: '/contractors?create=true' },
-  },
-  landlord_declined: {
-    message: 'The landlord has declined the quote. Contact them to discuss alternatives.',
-    button: { label: 'View Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
-  },
-  landlord_no_response: {
-    message: "The landlord hasn't responded. Follow up directly.",
-    button: { label: 'View Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
-  },
-  landlord_needs_help: {
-    message: 'The landlord needs assistance managing this job. Take over coordination.',
-    button: { label: 'View Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
-  },
-  job_not_completed: {
-    message: 'The contractor marked the job as incomplete. Review and redispatch.',
-    button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
+interface StageEntry {
+  icon: LucideIcon
+  iconBg: string
+  iconColor: string
+  title: string
+  description: string | ((basic: TicketBasic, context: TicketContext) => string)
+  timer?: (basic: TicketBasic) => string | null
+  cta?: {
+    label: string
+    action: 'navigate' | 'tab' | 'toggle_hold' | 'inline_approve' | 'inline_dispatch'
+    destination?: string
+  }
+}
+
+const STAGE_CONFIG: Record<string, StageEntry> = {
+  // --- Needs your attention ---
+  new: {
+    icon: Circle,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: 'Ready to dispatch',
+    description: "This one just came in. Have a look at the details and send it out to a contractor when you're ready.",
+    timer: (b) => b.date_logged ? `Reported ${formatDistanceToNow(new Date(b.date_logged), { addSuffix: true })}` : null,
+    cta: { label: 'Dispatch', action: 'inline_dispatch' },
   },
   manager_approval: {
-    message: 'A quote is waiting for your approval. Review and approve or decline.',
-    button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
+    icon: CircleDollarSign,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: "There's a quote waiting for your approval",
+    description: "A contractor has come back with a price. Take a look and decide if you're happy to go ahead.",
+    cta: { label: 'Approve', action: 'inline_approve' },
+  },
+  no_contractors: {
+    icon: AlertTriangle,
+    iconBg: 'bg-danger/10',
+    iconColor: 'text-danger',
+    title: 'No contractors available',
+    description: "Every contractor on your list has been contacted and none could take this on. You'll need to add someone new or hand it to the landlord.",
+    cta: { label: 'Dispatch', action: 'inline_dispatch' },
+  },
+  landlord_declined: {
+    icon: XCircle,
+    iconBg: 'bg-danger/10',
+    iconColor: 'text-danger',
+    title: 'Landlord declined the quote',
+    description: "The landlord wasn't happy with the price. Worth getting in touch to talk through what they'd be comfortable with.",
+    cta: { label: 'Contact Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  landlord_no_response: {
+    icon: HelpCircle,
+    iconBg: 'bg-warning/10',
+    iconColor: 'text-warning',
+    title: "Landlord hasn't responded",
+    description: "The approval request went out but there's been no reply. Might be worth a nudge.",
+    timer: () => null, // TODO: compute from outbound log timestamp
+    cta: { label: 'Contact Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  landlord_needs_help: {
+    icon: AlertCircle,
+    iconBg: 'bg-warning/10',
+    iconColor: 'text-warning',
+    title: 'Landlord needs a hand',
+    description: 'The landlord was handling this but has asked for help. Time to step in and take over.',
+    cta: { label: 'Contact Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  job_not_completed: {
+    icon: AlertTriangle,
+    iconBg: 'bg-danger/10',
+    iconColor: 'text-danger',
+    title: 'Job came back incomplete',
+    description: "The contractor flagged this as not finished. Check the completion report to see what went wrong and decide what to do next.",
+    cta: { label: 'Review Report', action: 'tab', destination: 'completion' },
   },
   ooh_unresolved: {
-    message: 'The out-of-hours contact did not resolve the issue. Escalate or redispatch.',
-    button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
+    icon: AlertTriangle,
+    iconBg: 'bg-danger/10',
+    iconColor: 'text-danger',
+    title: "OOH couldn't fix it",
+    description: "The out-of-hours contact had a go but couldn't sort it. This needs to go out to a contractor now.",
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors' },
   },
-  awaiting_contractor: { message: 'Waiting for a contractor to respond.' },
-  awaiting_landlord: { message: 'Quote sent to landlord — awaiting approval.' },
-  awaiting_booking: { message: 'Waiting for the contractor to book a slot.' },
-  allocated_to_landlord: { message: 'This job has been allocated to the landlord to manage.' },
-  scheduled: { message: 'Job is scheduled — awaiting contractor completion.' },
-  ooh_dispatched: { message: 'Out-of-hours contact has been notified. Awaiting response.' },
-  pending_review: { message: 'Review the AI conversation and create a ticket.' },
-  handoff_review: { message: 'Review this handoff and triage into a ticket.' },
+  pending_review: {
+    icon: MessageSquare,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: 'Conversation ready for review',
+    description: "The AI couldn't handle this one. Have a read through and manually create a ticket from it.",
+    cta: { label: 'Review', action: 'tab', destination: 'conversation' },
+  },
+  handoff_review: {
+    icon: MessageSquare,
+    iconBg: 'bg-warning/10',
+    iconColor: 'text-warning',
+    title: 'Needs a human',
+    description: 'The AI got stuck on this one and passed it over. Review what happened and take it from here.',
+    cta: { label: 'Review', action: 'tab', destination: 'conversation' },
+  },
+  // --- Waiting ---
+  awaiting_contractor: {
+    icon: Wrench,
+    iconBg: 'bg-muted',
+    iconColor: 'text-muted-foreground',
+    title: 'Waiting on the contractor',
+    description: "The job's been sent out. Sitting tight until a contractor gets back to you with a quote.",
+    timer: (b) => b.date_logged ? `Sent ${formatDistanceToNow(new Date(b.date_logged), { addSuffix: true })}` : null,
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors/{contractor_id}' },
+  },
+  awaiting_landlord: {
+    icon: Crown,
+    iconBg: 'bg-muted',
+    iconColor: 'text-muted-foreground',
+    title: 'With the landlord',
+    description: "The quote's been sent over for approval. Ball's in their court.",
+    timer: (b) => b.date_logged ? `Sent ${formatDistanceToNow(new Date(b.date_logged), { addSuffix: true })}` : null,
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  awaiting_booking: {
+    icon: CalendarClock,
+    iconBg: 'bg-muted',
+    iconColor: 'text-muted-foreground',
+    title: 'Waiting for a date',
+    description: "Quote's approved — now waiting for the contractor to lock in a time.",
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors/{contractor_id}' },
+  },
+  scheduled: {
+    icon: CalendarClock,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: 'Booked in',
+    description: (basic) => {
+      if (!basic.scheduled_date) return 'The job has been scheduled with the contractor.'
+      const d = new Date(basic.scheduled_date)
+      const days = differenceInDays(d, new Date())
+      if (days >= 0) return `All sorted — the contractor's coming on ${format(d, 'd MMM yyyy')}.`
+      return `The contractor was booked for ${format(d, 'd MMM yyyy')} — that was ${Math.abs(days)} days ago.`
+    },
+    timer: (b) => {
+      if (!b.scheduled_date) return null
+      const days = differenceInDays(new Date(b.scheduled_date), new Date())
+      return days >= 0 ? `In ${days} days` : `${Math.abs(days)} days ago`
+    },
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors/{contractor_id}' },
+  },
+  allocated_to_landlord: {
+    icon: Crown,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: "Landlord's handling it",
+    description: "This one's been handed to the landlord to sort out directly.",
+    timer: (b) => b.landlord_allocated_at ? `Allocated ${formatDistanceToNow(new Date(b.landlord_allocated_at), { addSuffix: true })}` : null,
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
+  ooh_dispatched: {
+    icon: Phone,
+    iconBg: 'bg-purple-500/10',
+    iconColor: 'text-purple-600',
+    title: 'OOH on it',
+    description: 'The out-of-hours contact has been notified. Waiting to hear back.',
+    timer: (b) => b.ooh_dispatched_at ? `Dispatched ${formatDistanceToNow(new Date(b.ooh_dispatched_at), { addSuffix: true })}` : null,
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors' },
+  },
+  on_hold: {
+    icon: Pause,
+    iconBg: 'bg-muted',
+    iconColor: 'text-muted-foreground',
+    title: 'Paused',
+    description: "This ticket's on hold. Hit resume when you're ready to pick it back up.",
+    cta: { label: 'Resume', action: 'toggle_hold' },
+  },
+  // --- Done ---
+  completed: {
+    icon: CheckCircle2,
+    iconBg: 'bg-success/10',
+    iconColor: 'text-success',
+    title: 'All done',
+    description: "The contractor's finished the job. This one's wrapped up.",
+    cta: { label: 'Resume', action: 'toggle_hold' },
+  },
+  ooh_resolved: {
+    icon: CheckCircle2,
+    iconBg: 'bg-success/10',
+    iconColor: 'text-success',
+    title: 'Sorted by OOH',
+    description: 'The out-of-hours contact handled it. No further action needed.',
+    cta: { label: 'Resume', action: 'toggle_hold' },
+  },
+  landlord_resolved: {
+    icon: CheckCircle2,
+    iconBg: 'bg-success/10',
+    iconColor: 'text-success',
+    title: 'Landlord sorted it',
+    description: 'The landlord took care of this one themselves.',
+    cta: { label: 'Resume', action: 'toggle_hold' },
+  },
+  ooh_in_progress: {
+    icon: Phone,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: 'OOH working on it',
+    description: 'The out-of-hours contact is on the case. Hang tight.',
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors' },
+  },
+  landlord_in_progress: {
+    icon: Crown,
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    title: "Landlord's on it",
+    description: 'The landlord is actively working on this one.',
+    timer: (b) => b.landlord_allocated_at ? `Started ${formatDistanceToNow(new Date(b.landlord_allocated_at), { addSuffix: true })}` : null,
+    cta: { label: 'Follow Up', action: 'navigate', destination: '/landlords/{landlord_id}' },
+  },
 }
 
 // --- Component ---
@@ -141,9 +316,11 @@ interface TicketOverviewTabProps {
   basic: TicketBasic
   messages?: MessageData | null
   onTabChange?: (tab: string) => void
+  onActionTaken?: () => void
+  onToggleHold?: () => void
 }
 
-export function TicketOverviewTab({ context, basic, onTabChange }: TicketOverviewTabProps) {
+export function TicketOverviewTab({ context, basic, messages, onTabChange, onActionTaken, onToggleHold }: TicketOverviewTabProps) {
   const router = useRouter()
   const images = basic.images || []
   const markup = basic.final_amount && basic.contractor_quote
@@ -155,12 +332,33 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
   const CatIcon = CATEGORY_ICON[category]
   const timelineSteps = deriveTimeline(basic)
 
+  // Resolve stage config
+  const reason = basic.next_action_reason || (basic.status === 'closed' ? 'completed' : 'new')
+  const stage = STAGE_CONFIG[reason] || STAGE_CONFIG.new
+  const StageIcon = stage.icon
+  const stageDesc = typeof stage.description === 'function' ? stage.description(basic, context) : stage.description
+  const stageTimer = stage.timer?.(basic)
+
+  const handleCta = () => {
+    if (!stage.cta) return
+    if (stage.cta.action === 'tab') {
+      onTabChange?.(stage.cta.destination || 'overview')
+    } else if (stage.cta.action === 'toggle_hold') {
+      onToggleHold?.()
+    } else if (stage.cta.action === 'navigate' && stage.cta.destination) {
+      const url = stage.cta.destination
+        .replace('{landlord_id}', context.landlord_id || '')
+        .replace('{contractor_id}', basic.contractor_id || '')
+      router.push(url)
+    }
+    // inline_approve and inline_dispatch handled by rendering components below
+  }
+
   return (
     <div className="px-4 pb-4 space-y-3">
 
       {/* ── Card 1: Title ── */}
       <div className="bg-card rounded-xl border border-border p-5">
-        {/* Icon + short title */}
         <div className="flex items-center gap-3">
           <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', CATEGORY_BG[category])}>
             <CatIcon className="w-5 h-5 text-white" />
@@ -171,14 +369,10 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
           </div>
         </div>
 
-        {/* Long description */}
         {longDescription && (
-          <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-            {longDescription}
-          </p>
+          <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{longDescription}</p>
         )}
 
-        {/* Date + priority */}
         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border/40">
           <div className="flex items-center gap-1.5 text-sm font-semibold text-card-foreground">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -198,102 +392,91 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
 
         <HorizontalTimeline steps={timelineSteps} />
 
-        {/* Deviation branches */}
-        {(basic.landlord_allocated || basic.ooh_dispatched || basic.next_action_reason === 'job_not_completed' || basic.reschedule_requested) && (
-          <div className="space-y-2">
-            {basic.ooh_dispatched && (
-              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
-                <Phone className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-card-foreground">
-                    OOH: {basic.ooh_outcome === 'resolved' ? 'Resolved'
-                    : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
-                    : basic.ooh_outcome === 'in_progress' ? 'In progress'
-                    : 'Awaiting response'}
-                  </p>
-                  {basic.ooh_notes && <p className="text-xs text-muted-foreground mt-0.5">{basic.ooh_notes}</p>}
-                  {basic.ooh_cost != null && basic.ooh_cost > 0 && (
-                    <p className="text-xs font-mono text-muted-foreground mt-0.5">Cost: {formatCurrency(basic.ooh_cost)}</p>
-                  )}
-                </div>
+        {/* Stage block */}
+        <div className="mt-4 flex items-start gap-3">
+          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0', stage.iconBg)}>
+            <StageIcon className={cn('w-4.5 h-4.5', stage.iconColor)} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-card-foreground">{stage.title}</p>
+            <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{stageDesc}</p>
+            {stageTimer && (
+              <p className="text-xs text-muted-foreground/70 mt-1">{stageTimer}</p>
+            )}
+
+            {/* OOH notes/cost */}
+            {(reason === 'ooh_unresolved' || reason === 'ooh_resolved' || reason === 'ooh_dispatched') && basic.ooh_notes && (
+              <p className="text-xs text-muted-foreground mt-1.5">Notes: {basic.ooh_notes}</p>
+            )}
+            {(reason === 'ooh_unresolved' || reason === 'ooh_resolved') && basic.ooh_cost != null && basic.ooh_cost > 0 && (
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">Cost: {formatCurrency(basic.ooh_cost)}</p>
+            )}
+
+            {/* Landlord notes/cost */}
+            {(reason === 'landlord_resolved' || reason === 'landlord_needs_help') && basic.landlord_notes && (
+              <p className="text-xs text-muted-foreground mt-1.5">Notes: {basic.landlord_notes}</p>
+            )}
+            {reason === 'landlord_resolved' && basic.landlord_cost != null && basic.landlord_cost > 0 && (
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">Cost: {formatCurrency(basic.landlord_cost)}</p>
+            )}
+
+            {/* Inline actions */}
+            {stage.cta?.action === 'inline_approve' && (
+              <StageApproveAction
+                ticketId={basic.id}
+                messages={messages || null}
+                onActionTaken={onActionTaken || (() => {})}
+              />
+            )}
+
+            {stage.cta?.action === 'inline_dispatch' && (
+              <div>
+                <StageDispatchAction
+                  ticketId={basic.id}
+                  onActionTaken={onActionTaken || (() => {})}
+                />
+                {(context.landlord_name || context.landlord_phone) && !basic.landlord_allocated && (
+                  <StageAllocateAction
+                    ticketId={basic.id}
+                    landlordName={context.landlord_name}
+                    landlordPhone={context.landlord_phone}
+                    onActionTaken={onActionTaken || (() => {})}
+                  />
+                )}
               </div>
             )}
 
-            {basic.landlord_allocated && (
-              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
-                <GitBranch className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-card-foreground">
-                    Landlord: {basic.landlord_outcome === 'resolved' ? 'Resolved'
-                    : basic.landlord_outcome === 'need_help' ? 'Needs help'
-                    : basic.landlord_outcome === 'in_progress' ? 'In progress'
-                    : 'Awaiting response'}
-                  </p>
-                  {basic.landlord_notes && <p className="text-xs text-muted-foreground mt-0.5">{basic.landlord_notes}</p>}
-                  {basic.landlord_cost != null && basic.landlord_cost > 0 && (
-                    <p className="text-xs font-mono text-muted-foreground mt-0.5">Cost: {formatCurrency(basic.landlord_cost)}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {basic.next_action_reason === 'job_not_completed' && (
-              <div className="flex items-start gap-2 rounded-lg bg-danger/5 border border-danger/20 px-3 py-2.5">
-                <AlertTriangle className="h-4 w-4 text-danger mt-0.5 flex-shrink-0" />
-                <p className="text-sm font-semibold text-danger">Job marked as not completed</p>
-              </div>
-            )}
-
-            {basic.reschedule_requested && (
-              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
-                <RotateCcw className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-card-foreground">
-                    Reschedule: {basic.reschedule_status === 'pending' ? 'Awaiting response'
-                    : basic.reschedule_status === 'approved' ? 'Approved'
-                    : basic.reschedule_status === 'declined' ? 'Declined'
-                    : 'Requested'}
-                  </p>
-                  {basic.reschedule_date && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Proposed: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
-                    </p>
-                  )}
-                </div>
-              </div>
+            {/* Navigation / tab CTAs */}
+            {stage.cta && stage.cta.action !== 'inline_approve' && stage.cta.action !== 'inline_dispatch' && (
+              <button
+                onClick={handleCta}
+                className="mt-2 text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
+              >
+                {stage.cta.label} →
+              </button>
             )}
           </div>
-        )}
+        </div>
 
-        {/* Action message */}
-        {basic.next_action_reason && NEXT_ACTION_MAP[basic.next_action_reason] && (() => {
-          const entry = NEXT_ACTION_MAP[basic.next_action_reason!]
-          const handleButtonClick = () => {
-            if (!entry.button) return
-            if (entry.button.action === 'tab') {
-              onTabChange?.(entry.button.destination)
-            } else {
-              const url = entry.button.destination
-                .replace('{landlord_id}', context.landlord_id || '')
-                .replace('{tenant_id}', basic.tenant_id || '')
-                .replace('{contractor_id}', basic.contractor_id || '')
-              router.push(url)
-            }
-          }
-          return (
-            <div className="mt-4 rounded-lg bg-muted/50 px-3.5 py-3">
-              <p className="text-sm text-card-foreground leading-snug">{entry.message}</p>
-              {entry.button && (
-                <button
-                  onClick={handleButtonClick}
-                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
-                >
-                  {entry.button.label} →
-                </button>
+        {/* Reschedule callout */}
+        {basic.reschedule_requested && (
+          <div className="mt-3 flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
+            <RotateCcw className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-card-foreground">
+                Reschedule {basic.reschedule_status === 'pending' ? 'requested'
+                : basic.reschedule_status === 'approved' ? 'approved'
+                : basic.reschedule_status === 'declined' ? 'declined'
+                : 'requested'}
+              </p>
+              {basic.reschedule_date && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Proposed: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
+                </p>
               )}
             </div>
-          )
-        })()}
+          </div>
+        )}
       </div>
 
       {/* ── Card 3: Job Details ── */}
@@ -354,20 +537,14 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
         </div>
       </div>
 
-      {/* ── Card 4: People — 3 square cards ── */}
+      {/* ── Card 4: People ── */}
       <div className="bg-card rounded-xl border border-border p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">People</p>
         <div className="grid grid-cols-3 gap-2">
-          {/* Tenant */}
           {context.tenant_name ? (
             basic.tenant_id ? (
-              <Link
-                href={`/tenants/${basic.tenant_id}`}
-                className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
+              <Link href={`/tenants/${basic.tenant_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Users className="h-4 w-4 text-primary" /></div>
                 <div className="text-center min-w-0 w-full">
                   <p className="text-sm font-semibold text-card-foreground truncate">{context.tenant_name}</p>
                   <p className="text-[11px] text-muted-foreground">Reported by</p>
@@ -375,9 +552,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
               </Link>
             ) : (
               <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Users className="h-4 w-4 text-primary" /></div>
                 <div className="text-center min-w-0 w-full">
                   <p className="text-sm font-semibold text-card-foreground truncate">{context.tenant_name}</p>
                   <p className="text-[11px] text-muted-foreground">Reported by</p>
@@ -386,9 +561,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             )
           ) : (
             <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 opacity-50">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </div>
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center"><Users className="h-4 w-4 text-muted-foreground" /></div>
               <div className="text-center min-w-0 w-full">
                 <p className="text-sm text-muted-foreground">Unknown</p>
                 <p className="text-[11px] text-muted-foreground">Reported by</p>
@@ -396,16 +569,10 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             </div>
           )}
 
-          {/* Landlord */}
           {context.landlord_name ? (
             context.landlord_id ? (
-              <Link
-                href={`/landlords/${context.landlord_id}`}
-                className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Crown className="h-4 w-4 text-warning" />
-                </div>
+              <Link href={`/landlords/${context.landlord_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
+                <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center"><Crown className="h-4 w-4 text-warning" /></div>
                 <div className="text-center min-w-0 w-full">
                   <p className="text-sm font-semibold text-card-foreground truncate">{context.landlord_name}</p>
                   <p className="text-[11px] text-muted-foreground">Landlord</p>
@@ -413,9 +580,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
               </Link>
             ) : (
               <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4">
-                <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Crown className="h-4 w-4 text-warning" />
-                </div>
+                <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center"><Crown className="h-4 w-4 text-warning" /></div>
                 <div className="text-center min-w-0 w-full">
                   <p className="text-sm font-semibold text-card-foreground truncate">{context.landlord_name}</p>
                   <p className="text-[11px] text-muted-foreground">Landlord</p>
@@ -424,9 +589,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             )
           ) : (
             <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 opacity-50">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <Crown className="h-4 w-4 text-muted-foreground" />
-              </div>
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center"><Crown className="h-4 w-4 text-muted-foreground" /></div>
               <div className="text-center min-w-0 w-full">
                 <p className="text-sm text-muted-foreground">—</p>
                 <p className="text-[11px] text-muted-foreground">Landlord</p>
@@ -434,15 +597,9 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             </div>
           )}
 
-          {/* Contractor */}
           {basic.contractor_name && basic.contractor_id ? (
-            <Link
-              href={`/contractors/${basic.contractor_id}`}
-              className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors"
-            >
-              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-                <Wrench className="h-4 w-4 text-success" />
-              </div>
+            <Link href={`/contractors/${basic.contractor_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center"><Wrench className="h-4 w-4 text-success" /></div>
               <div className="text-center min-w-0 w-full">
                 <p className="text-sm font-semibold text-card-foreground truncate">{basic.contractor_name}</p>
                 <p className="text-[11px] text-muted-foreground">Contractor</p>
@@ -450,9 +607,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             </Link>
           ) : (
             <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 opacity-50">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <Wrench className="h-4 w-4 text-muted-foreground" />
-              </div>
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center"><Wrench className="h-4 w-4 text-muted-foreground" /></div>
               <div className="text-center min-w-0 w-full">
                 <p className="text-sm text-muted-foreground">Not assigned</p>
                 <p className="text-[11px] text-muted-foreground">Contractor</p>
@@ -462,12 +617,10 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
         </div>
       </div>
 
-      {/* ── Media (conditional) ── */}
+      {/* ── Media ── */}
       {images.length > 0 && (
         <div className="bg-card rounded-xl border border-border p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Media ({images.length})
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Media ({images.length})</p>
           <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
             {images.map((url, index) => {
               const isVideo = /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes('/video/')

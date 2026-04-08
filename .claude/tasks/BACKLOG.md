@@ -12,6 +12,7 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-04-08] BUG: Ticket drawer title falls back to "Maintenance Request" — issue_title is null for some tickets. Trace why it wasn't set during creation (manual vs AI). Harden: generate short title from issue_description if issue_title is null (e.g. first 3-4 words or AI-generated summary). Should never need the fallback. [priority: high]
 - [2026-04-02] FEATURE: Tenancy history table (`c1_tenancies`) — immutable record per tenancy like tickets. Store property, room, tenant, start/end dates, status. End tenancy clears `room_id` AND `property_id` but history preserved. Tenant detail page gets "Tenancy History" button. Every move/end logged to audit trail. [priority: high]
 - [2026-04-02] UX: End tenancy dialog padding/layout polish [priority: low]
 - [2026-04-02] UX: Tenant-room assign dialog needs inline "Create tenant" button via global side drawer [priority: medium]

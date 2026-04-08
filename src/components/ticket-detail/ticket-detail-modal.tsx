@@ -268,7 +268,7 @@ export function TicketDetailModal({
                       )}
                       {(hasDispatch || hasOutboundLog || ledger.length > 0) && (
                         <button onClick={() => setActiveTab('dispatch')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                          <span className={cn('text-sm font-medium transition-colors', activeTab === 'dispatch' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Dispatch</span>
+                          <span className={cn('text-sm font-medium transition-colors', activeTab === 'dispatch' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Activity</span>
                         </button>
                       )}
                       {hasCompletion && (
@@ -281,7 +281,7 @@ export function TicketDetailModal({
                     {/* Tab content */}
                     {activeTab === 'overview' && (
                       <div className="flex-1 min-h-0 overflow-y-auto">
-                        <TicketOverviewTab context={context} basic={basic} messages={messages} onTabChange={setActiveTab} />
+                        <TicketOverviewTab context={context} basic={basic} messages={messages} onTabChange={setActiveTab} onActionTaken={() => { refetch(); onTicketUpdated?.() }} onToggleHold={handleToggleHold} />
                       </div>
                     )}
                     {activeTab === 'conversation' && showConversationTab && (
