@@ -2,12 +2,98 @@
 
 import { format, formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play, BedDouble } from 'lucide-react'
+import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play, BedDouble, Calendar, AlertTriangle, RotateCcw, GitBranch, Check } from 'lucide-react'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import Link from 'next/link'
 import { formatCurrency } from '@/hooks/use-ticket-detail'
-import { formatPhoneDisplay } from '@/lib/normalize'
 import { StatusBadge } from '@/components/status-badge'
+import { ShieldCheck, DollarSign } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+// --- Helpers ---
+
+const CATEGORY_ICON = { maintenance: Wrench, compliance: ShieldCheck, finance: DollarSign } as const
+const CATEGORY_BG = { maintenance: 'bg-primary', compliance: 'bg-warning', finance: 'bg-success' } as const
+type TicketCategory = keyof typeof CATEGORY_ICON
+
+function deriveCategoryFromTicket(category: string | null): TicketCategory {
+  if (category === 'compliance_renewal') return 'compliance'
+  if (category === 'rent_arrears') return 'finance'
+  return 'maintenance'
+}
+
+// --- Timeline ---
+
+interface TimelineStep {
+  label: string
+  complete: boolean
+  active: boolean
+}
+
+function deriveTimeline(basic: TicketBasic): TimelineStep[] {
+  const reason = basic.next_action_reason || ''
+  const isCompleted = reason === 'completed' || reason === 'cert_renewed' || reason === 'rent_cleared'
+  const isScheduled = !!basic.scheduled_date || basic.job_stage === 'booked' || basic.job_stage === 'scheduled'
+  const isApproved = isScheduled || isCompleted || ['awaiting_booking', 'scheduled', 'job_not_completed'].includes(reason)
+  const isQuoted = !!basic.contractor_quote || isApproved
+  const isDispatched = !!basic.job_stage || isQuoted || ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking', 'no_contractors', 'manager_approval'].includes(reason)
+
+  const steps = [
+    { label: 'Reported', complete: true, active: false },
+    { label: 'Dispatched', complete: isDispatched, active: false },
+    { label: 'Quoted', complete: isQuoted, active: false },
+    { label: 'Approved', complete: isApproved, active: false },
+    { label: 'Scheduled', complete: isScheduled, active: false },
+    { label: 'Completed', complete: isCompleted, active: false },
+  ]
+
+  // Mark the current (last complete) step as active
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (steps[i].complete) {
+      steps[i].active = true
+      break
+    }
+  }
+
+  return steps
+}
+
+function HorizontalTimeline({ steps }: { steps: TimelineStep[] }) {
+  return (
+    <div className="flex items-center w-full">
+      {steps.map((step, i) => (
+        <div key={step.label} className="flex items-center flex-1 last:flex-none">
+          {/* Step circle + label */}
+          <div className="flex flex-col items-center gap-1.5">
+            <div className={cn(
+              'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors',
+              step.complete
+                ? step.active ? 'bg-primary ring-2 ring-primary/20' : 'bg-primary'
+                : 'bg-muted border-2 border-border'
+            )}>
+              {step.complete && <Check className="w-3 h-3 text-white" />}
+            </div>
+            <span className={cn(
+              'text-[10px] font-medium whitespace-nowrap',
+              step.complete ? step.active ? 'text-primary font-semibold' : 'text-card-foreground' : 'text-muted-foreground'
+            )}>
+              {step.label}
+            </span>
+          </div>
+          {/* Connector line */}
+          {i < steps.length - 1 && (
+            <div className={cn(
+              'flex-1 h-0.5 mx-1 mt-[-18px]',
+              steps[i + 1].complete ? 'bg-primary' : 'bg-border'
+            )} />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// --- Action Map ---
 
 const NEXT_ACTION_MAP: Record<string, {
   message: string
@@ -41,31 +127,17 @@ const NEXT_ACTION_MAP: Record<string, {
     message: 'The out-of-hours contact did not resolve the issue. Escalate or redispatch.',
     button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
   },
-  awaiting_contractor: {
-    message: 'Waiting for a contractor to respond.',
-  },
-  awaiting_landlord: {
-    message: 'Quote sent to landlord — awaiting approval.',
-  },
-  awaiting_booking: {
-    message: 'Waiting for the contractor to book a slot.',
-  },
-  allocated_to_landlord: {
-    message: 'This job has been allocated to the landlord to manage.',
-  },
-  scheduled: {
-    message: 'Job is scheduled — awaiting contractor completion.',
-  },
-  ooh_dispatched: {
-    message: 'Out-of-hours contact has been notified. Awaiting response.',
-  },
-  pending_review: {
-    message: 'Review the AI conversation and create a ticket.',
-  },
-  handoff_review: {
-    message: 'Review this handoff and triage into a ticket.',
-  },
+  awaiting_contractor: { message: 'Waiting for a contractor to respond.' },
+  awaiting_landlord: { message: 'Quote sent to landlord — awaiting approval.' },
+  awaiting_booking: { message: 'Waiting for the contractor to book a slot.' },
+  allocated_to_landlord: { message: 'This job has been allocated to the landlord to manage.' },
+  scheduled: { message: 'Job is scheduled — awaiting contractor completion.' },
+  ooh_dispatched: { message: 'Out-of-hours contact has been notified. Awaiting response.' },
+  pending_review: { message: 'Review the AI conversation and create a ticket.' },
+  handoff_review: { message: 'Review this handoff and triage into a ticket.' },
 }
+
+// --- Component ---
 
 interface TicketOverviewTabProps {
   context: TicketContext
@@ -80,27 +152,123 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
   const markup = basic.final_amount && basic.contractor_quote
     ? Math.abs(basic.final_amount - basic.contractor_quote)
     : null
+  const shortTitle = basic.issue_title || context.label || 'Maintenance Request'
+  const longDescription = (basic.issue_title || context.label) ? context.issue_description : null
+  const category = deriveCategoryFromTicket(basic.category)
+  const CatIcon = CATEGORY_ICON[category]
+  const timelineSteps = deriveTimeline(basic)
 
   return (
-    <div>
-      {/* ── Section 1: Situation ── */}
-      <div className="px-6 py-6">
-        {/* Status + Priority + Category badges — inline */}
-        <div className="flex items-center gap-2 flex-wrap mb-3">
-          {basic.next_action_reason ? (
-            <StatusBadge status={basic.next_action_reason} size="md" />
-          ) : basic.status ? (
-            <StatusBadge status={basic.status} size="md" />
-          ) : null}
-          {basic.priority && (
-            <StatusBadge status={basic.priority} size="md" />
-          )}
-          {context.category && (
-            <StatusBadge status={context.category} size="md" />
-          )}
+    <div className="px-4 pb-4 space-y-3">
+
+      {/* ── Card 1: Title ── */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        {/* Icon + short title */}
+        <div className="flex items-center gap-3">
+          <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', CATEGORY_BG[category])}>
+            <CatIcon className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-card-foreground truncate">{shortTitle}</p>
+            <p className="text-sm text-muted-foreground truncate">{context.property_address}</p>
+          </div>
         </div>
 
-        {/* Next Action block */}
+        {/* Long description */}
+        {longDescription && (
+          <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+            {longDescription}
+          </p>
+        )}
+
+        {/* Date + priority */}
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border/40">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-card-foreground">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            Reported on {basic.date_logged
+              ? format(new Date(basic.date_logged), "d MMM yyyy 'at' HH:mm")
+              : context.date_logged
+              ? format(new Date(context.date_logged), "d MMM yyyy 'at' HH:mm")
+              : '—'}
+          </div>
+          {basic.priority && <StatusBadge status={basic.priority} size="md" />}
+        </div>
+      </div>
+
+      {/* ── Card 2: Current Stage — Timeline ── */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Current Stage</p>
+
+        <HorizontalTimeline steps={timelineSteps} />
+
+        {/* Deviation branches */}
+        {(basic.landlord_allocated || basic.ooh_dispatched || basic.next_action_reason === 'job_not_completed' || basic.reschedule_requested) && (
+          <div className="mt-4 space-y-2">
+            {basic.ooh_dispatched && (
+              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
+                <Phone className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-card-foreground">
+                    OOH: {basic.ooh_outcome === 'resolved' ? 'Resolved'
+                    : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
+                    : basic.ooh_outcome === 'in_progress' ? 'In progress'
+                    : 'Awaiting response'}
+                  </p>
+                  {basic.ooh_notes && <p className="text-xs text-muted-foreground mt-0.5">{basic.ooh_notes}</p>}
+                  {basic.ooh_cost != null && basic.ooh_cost > 0 && (
+                    <p className="text-xs font-mono text-muted-foreground mt-0.5">Cost: {formatCurrency(basic.ooh_cost)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {basic.landlord_allocated && (
+              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
+                <GitBranch className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-card-foreground">
+                    Landlord: {basic.landlord_outcome === 'resolved' ? 'Resolved'
+                    : basic.landlord_outcome === 'need_help' ? 'Needs help'
+                    : basic.landlord_outcome === 'in_progress' ? 'In progress'
+                    : 'Awaiting response'}
+                  </p>
+                  {basic.landlord_notes && <p className="text-xs text-muted-foreground mt-0.5">{basic.landlord_notes}</p>}
+                  {basic.landlord_cost != null && basic.landlord_cost > 0 && (
+                    <p className="text-xs font-mono text-muted-foreground mt-0.5">Cost: {formatCurrency(basic.landlord_cost)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {basic.next_action_reason === 'job_not_completed' && (
+              <div className="flex items-start gap-2 rounded-lg bg-danger/5 border border-danger/20 px-3 py-2.5">
+                <AlertTriangle className="h-4 w-4 text-danger mt-0.5 flex-shrink-0" />
+                <p className="text-sm font-semibold text-danger">Job marked as not completed</p>
+              </div>
+            )}
+
+            {basic.reschedule_requested && (
+              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
+                <RotateCcw className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-card-foreground">
+                    Reschedule: {basic.reschedule_status === 'pending' ? 'Awaiting response'
+                    : basic.reschedule_status === 'approved' ? 'Approved'
+                    : basic.reschedule_status === 'declined' ? 'Declined'
+                    : 'Requested'}
+                  </p>
+                  {basic.reschedule_date && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Proposed: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action message */}
         {basic.next_action_reason && NEXT_ACTION_MAP[basic.next_action_reason] && (() => {
           const entry = NEXT_ACTION_MAP[basic.next_action_reason!]
           const handleButtonClick = () => {
@@ -116,12 +284,12 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             }
           }
           return (
-            <div className="mb-3 rounded-lg border border-border px-3 py-3">
-              <p className="text-sm text-muted-foreground leading-snug">{entry.message}</p>
+            <div className="mt-4 rounded-lg bg-muted/50 px-3.5 py-3">
+              <p className="text-sm text-card-foreground leading-snug">{entry.message}</p>
               {entry.button && (
                 <button
                   onClick={handleButtonClick}
-                  className="mt-2 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
+                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
                 >
                   {entry.button.label} →
                 </button>
@@ -129,309 +297,160 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
             </div>
           )
         })()}
-
-        {/* Metadata — date only */}
-        <p className="text-xs text-muted-foreground">
-          {basic.date_logged
-            ? `Logged ${format(new Date(basic.date_logged), 'd MMM yyyy')}`
-            : context.date_logged
-            ? `Logged ${format(new Date(context.date_logged), 'd MMM yyyy')}`
-            : null}
-        </p>
       </div>
 
-      {/* ── OOH Outcome (conditional) ── */}
-      {basic.ooh_dispatched && (
-        <>
-          <div className="border-t border-border/40" />
-          <div className="px-6 py-4">
-            <p className="text-sm font-semibold text-foreground mb-3">Out-of-Hours</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
-                <span className="text-sm font-medium">
-                  {basic.ooh_outcome === 'resolved' ? 'Handled by OOH contact'
-                  : basic.ooh_outcome === 'unresolved' ? 'Could not resolve'
-                  : basic.ooh_outcome === 'in_progress' ? 'In progress'
-                  : 'Dispatched — awaiting response'}
-                </span>
-              </div>
-              {basic.ooh_dispatched_at && (
-                <p className="text-xs text-muted-foreground">
-                  Dispatched {formatDistanceToNow(new Date(basic.ooh_dispatched_at), { addSuffix: true })}
-                </p>
-              )}
-              {basic.ooh_outcome_at && (
-                <p className="text-xs text-muted-foreground">
-                  Responded {formatDistanceToNow(new Date(basic.ooh_outcome_at), { addSuffix: true })}
-                </p>
-              )}
-              {basic.ooh_notes && (
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-xs text-muted-foreground flex-shrink-0">Notes</span>
-                  <span className="text-sm text-foreground text-right">{basic.ooh_notes}</span>
-                </div>
-              )}
-              {basic.ooh_cost != null && basic.ooh_cost > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Cost</span>
-                  <span className="text-sm font-medium text-foreground font-mono">{formatCurrency(basic.ooh_cost)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Landlord Allocated Outcome (conditional) ── */}
-      {basic.landlord_allocated && (
-        <>
-          <div className="border-t border-border/40" />
-          <div className="px-6 py-4">
-            <p className="text-sm font-semibold text-foreground mb-3">Landlord Allocated</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
-                <span className="text-sm font-medium">
-                  {basic.landlord_outcome === 'resolved' ? 'Resolved by landlord'
-                  : basic.landlord_outcome === 'need_help' ? 'Landlord needs help'
-                  : basic.landlord_outcome === 'in_progress' ? 'In progress'
-                  : 'Allocated — awaiting response'}
-                </span>
-              </div>
-              {basic.landlord_allocated_at && (
-                <p className="text-xs text-muted-foreground">
-                  Allocated {formatDistanceToNow(new Date(basic.landlord_allocated_at), { addSuffix: true })}
-                </p>
-              )}
-              {basic.landlord_outcome_at && (
-                <p className="text-xs text-muted-foreground">
-                  Responded {formatDistanceToNow(new Date(basic.landlord_outcome_at), { addSuffix: true })}
-                </p>
-              )}
-              {basic.landlord_notes && (
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-xs text-muted-foreground flex-shrink-0">Response note</span>
-                  <span className="text-sm text-foreground text-right">{basic.landlord_notes}</span>
-                </div>
-              )}
-              {basic.landlord_cost != null && basic.landlord_cost > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Landlord cost</span>
-                  <span className="text-sm font-medium text-foreground font-mono">{formatCurrency(basic.landlord_cost)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Section 2: People ── */}
-      <div className="border-t border-border/40" />
-      <div className="px-6 py-6">
-        <div className="flex items-baseline gap-2 mb-4">
-          <p className="text-sm font-semibold text-foreground">People</p>
-          {context.reporter_role && context.reporter_role !== 'tenant' && (
-            <p className="text-xs text-muted-foreground/60">
-              · Reported by {context.reporter_role.charAt(0).toUpperCase() + context.reporter_role.slice(1)}
-            </p>
-          )}
-        </div>
-        <div className="space-y-1">
+      {/* ── Card 3: People — 3 square cards ── */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">People</p>
+        <div className="grid grid-cols-3 gap-2">
           {/* Tenant */}
-          {context.tenant_name && (
+          {context.tenant_name ? (
             basic.tenant_id ? (
               <Link
                 href={`/tenants/${basic.tenant_id}`}
-                className="flex items-center justify-between hover:bg-muted/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors"
+                className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{context.tenant_name}</p>
-                    <p className="text-xs text-muted-foreground">Tenant</p>
-                  </div>
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-primary" />
                 </div>
-                {context.tenant_phone && (
-                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.tenant_phone)}</span>
-                )}
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-sm font-semibold text-card-foreground truncate">{context.tenant_name}</p>
+                  <p className="text-[11px] text-muted-foreground">Reported by</p>
+                </div>
               </Link>
             ) : (
-              <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{context.tenant_name}</p>
-                    <p className="text-xs text-muted-foreground">Tenant</p>
-                  </div>
+              <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-primary" />
                 </div>
-                {context.tenant_phone && (
-                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.tenant_phone)}</span>
-                )}
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-sm font-semibold text-card-foreground truncate">{context.tenant_name}</p>
+                  <p className="text-[11px] text-muted-foreground">Reported by</p>
+                </div>
               </div>
             )
-          )}
-
-          {/* Room */}
-          {basic.room_number && (
-            <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <BedDouble className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{basic.room_number}</p>
-                  <p className="text-xs text-muted-foreground">Room</p>
-                </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 opacity-50">
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="text-center min-w-0 w-full">
+                <p className="text-sm text-muted-foreground">Unknown</p>
+                <p className="text-[11px] text-muted-foreground">Reported by</p>
               </div>
             </div>
           )}
 
           {/* Landlord */}
-          {context.landlord_name && (
+          {context.landlord_name ? (
             context.landlord_id ? (
               <Link
                 href={`/landlords/${context.landlord_id}`}
-                className="flex items-center justify-between hover:bg-muted/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors"
+                className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
-                    <Crown className="h-3.5 w-3.5 text-warning" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{context.landlord_name}</p>
-                    <p className="text-xs text-muted-foreground">Landlord</p>
-                  </div>
+                <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                  <Crown className="h-4 w-4 text-warning" />
                 </div>
-                {context.landlord_phone && (
-                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.landlord_phone)}</span>
-                )}
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-sm font-semibold text-card-foreground truncate">{context.landlord_name}</p>
+                  <p className="text-[11px] text-muted-foreground">Landlord</p>
+                </div>
               </Link>
             ) : (
-              <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
-                    <Crown className="h-3.5 w-3.5 text-warning" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{context.landlord_name}</p>
-                    <p className="text-xs text-muted-foreground">Landlord</p>
-                  </div>
+              <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4">
+                <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                  <Crown className="h-4 w-4 text-warning" />
                 </div>
-                {context.landlord_phone && (
-                  <span className="text-xs text-muted-foreground font-mono">{formatPhoneDisplay(context.landlord_phone)}</span>
-                )}
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-sm font-semibold text-card-foreground truncate">{context.landlord_name}</p>
+                  <p className="text-[11px] text-muted-foreground">Landlord</p>
+                </div>
               </div>
             )
+          ) : (
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 opacity-50">
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                <Crown className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="text-center min-w-0 w-full">
+                <p className="text-sm text-muted-foreground">—</p>
+                <p className="text-[11px] text-muted-foreground">Landlord</p>
+              </div>
+            </div>
           )}
 
-          {/* Contractor — explicit when unassigned */}
+          {/* Contractor */}
           {basic.contractor_name && basic.contractor_id ? (
             <Link
               href={`/contractors/${basic.contractor_id}`}
-              className="flex items-center justify-between hover:bg-muted/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors"
+              className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                  <Wrench className="h-3.5 w-3.5 text-success" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{basic.contractor_name}</p>
-                  <p className="text-xs text-muted-foreground">Contractor</p>
-                </div>
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <Wrench className="h-4 w-4 text-success" />
+              </div>
+              <div className="text-center min-w-0 w-full">
+                <p className="text-sm font-semibold text-card-foreground truncate">{basic.contractor_name}</p>
+                <p className="text-[11px] text-muted-foreground">Contractor</p>
               </div>
             </Link>
-          ) : basic.contractor_name ? (
-            <div className="flex items-center justify-between -mx-3 px-3 py-1.5">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                  <Wrench className="h-3.5 w-3.5 text-success" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{basic.contractor_name}</p>
-                  <p className="text-xs text-muted-foreground">Contractor</p>
-                </div>
-              </div>
-            </div>
           ) : (
-            <div className="flex items-center gap-3 -mx-3 px-3 py-1.5">
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 opacity-50">
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                <Wrench className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">No contractor assigned yet</p>
-                <p className="text-xs text-muted-foreground/60">Contractor</p>
+              <div className="text-center min-w-0 w-full">
+                <p className="text-sm text-muted-foreground">Not assigned</p>
+                <p className="text-[11px] text-muted-foreground">Contractor</p>
               </div>
             </div>
           )}
-
         </div>
       </div>
 
-      {/* ── Section 3: Job Details ── */}
-      <div className="border-t border-border/40" />
-      <div className="px-6 py-6">
-        <p className="text-sm font-semibold text-foreground mb-4">Job Details</p>
+      {/* ── Card 4: Job Details ── */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Job Details</p>
         <div className="space-y-3">
-          {/* Quote */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Quote</span>
+            <span className="text-sm text-muted-foreground">Quote</span>
             {basic.contractor_quote ? (
-              <span className="text-sm font-medium text-foreground font-mono">
-                {formatCurrency(basic.contractor_quote)}
-              </span>
+              <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(basic.contractor_quote)}</span>
             ) : (
               <span className="text-sm text-muted-foreground/60">Not yet received</span>
             )}
           </div>
 
-          {/* Markup */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Markup</span>
+            <span className="text-sm text-muted-foreground">Markup</span>
             {markup != null ? (
-              <span className="text-sm font-medium text-foreground font-mono">
-                {formatCurrency(markup)}
-              </span>
+              <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(markup)}</span>
             ) : (
               <span className="text-sm text-muted-foreground/60">—</span>
             )}
           </div>
 
-          {/* Final Amount — only when it exists */}
           {basic.final_amount != null && (
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Final Amount</span>
-              <span className="text-sm font-semibold text-foreground font-mono">
-                {formatCurrency(basic.final_amount)}
-              </span>
+              <span className="text-sm text-muted-foreground">Final Amount</span>
+              <span className="text-base font-bold text-card-foreground font-mono">{formatCurrency(basic.final_amount)}</span>
             </div>
           )}
 
-          {/* Approval context — only shown once quote exists */}
           {basic.contractor_quote && context.auto_approve_limit != null && (
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Approval</span>
+              <span className="text-sm text-muted-foreground">Approval</span>
               {basic.contractor_quote <= context.auto_approve_limit ? (
-                <span className="text-sm text-success font-medium">
-                  Within limit ({formatCurrency(context.auto_approve_limit)} auto-approve)
-                </span>
+                <span className="text-sm text-success font-semibold">Within limit ({formatCurrency(context.auto_approve_limit)})</span>
               ) : (
-                <span className="text-sm text-warning font-medium">
-                  Requires landlord approval · limit {formatCurrency(context.auto_approve_limit)}
-                </span>
+                <span className="text-sm text-warning font-semibold">Requires landlord · limit {formatCurrency(context.auto_approve_limit)}</span>
               )}
             </div>
           )}
 
-          {/* Scheduled date */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Scheduled</span>
+            <span className="text-sm text-muted-foreground">Scheduled</span>
             {basic.scheduled_date ? (
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-sm font-semibold text-card-foreground">
                 {format(new Date(basic.scheduled_date), 'd MMM yyyy')}
                 {(() => {
                   const h = new Date(basic.scheduled_date).getHours()
@@ -446,91 +465,32 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
         </div>
       </div>
 
-      {/* ── Reschedule Request (conditional) ── */}
-      {basic.reschedule_requested && (
-        <>
-          <div className="border-t border-border/40" />
-          <div className="px-6 py-4">
-            <p className="text-sm font-semibold text-foreground mb-3">Reschedule Request</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
-                <span className="text-sm font-medium">
-                  {basic.reschedule_status === 'pending' ? 'Awaiting contractor response'
-                  : basic.reschedule_status === 'approved' ? 'Approved by contractor'
-                  : basic.reschedule_status === 'declined' ? 'Declined by contractor'
-                  : 'Requested'}
-                </span>
-              </div>
-              {basic.reschedule_date && (
-                <p className="text-xs text-muted-foreground">
-                  Proposed date: {format(new Date(basic.reschedule_date), 'EEE dd MMM yyyy')}
-                </p>
-              )}
-              {basic.reschedule_reason && (
-                <p className="text-sm">Reason: {basic.reschedule_reason}</p>
-              )}
-              {basic.reschedule_decided_at && (
-                <p className="text-xs text-muted-foreground">
-                  Decided {formatDistanceToNow(new Date(basic.reschedule_decided_at), { addSuffix: true })}
-                </p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ── Media (conditional) ── */}
       {images.length > 0 && (
-        <>
-          <div className="border-t border-border/40" />
-          <div className="px-6 py-4">
-            <p className="text-sm font-semibold text-foreground mb-3">
-              Media ({images.length})
-            </p>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-              {images.map((url, index) => {
-                const isVideo = /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes('/video/')
-                return isVideo ? (
-                  <a
-                    key={index}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block group relative"
-                  >
-                    <video
-                      src={url}
-                      preload="metadata"
-                      muted
-                      playsInline
-                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-7 h-7 rounded-full bg-foreground/70 flex items-center justify-center">
-                        <Play className="w-3.5 h-3.5 text-background fill-background ml-0.5" />
-                      </div>
+        <div className="bg-card rounded-xl border border-border p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Media ({images.length})
+          </p>
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+            {images.map((url, index) => {
+              const isVideo = /\.(mp4|mov|webm|avi|mkv|3gp)/i.test(url) || url.includes('/video/')
+              return isVideo ? (
+                <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="block group relative">
+                  <video src={url} preload="metadata" muted playsInline className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-full bg-foreground/70 flex items-center justify-center">
+                      <Play className="w-3.5 h-3.5 text-background fill-background ml-0.5" />
                     </div>
-                  </a>
-                ) : (
-                  <a
-                    key={index}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <img
-                      src={url}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                    />
-                  </a>
-                )
-              })}
-            </div>
+                  </div>
+                </a>
+              ) : (
+                <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="block group">
+                  <img src={url} alt={`Photo ${index + 1}`} className="w-full h-20 object-cover rounded-lg border group-hover:opacity-80 transition-opacity" />
+                </a>
+              )
+            })}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

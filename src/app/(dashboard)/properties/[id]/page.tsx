@@ -10,6 +10,7 @@ import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
 import type { TicketRow } from '@/components/profile'
+import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -190,6 +191,8 @@ function PropertyDetailInner() {
     if (landlordsRes.data) setLandlordOptions(landlordsRes.data as LandlordOption[])
     if (roomsRes.data) setRooms(roomsRes.data)
   }, [propertyId, propertyManager, supabase])
+
+  useOnTicketUpdated(fetchRelated)
 
   useEffect(() => {
     if (!propertyManager || !propertyId) return
@@ -597,7 +600,7 @@ function PropertyDetailInner() {
           {/* Tickets Tab */}
           <TabsContent value="tickets" className="mt-0">
             <div>
-              <TicketCard tickets={tickets} onTicketUpdated={() => fetchRelated()} />
+              <TicketCard tickets={tickets} />
             </div>
           </TabsContent>
         </div>

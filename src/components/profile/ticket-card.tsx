@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { ProfileCard } from './profile-card'
 import { Wrench, Clock, CheckCircle2, XCircle } from 'lucide-react'
 
@@ -69,69 +68,59 @@ export interface TicketRow {
 interface TicketCardProps {
   tickets: TicketRow[]
   propertyAddressMap?: Record<string, string>
-  onTicketUpdated?: () => void
 }
 
 // --- Component ---
 
-export function TicketCard({ tickets, propertyAddressMap, onTicketUpdated }: TicketCardProps) {
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+export function TicketCard({ tickets, propertyAddressMap }: TicketCardProps) {
+  const openTicket = useOpenTicket()
 
   return (
-    <>
-      <ProfileCard title="Reported tickets">
-        {tickets.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">No tickets reported yet.</p>
-        ) : (
-          <div className="divide-y divide-border/50">
-            {tickets.map((t) => {
-              const ts = getTicketStatus(t.next_action_reason, t.status, t.archived)
-              const cfg = statusConfig[ts]
-              const Icon = cfg.Icon
+    <ProfileCard title="Reported tickets">
+      {tickets.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">No tickets reported yet.</p>
+      ) : (
+        <div className="divide-y divide-border/50">
+          {tickets.map((t) => {
+            const ts = getTicketStatus(t.next_action_reason, t.status, t.archived)
+            const cfg = statusConfig[ts]
+            const Icon = cfg.Icon
 
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setSelectedTicketId(t.id)}
-                  className={`w-full text-left py-2.5 hover:bg-muted/30 -mx-3 px-3 transition-colors rounded-lg flex items-center gap-3 ${t.archived ? 'opacity-40' : ''}`}
-                >
-                  {/* Status icon */}
-                  <div className={`h-7 w-7 rounded-md ${cfg.iconBg} flex items-center justify-center shrink-0`}>
-                    <Icon className={`h-3.5 w-3.5 ${cfg.badgeText}`} />
-                  </div>
+            return (
+              <button
+                key={t.id}
+                onClick={() => openTicket(t.id)}
+                className={`w-full text-left py-2.5 hover:bg-muted/30 -mx-3 px-3 transition-colors rounded-lg flex items-center gap-3 ${t.archived ? 'opacity-40' : ''}`}
+              >
+                {/* Status icon */}
+                <div className={`h-7 w-7 rounded-md ${cfg.iconBg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`h-3.5 w-3.5 ${cfg.badgeText}`} />
+                </div>
 
-                  {/* Body */}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium truncate">
-                      {t.issue_title || t.issue_description || 'Maintenance request'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {t.category || 'General'}
-                      {' \u00b7 '}
-                      {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      {t.property_id && propertyAddressMap?.[t.property_id] && (
-                        <> &middot; {propertyAddressMap[t.property_id]}</>
-                      )}
-                    </p>
-                  </div>
+                {/* Body */}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium truncate">
+                    {t.issue_title || t.issue_description || 'Maintenance request'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t.category || 'General'}
+                    {' \u00b7 '}
+                    {new Date(t.date_logged).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    {t.property_id && propertyAddressMap?.[t.property_id] && (
+                      <> &middot; {propertyAddressMap[t.property_id]}</>
+                    )}
+                  </p>
+                </div>
 
-                  {/* Status badge */}
-                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badgeBg} ${cfg.badgeText}`}>
-                    {cfg.label}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </ProfileCard>
-
-      <TicketDetailModal
-        ticketId={selectedTicketId}
-        open={!!selectedTicketId}
-        onClose={() => setSelectedTicketId(null)}
-        onTicketUpdated={onTicketUpdated}
-      />
-    </>
+                {/* Status badge */}
+                <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badgeBg} ${cfg.badgeText}`}>
+                  {cfg.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </ProfileCard>
   )
 }

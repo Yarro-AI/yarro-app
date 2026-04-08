@@ -9,6 +9,7 @@ import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateTenant, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
 import type { TicketRow } from '@/components/profile'
+import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -94,6 +95,8 @@ export default function TenantDetailPage() {
     if (ticketsRes.data) setTickets(ticketsRes.data as TicketRow[])
     if (propertiesRes.data) setAllProperties(propertiesRes.data as PropertyOption[])
   }, [tenantId, propertyManager, supabase])
+
+  useOnTicketUpdated(fetchRelated)
 
   const fetchProperty = useCallback(async () => {
     if (!tenant?.property_id) { setProperty(null); return }
@@ -331,7 +334,7 @@ export default function TenantDetailPage() {
 
         {/* Reported tickets — full width */}
         <div className="mt-4">
-          <TicketCard tickets={tickets} onTicketUpdated={() => fetchRelated()} />
+          <TicketCard tickets={tickets} />
         </div>
       </div>
 

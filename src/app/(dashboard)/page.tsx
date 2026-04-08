@@ -630,7 +630,7 @@ export default function DashboardPage() {
                       {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
                       {awaitingType === 'handoff' && ticket.handoff && (
                         <Link
-                          href={`/tickets?id=${ticket.id}&action=complete`}
+                          href={`/tickets?ticketId=${ticket.id}&action=complete`}
                           onClick={() => setAwaitingType(null)}
                         >
                           <InteractiveHoverButton text="Review" size="sm" />

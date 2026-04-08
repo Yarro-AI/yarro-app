@@ -60,6 +60,7 @@ export interface TicketContext {
 
 export interface TicketBasic {
   id: string
+  issue_title: string | null
   issue_description: string | null
   status: string
   job_stage: string | null
@@ -105,10 +106,37 @@ export interface TicketBasic {
   reschedule_status: string | null
   reschedule_decided_at: string | null
   room_id: string | null
+  compliance_certificate_id: string | null
   address?: string
   tenant_name?: string
   contractor_name?: string
   room_number?: string
+}
+
+export interface ComplianceCertData {
+  id: string
+  certificate_type: string
+  expiry_date: string | null
+  issued_date: string | null
+  certificate_number: string | null
+  issued_by: string | null
+  document_url: string | null
+  status: string
+  notes: string | null
+  contractor_id: string | null
+  contractor_name: string | null
+}
+
+export interface RentLedgerRow {
+  id: string
+  due_date: string
+  amount_due: number
+  amount_paid: number | null
+  status: string
+  room_id: string
+  paid_at: string | null
+  payment_method: string | null
+  notes: string | null
 }
 
 export interface ConversationData {
@@ -368,6 +396,9 @@ interface UseTicketDetailResult {
   completion: CompletionData | null
   ledger: LedgerEntry[]
   outboundLog: OutboundLogEntry[]
+  complianceCert: ComplianceCertData | null
+  rentLedger: RentLedgerRow[]
+  categoryDataLoading: boolean
   loading: boolean
   error: string | null
   refetch: () => void
@@ -387,6 +418,9 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const [completion, setCompletion] = useState<CompletionData | null>(null)
   const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [outboundLog, setOutboundLog] = useState<OutboundLogEntry[]>([])
+  const [complianceCert, setComplianceCert] = useState<ComplianceCertData | null>(null)
+  const [rentLedger, setRentLedger] = useState<RentLedgerRow[]>([])
+  const [categoryDataLoading, setCategoryDataLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -400,6 +434,9 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setCompletion(null)
     setLedger([])
     setOutboundLog([])
+    setComplianceCert(null)
+    setRentLedger([])
+    setCategoryDataLoading(false)
     setError(null)
   }, [])
 
@@ -414,10 +451,10 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         supabase
           .from('c1_tickets')
           .select(`
-            id, issue_description, status, job_stage, category, priority,
+            id, issue_title, issue_description, status, job_stage, category, priority,
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
-            property_id, tenant_id, contractor_id, conversation_id, room_id,
+            property_id, tenant_id, contractor_id, conversation_id, room_id, compliance_certificate_id,
             archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
             ooh_dispatched, ooh_outcome, ooh_notes, ooh_cost, ooh_dispatched_at, ooh_outcome_at, ooh_submissions,
             landlord_allocated, landlord_allocated_at, landlord_outcome, landlord_notes, landlord_cost, landlord_outcome_at, landlord_submissions,
@@ -507,6 +544,34 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       } else {
         setConversation(null)
       }
+
+      // Category-specific secondary fetches (check both basic and context for category)
+      const ticketCategory = basicData?.category || ctx?.category
+      if (ticketCategory === 'compliance_renewal' && basicData?.compliance_certificate_id) {
+        setCategoryDataLoading(true)
+        const { data: certData } = await supabase
+          .from('c1_compliance_certificates')
+          .select('id, certificate_type, expiry_date, issued_date, certificate_number, issued_by, document_url, status, notes, contractor_id, c1_contractors(contractor_name)')
+          .eq('id', basicData.compliance_certificate_id)
+          .maybeSingle()
+        if (certData) {
+          setComplianceCert({
+            ...certData,
+            contractor_name: (certData.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name ?? null,
+          } as ComplianceCertData)
+        }
+        setCategoryDataLoading(false)
+      } else if (ticketCategory === 'rent_arrears' && basicData?.tenant_id) {
+        setCategoryDataLoading(true)
+        const { data: ledgerData } = await supabase
+          .from('c1_rent_ledger')
+          .select('id, due_date, amount_due, amount_paid, status, room_id, paid_at, payment_method, notes')
+          .eq('tenant_id', basicData.tenant_id)
+          .order('due_date', { ascending: false })
+          .limit(12)
+        if (ledgerData) setRentLedger(ledgerData as RentLedgerRow[])
+        setCategoryDataLoading(false)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ticket details')
     } finally {
@@ -578,6 +643,11 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       completed: 'Completed',
       dismissed: 'Dismissed',
       new: 'Created',
+      cert_renewed: 'Cert Renewed',
+      compliance_pending: 'Compliance Pending',
+      rent_cleared: 'Rent Cleared',
+      rent_partial_payment: 'Partial Payment',
+      rent_overdue: 'Rent Overdue',
     }
     if (basic.on_hold) return 'On Hold'
     return reasonMap[basic.next_action_reason || ''] || reasonMap[basic.next_action || ''] || 'Created'
@@ -591,6 +661,9 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     completion,
     ledger,
     outboundLog,
+    complianceCert,
+    rentLedger,
+    categoryDataLoading,
     loading,
     error,
     refetch,

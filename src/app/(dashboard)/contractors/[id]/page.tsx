@@ -9,6 +9,7 @@ import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
 import type { TicketRow } from '@/components/profile'
+import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -72,6 +73,8 @@ export default function ContractorDetailPage() {
     if (propertiesRes.data) setAllProperties(propertiesRes.data as PropertyOption[])
     if (ticketsRes.data) setTickets(ticketsRes.data as TicketRow[])
   }, [contractorId, propertyManager, supabase])
+
+  useOnTicketUpdated(fetchRelated)
 
   useEffect(() => {
     if (!propertyManager || !contractorId) return
@@ -307,7 +310,7 @@ export default function ContractorDetailPage() {
 
         {/* Reported tickets — full width */}
         <div className="mt-4">
-          <TicketCard tickets={tickets} onTicketUpdated={() => fetchRelated()} />
+          <TicketCard tickets={tickets} />
         </div>
       </div>
 

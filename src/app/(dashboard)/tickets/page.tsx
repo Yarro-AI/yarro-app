@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,6 @@ import { DataTable, Column } from '@/components/data-table'
 import { QueryError } from '@/components/query-error'
 import { DateFilter } from '@/components/date-filter'
 import { useDateRange } from '@/contexts/date-range-context'
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketForm } from '@/components/ticket-form'
 import { Button } from '@/components/ui/button'
@@ -20,8 +19,9 @@ import { PageShell } from '@/components/page-shell'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Ticket, SlidersHorizontal, ClipboardList, MoreHorizontal } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { TicketDetailModal } from '@/components/ticket-detail/ticket-detail-modal'
 import { HandoffAlertBanner } from '@/components/handoff-alert-banner'
+import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
+import { useOpenTicket } from '@/hooks/use-open-ticket'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,25 +85,23 @@ export default function TicketsPage() {
   const { propertyManager } = usePM()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const openTicket = useOpenTicket()
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [selectedTicketBasic, setSelectedTicketBasic] = useState<TicketRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [handoffTicketId, setHandoffTicketId] = useState<string | null>(null)
   const [reviewTicketId, setReviewTicketId] = useState<string | null>(null)
   const { dateRange, setDateRange } = useDateRange()
-  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedLifecycle, setSelectedLifecycle] = useState<LifecycleFilter[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowFilter[]>([])
   const [selectedType, setSelectedType] = useState<TypeFilter[]>([])
   const supabase = createClient()
 
-  const selectedId = searchParams.get('id')
+  const selectedId = searchParams.get('ticketId')
   const action = searchParams.get('action')
-  const defaultTab = searchParams.get('tab')
   const shouldCreate = searchParams.get('create')
 
   useEffect(() => {
@@ -124,32 +122,25 @@ export default function TicketsPage() {
     }
   }, [selectedLifecycle, selectedWorkflow.length])
 
+  // Handle action flows (complete/review) — these open TicketForm, not the detail modal
+  // The global TicketDrawerProvider skips rendering when ?action= is present
   useEffect(() => {
-    if (!selectedId || tickets.length === 0) return
+    if (!selectedId || !action || tickets.length === 0) return
 
     const basicTicket = tickets.find((t) => t.id === selectedId)
-    if (basicTicket) {
-      setSelectedTicketBasic(basicTicket)
-      // Auto-open complete drawer if action=complete and ticket is handoff
-      if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
-        setHandoffTicketId(basicTicket.id)
-        setCreateDrawerOpen(true)
-        return
-      }
-      // Auto-open review drawer if action=review and ticket is pending review
-      if (action === 'review' && basicTicket.pending_review && basicTicket.status === 'open') {
-        setReviewTicketId(basicTicket.id)
-        setCreateDrawerOpen(true)
-        return
-      }
-    }
-    // Only open the detail modal if the create drawer isn't already open
-    if (!createDrawerOpen) {
-      setModalOpen(true)
+    if (!basicTicket) return
+
+    setSelectedTicketBasic(basicTicket)
+    if (action === 'complete' && basicTicket.handoff && basicTicket.status === 'open') {
+      setHandoffTicketId(basicTicket.id)
+      setCreateDrawerOpen(true)
+    } else if (action === 'review' && basicTicket.pending_review && basicTicket.status === 'open') {
+      setReviewTicketId(basicTicket.id)
+      setCreateDrawerOpen(true)
     }
   }, [selectedId, tickets, action])
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from('c1_tickets')
@@ -247,16 +238,14 @@ export default function TicketsPage() {
       setTickets(mapped)
     }
     setLoading(false)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyManager, dateRange])
+
+  // Register fetchTickets so global drawer can trigger refresh after ticket actions
+  useOnTicketUpdated(fetchTickets)
 
   const handleRowClick = (ticket: TicketRow) => {
-    router.push(`/tickets?id=${ticket.id}`)
-  }
-
-  const handleCloseModal = () => {
-    setModalOpen(false)
-    router.push('/tickets')
-    setSelectedTicketBasic(null)
+    openTicket(ticket.id)
   }
 
   const handleCloseCreateDrawer = () => {
@@ -357,36 +346,6 @@ export default function TicketsPage() {
     await supabase.rpc('c1_toggle_hold', { p_ticket_id: ticket.id, p_on_hold: newHold })
     toast.success(newHold ? 'Ticket paused' : 'Ticket resumed')
     fetchTickets()
-  }
-
-  const handleArchive = async () => {
-    if (!selectedTicketBasic) return
-
-    const archivedAt = new Date().toISOString()
-
-    const { error: ticketError } = await supabase
-      .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
-      .eq('id', selectedTicketBasic.id)
-
-    if (ticketError) throw ticketError
-
-    await supabase
-      .from('c1_messages')
-      .update({ archived: true, archived_at: archivedAt })
-      .eq('ticket_id', selectedTicketBasic.id)
-
-    if (selectedTicketBasic.conversation_id) {
-      await supabase
-        .from('c1_conversations')
-        .update({ archived: true, archived_at: archivedAt })
-        .eq('id', selectedTicketBasic.conversation_id)
-    }
-
-    toast.success('Ticket archived')
-    setArchiveDialogOpen(false)
-    handleCloseModal()
-    await fetchTickets()
   }
 
   const handleArchiveRow = async (ticket: TicketRow) => {
@@ -564,7 +523,7 @@ export default function TicketsPage() {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation()
-                  router.push(`/tickets?id=${ticket.id}`)
+                  openTicket(ticket.id)
                 }}
               >
                 View
@@ -876,23 +835,6 @@ export default function TicketsPage() {
         )}
       </div>
 
-      {/* Ticket Detail Modal (replaces old DetailDrawer) */}
-      <TicketDetailModal
-        ticketId={selectedId}
-        open={modalOpen}
-        onClose={handleCloseModal}
-        onArchive={() => setArchiveDialogOpen(true)}
-        defaultTab={defaultTab || undefined}
-        onTicketUpdated={() => fetchTickets()}
-        onReview={() => {
-          if (selectedTicketBasic) {
-            setHandoffTicketId(selectedTicketBasic.id)
-            setCreateDrawerOpen(true)
-            setModalOpen(false)
-          }
-        }}
-      />
-
       {/* Create / Complete / Review Ticket Drawer */}
       <TicketForm
         open={createDrawerOpen}
@@ -916,18 +858,6 @@ export default function TicketsPage() {
         onDismiss={(handoffTicketId || reviewTicketId) ? handleDismissTicket : undefined}
         onAllocateLandlord={() => { handleCloseCreateDrawer(); fetchTickets() }}
         submitLabel={reviewTicketId ? 'Dispatch' : handoffTicketId ? 'Complete Ticket' : 'Create Ticket'}
-      />
-
-      {/* Archive Confirmation Dialog */}
-      <ConfirmDeleteDialog
-        open={archiveDialogOpen}
-        onOpenChange={setArchiveDialogOpen}
-        title="Archive Ticket"
-        description="This ticket will be moved to the archive. You can view archived tickets in the Archived tab. Archived tickets are excluded from automation."
-        itemName={selectedTicketBasic?.issue_description?.slice(0, 50) || undefined}
-        onConfirm={handleArchive}
-        confirmLabel="Archive"
-        confirmingLabel="Archiving..."
       />
 
     </PageShell>

@@ -106,8 +106,9 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-hidden">
           <DateRangeProvider>
             <ErrorBoundary>
-              <TicketDrawerProvider />
-              {children}
+              <TicketDrawerProvider>
+                {children}
+              </TicketDrawerProvider>
             </ErrorBoundary>
           </DateRangeProvider>
         </main>

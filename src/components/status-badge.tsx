@@ -87,6 +87,18 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   'renewal requested': { border: 'border-warning/40',  text: 'text-warning' },
   'renewal scheduled': { border: 'border-primary/40', text: 'text-primary' },
 
+  // Rent statuses
+  'rent overdue':         { border: 'border-danger/40',   text: 'text-danger' },
+  'rent partial payment': { border: 'border-warning/40',  text: 'text-warning' },
+  'partial payment':      { border: 'border-warning/40',  text: 'text-warning' },
+  'rent cleared':         { border: 'border-success/40',  text: 'text-success' },
+  'rent arrears':         { border: 'border-danger/40',   text: 'text-danger' },
+
+  // Compliance ticket statuses
+  'compliance pending':   { border: 'border-warning/40',  text: 'text-warning' },
+  'cert renewed':         { border: 'border-success/40',  text: 'text-success' },
+  'compliance renewal':   { border: 'border-warning/40',  text: 'text-warning' },
+
   // Default
   default: { border: 'border-border', text: 'text-muted-foreground' },
 }

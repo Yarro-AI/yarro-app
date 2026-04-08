@@ -129,8 +129,8 @@ export function getTodoHref(item: TodoItem): string | null {
       : `/compliance/${item.entity_id}`
   }
   if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
-  if (item.next_action_reason === 'handoff_review') return `/tickets?id=${item.ticket_id}&action=complete`
-  if (item.next_action_reason === 'pending_review') return `/tickets?id=${item.ticket_id}&action=review`
+  if (item.next_action_reason === 'handoff_review') return `/tickets?ticketId=${item.ticket_id}&action=complete`
+  if (item.next_action_reason === 'pending_review') return `/tickets?ticketId=${item.ticket_id}&action=review`
   return null
 }
 

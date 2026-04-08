@@ -9,6 +9,7 @@ import { useEditMode } from '@/hooks/use-edit-mode'
 import { normalizeRecord, validateLandlord, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
 import type { TicketRow } from '@/components/profile'
+import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
 import { Input } from '@/components/ui/input'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import Link from 'next/link'
@@ -70,6 +71,8 @@ export default function LandlordDetailPage() {
     }
     if (ticketsRes.data) setTickets(ticketsRes.data as TicketRow[])
   }, [landlordId, supabase])
+
+  useOnTicketUpdated(fetchRelated)
 
   useEffect(() => {
     if (!propertyManager || !landlordId) return
@@ -194,7 +197,7 @@ export default function LandlordDetailPage() {
 
         {/* Reported tickets — full width */}
         <div className="mt-4">
-          <TicketCard tickets={tickets} propertyAddressMap={propertyAddressMap} onTicketUpdated={() => fetchRelated()} />
+          <TicketCard tickets={tickets} propertyAddressMap={propertyAddressMap} />
         </div>
       </div>
 
