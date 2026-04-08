@@ -78,26 +78,15 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
       <div className="flex items-center pr-3 border-r-2 border-[#F3F4F6] self-stretch">
         <CategoryBadge category={category} urgency={urgency} />
       </div>
-      {/* Col 2: Issue + action + property */}
-      <div className="min-w-0" title={item.action_context || undefined}>
-        <div className="flex items-baseline min-w-0">
-          <span className="truncate text-[15px] font-semibold text-[#111827]">{item.issue_summary}</span>
-          {item.action_label && (
-            <span className="flex-shrink-0 font-medium text-[13px] text-muted-foreground ml-1.5">
-              · {item.action_label}
-            </span>
-          )}
-        </div>
+      {/* Col 2: Issue + property (truncates) */}
+      <div className="min-w-0">
+        <p className="text-[15px] font-semibold text-[#111827] truncate">{item.issue_summary}</p>
         <p className="text-sm text-[#6B7280] truncate mt-0.5">{item.property_label}</p>
       </div>
-      {/* Col 3: SLA ring OR stale indicator */}
+      {/* Col 3: SLA ring */}
       <div className="flex items-center justify-center">
         {item.sla_due_at ? (
           <SlaRing slaDueAt={item.sla_due_at} />
-        ) : (item.action_type === 'STALE_AWAITING' || item.action_type === 'SCHEDULED_OVERDUE') ? (
-          <div className="w-6 h-6 rounded-full bg-warning/15 flex items-center justify-center" title={item.action_label}>
-            <span className="text-sm font-bold text-warning leading-none">!</span>
-          </div>
         ) : null}
       </div>
       {/* Col 4: Arrow (hover reveal) */}
