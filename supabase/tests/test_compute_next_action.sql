@@ -593,7 +593,7 @@ DECLARE
   v_tid uuid;
   v_ticket record;
 BEGIN
-  v_tid := create_rent_arrears_ticket(
+  SELECT ticket_id INTO v_tid FROM create_rent_arrears_ticket(
     _test_uuid(999), _test_uuid(990), _test_uuid(983),
     'Rent arrears: Fresh Tenant', '1 month overdue, £1000 total'
   );
@@ -618,11 +618,11 @@ DECLARE
   v_tid1 uuid;
   v_tid2 uuid;
 BEGIN
-  v_tid1 := create_rent_arrears_ticket(
+  SELECT ticket_id INTO v_tid1 FROM create_rent_arrears_ticket(
     _test_uuid(999), _test_uuid(990), _test_uuid(984),
     'Rent arrears: Dedup Tenant', 'First call'
   );
-  v_tid2 := create_rent_arrears_ticket(
+  SELECT ticket_id INTO v_tid2 FROM create_rent_arrears_ticket(
     _test_uuid(999), _test_uuid(990), _test_uuid(984),
     'Rent arrears: Dedup Tenant', 'Second call — should dedup'
   );
@@ -775,7 +775,7 @@ DECLARE
   v_ticket_id uuid;
   v_result record;
 BEGIN
-  v_ticket_id := create_rent_arrears_ticket(
+  SELECT ticket_id INTO v_ticket_id FROM create_rent_arrears_ticket(
     _test_uuid(999), _test_uuid(990), _test_uuid(900),
     'Rent arrears: E2E Tenant', '1 month overdue, £800'
   );

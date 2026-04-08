@@ -2402,28 +2402,20 @@ export type Database = {
           next_action_reason: string
         }[]
       }
-      create_rent_arrears_ticket:
-        | {
-            Args: {
-              p_issue_description: string
-              p_issue_title: string
-              p_property_id: string
-              p_property_manager_id: string
-              p_tenant_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_issue_description: string
-              p_issue_title: string
-              p_priority?: string
-              p_property_id: string
-              p_property_manager_id: string
-              p_tenant_id: string
-            }
-            Returns: string
-          }
+      create_rent_arrears_ticket: {
+        Args: {
+          p_issue_description: string
+          p_issue_title: string
+          p_priority?: string
+          p_property_id: string
+          p_property_manager_id: string
+          p_tenant_id: string
+        }
+        Returns: {
+          is_new: boolean
+          ticket_id: string
+        }[]
+      }
       create_rent_ledger_entries: {
         Args: {
           p_month: number

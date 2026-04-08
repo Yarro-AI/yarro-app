@@ -75,7 +75,7 @@ DECLARE
   v_tid uuid;
   v_ticket record;
 BEGIN
-  v_tid := create_rent_arrears_ticket(
+  SELECT ticket_id INTO v_tid FROM create_rent_arrears_ticket(
     _e2e_uuid(1), _e2e_uuid(2), _e2e_uuid(3),
     'Rent arrears: Jane Arrears',
     '1 month overdue, £800 total arrears since ' || (CURRENT_DATE - INTERVAL '40 days')::date
@@ -130,7 +130,7 @@ BEGIN
   SELECT id INTO v_existing_tid FROM c1_tickets
   WHERE tenant_id = _e2e_uuid(3) AND category = 'rent_arrears' AND status = 'open';
 
-  v_returned_tid := create_rent_arrears_ticket(
+  SELECT ticket_id INTO v_returned_tid FROM create_rent_arrears_ticket(
     _e2e_uuid(1), _e2e_uuid(2), _e2e_uuid(3),
     'Rent arrears: Jane Arrears',
     '2 months overdue, £1600 total arrears'

@@ -246,7 +246,8 @@ Deno.serve(async (_req: Request) => {
     // ─── Ticket pass: create/update arrears tickets for overdue tenants ───
     // Runs independently of reminders — even if no WhatsApp reminders are due,
     // overdue tenants still need tickets created/priority escalated.
-    let escalated = 0;
+    let ticketsCreated = 0;
+    let ticketsUpdated = 0;
     try {
       const { data: pmRows } = await supabase
         .from("c1_rent_ledger")
@@ -286,7 +287,7 @@ Deno.serve(async (_req: Request) => {
           const title = `Rent arrears: ${tenant.tenant_name || "Unknown tenant"}`;
           const desc = `${tenant.months_overdue} month(s) overdue, £${Number(tenant.total_arrears).toFixed(2)} total arrears since ${tenant.earliest_overdue} (${tenant.days_overdue} days)`;
 
-          const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
+          const { data: ticketResult, error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
             p_property_manager_id: tenant.property_manager_id,
             p_property_id: tenant.property_id,
             p_tenant_id: tenant.tenant_id,
@@ -301,9 +302,15 @@ Deno.serve(async (_req: Request) => {
               tenant: tenant.tenant_name,
               property: tenant.property_address,
             });
-          } else {
-            escalated++;
-            console.log(`[${FN}] Rent arrears ticket [${tenant.priority}] for ${tenant.tenant_name} at ${tenant.property_address}`);
+            continue;
+          }
+
+          const row = Array.isArray(ticketResult) ? ticketResult[0] : ticketResult;
+          const isNew = row?.is_new === true;
+
+          if (isNew) {
+            ticketsCreated++;
+            console.log(`[${FN}] CREATED rent arrears ticket [${tenant.priority}] for ${tenant.tenant_name} at ${tenant.property_address}`);
 
             await supabase.rpc("c1_log_system_event", {
               p_pm_id: tenant.property_manager_id,
@@ -317,6 +324,9 @@ Deno.serve(async (_req: Request) => {
                 priority: tenant.priority,
               },
             });
+          } else {
+            ticketsUpdated++;
+            console.log(`[${FN}] UPDATED rent arrears ticket → [${tenant.priority}] for ${tenant.tenant_name} at ${tenant.property_address} (${tenant.days_overdue}d overdue)`);
           }
         }
       }
@@ -326,17 +336,17 @@ Deno.serve(async (_req: Request) => {
       await alertTelegram(FN, "Ticket pass", msg);
     }
 
-    const summary = { total: results.length, sent, skipped, failed, escalated, results };
+    const summary = { total: results.length, sent, skipped, failed, ticketsCreated, ticketsUpdated, results };
 
     console.log(
-      `[${FN}] Done: ${sent} sent, ${skipped} skipped, ${failed} failed, ${escalated} escalated`,
+      `[${FN}] Done: ${sent} sent, ${skipped} skipped, ${failed} failed | Tickets: ${ticketsCreated} created, ${ticketsUpdated} updated`,
     );
 
-    if (sent > 0 || escalated > 0) {
-      await alertInfo(
-        FN,
-        `Rent reminders: ${sent} sent, ${skipped} skipped, ${failed} failed, ${escalated} escalated to tickets`,
-      );
+    if (sent > 0 || ticketsCreated > 0) {
+      const parts: string[] = [];
+      if (sent > 0) parts.push(`${sent} reminder(s) sent`);
+      if (ticketsCreated > 0) parts.push(`${ticketsCreated} arrears ticket(s) created`);
+      await alertInfo(FN, parts.join(", "));
     }
 
     return new Response(JSON.stringify(summary), {

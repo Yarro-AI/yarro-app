@@ -53,7 +53,11 @@ $$;
 
 -- ─── 2. create_rent_arrears_ticket (protected RPC — Adam approved) ─────────
 -- Backup: supabase/migrations/20260404300000_polymorphic_subroutines.sql lines 278-317
--- Change: add p_priority parameter, update priority on dedup
+-- Change: add p_priority parameter, return TABLE(ticket_id, is_new), update priority on dedup
+-- DROP required because return type changed from uuid to TABLE
+
+DROP FUNCTION IF EXISTS public.create_rent_arrears_ticket(uuid, uuid, uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.create_rent_arrears_ticket(uuid, uuid, uuid, text, text);
 
 CREATE OR REPLACE FUNCTION public.create_rent_arrears_ticket(
   p_property_manager_id uuid,
@@ -62,7 +66,7 @@ CREATE OR REPLACE FUNCTION public.create_rent_arrears_ticket(
   p_issue_title text,
   p_issue_description text,
   p_priority text DEFAULT 'high'
-) RETURNS uuid
+) RETURNS TABLE(ticket_id uuid, is_new boolean)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_ticket_id uuid;
@@ -80,7 +84,8 @@ BEGIN
     SET issue_description = p_issue_description,
         priority = p_priority
     WHERE id = v_ticket_id;
-    RETURN v_ticket_id;
+    RETURN QUERY SELECT v_ticket_id, false;
+    RETURN;
   END IF;
 
   -- Create new ticket (no c1_messages, no dispatch — PM-only action)
@@ -94,7 +99,8 @@ BEGIN
     'created', 'system', true, false
   ) RETURNING id INTO v_ticket_id;
 
-  RETURN v_ticket_id;
+  RETURN QUERY SELECT v_ticket_id, true;
+  RETURN;
 END;
 $$;
 
