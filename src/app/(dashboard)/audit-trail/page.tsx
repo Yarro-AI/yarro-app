@@ -38,10 +38,12 @@ export default function AuditTrailPage() {
   const [allTickets, setAllTickets] = useState<AuditTicket[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [cacheLoaded, setCacheLoaded] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const typedSearchRef = useRef('')
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -119,6 +121,7 @@ export default function AuditTrailPage() {
     }
 
     setSuggestions(results)
+    setSelectedIndex(-1)
   }, [allTickets])
 
   const executeSearch = useCallback((term: string) => {
@@ -145,8 +148,10 @@ export default function AuditTrailPage() {
 
   const handleInputChange = useCallback((value: string) => {
     setSearch(value)
+    typedSearchRef.current = value
     setShowSuggestions(true)
     setHasSearched(false)
+    setSelectedIndex(-1)
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => updateSuggestions(value), 150)
@@ -159,13 +164,32 @@ export default function AuditTrailPage() {
   }, [executeSearch])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      executeSearch(search)
-    }
-    if (e.key === 'Escape') {
+    if (e.key === 'ArrowDown' && showSuggestions && suggestions.length > 0) {
+      e.preventDefault()
+      const next = Math.min(selectedIndex + 1, suggestions.length - 1)
+      setSelectedIndex(next)
+      setSearch(suggestions[next].value)
+    } else if (e.key === 'ArrowUp' && showSuggestions && suggestions.length > 0) {
+      e.preventDefault()
+      const next = selectedIndex - 1
+      if (next < 0) {
+        setSelectedIndex(-1)
+        setSearch(typedSearchRef.current)
+      } else {
+        setSelectedIndex(next)
+        setSearch(suggestions[next].value)
+      }
+    } else if (e.key === 'Enter') {
+      if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        executeSearch(suggestions[selectedIndex].value)
+      } else {
+        executeSearch(search)
+      }
+    } else if (e.key === 'Escape') {
       setShowSuggestions(false)
+      setSelectedIndex(-1)
     }
-  }, [executeSearch, search])
+  }, [executeSearch, search, showSuggestions, suggestions, selectedIndex])
 
   // Close suggestions on click outside
   useEffect(() => {
@@ -328,7 +352,10 @@ export default function AuditTrailPage() {
                         <button
                           key={`${s.type}-${i}`}
                           onClick={() => handleSuggestionClick(s)}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/50 transition-colors"
+                          className={cn(
+                            'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
+                            i === selectedIndex ? 'bg-muted' : 'hover:bg-muted/50'
+                          )}
                         >
                           <Icon className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                           <div className="flex-1 min-w-0">
