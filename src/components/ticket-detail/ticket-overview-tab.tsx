@@ -360,10 +360,7 @@ export function TicketOverviewTab({ context, basic, messages, onTabChange, onAct
       const url = stage.cta.destination
         .replace('{landlord_id}', context.landlord_id || '')
         .replace('{contractor_id}', basic.contractor_id || '')
-      console.log('[CTA navigate]', { destination: stage.cta.destination, url, landlord_id: context.landlord_id, contractor_id: basic.contractor_id })
-      // Don't navigate if ID was missing (URL ends with /)
       if (url.endsWith('/')) return
-      onClose?.()
       router.push(url)
     }
     // inline_approve and inline_dispatch handled by rendering components below
