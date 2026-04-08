@@ -36,7 +36,7 @@ import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
-import { filterActionable, filterInProgress } from '@/components/dashboard/todo-panel'
+import { filterActionable, filterInProgress, filterStuck } from '@/components/dashboard/todo-panel'
 import { JobsList } from '@/components/dashboard/jobs-list'
 import { WaitingSection } from '@/components/dashboard/waiting-section'
 import { ScheduledSection } from '@/components/dashboard/scheduled-section'
@@ -371,17 +371,10 @@ export default function DashboardPage() {
   // Lift filtered lists to parent scope for stat cards + TodoPanel props
   const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
   const inProgressItems = useMemo(() => filterInProgress(todoItems), [todoItems])
-  const contractorItems = useMemo(
-    () => inProgressItems.filter(i =>
-      i.next_action_reason === 'awaiting_contractor' || i.next_action_reason === 'awaiting_booking'
-    ), [inProgressItems]
-  )
-  const landlordItems = useMemo(
-    () => inProgressItems.filter(i =>
-      i.next_action_reason === 'awaiting_landlord' ||
-      i.next_action_reason === 'allocated_to_landlord' ||
-      i.next_action_reason === 'landlord_in_progress'
-    ), [inProgressItems]
+  const stuckItems = useMemo(() => filterStuck(todoItems), [todoItems])
+  const waitingItems = useMemo(
+    () => inProgressItems.filter(i => i.next_action_reason !== 'scheduled'),
+    [inProgressItems]
   )
   const scheduledItems = useMemo(
     () => inProgressItems.filter(i => i.next_action_reason === 'scheduled'),
@@ -581,9 +574,12 @@ export default function DashboardPage() {
           <div className="flex flex-col min-w-0 lg:flex-1 gap-6">
             {/* Top half: Waiting cards */}
             <WaitingSection
-              contractorItems={contractorItems}
-              landlordItems={landlordItems}
-              onTicketClick={(item) => openTicket(item.ticket_id)}
+              waitingItems={waitingItems}
+              stuckItems={stuckItems}
+              onTicketClick={(item) => {
+                const needsDispatchTab = item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+                openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
+              }}
             />
             {/* Bottom half: Calendar + Week panel */}
             <ScheduledSection
