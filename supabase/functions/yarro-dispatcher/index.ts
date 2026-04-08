@@ -23,9 +23,15 @@ async function handleContractorSms(
   const hasImages = images.length > 0 && images[0] !== "unprovided";
 
   // Media summary — gallery link or fallback
-  const mediaSummary = hasImages
-    ? await signedImageUrl(ticket.id)
-    : "No photos or videos provided";
+  let mediaSummary = "No photos or videos provided";
+  if (hasImages) {
+    try {
+      mediaSummary = await signedImageUrl(ticket.id);
+    } catch (err) {
+      console.warn(`[${FN}] Image URL signing failed, continuing without gallery:`, err);
+      mediaSummary = "Photos available — contact property manager";
+    }
+  }
 
   // Build access info string for {{6}}
   let accessInfo = "Contact property manager for access details";
@@ -174,9 +180,15 @@ async function handlePmSms(
   // Media summary for PM quote
   const images: string[] = ticket.images || [];
   const hasImages = images.length > 0 && images[0] !== "unprovided";
-  const mediaSummary = hasImages
-    ? await signedImageUrl(ticket.id)
-    : "No photos or videos provided";
+  let mediaSummary = "No photos or videos provided";
+  if (hasImages) {
+    try {
+      mediaSummary = await signedImageUrl(ticket.id);
+    } catch (err) {
+      console.warn(`[${FN}] Image URL signing failed, continuing without gallery:`, err);
+      mediaSummary = "Photos available — contact property manager";
+    }
+  }
 
   const result = await sendAndLog(supabase, FN, "pm-sms → Twilio send", {
     ticketId: ticket.id,
@@ -284,9 +296,15 @@ async function handleLandlordSms(
     .single();
   const llImages: string[] = ticketData?.images || [];
   const llHasImages = llImages.length > 0 && llImages[0] !== "unprovided";
-  const llMediaSummary = llHasImages
-    ? await signedImageUrl(ticket.id)
-    : "No photos or videos provided";
+  let llMediaSummary = "No photos or videos provided";
+  if (llHasImages) {
+    try {
+      llMediaSummary = await signedImageUrl(ticket.id);
+    } catch (err) {
+      console.warn(`[${FN}] Image URL signing failed, continuing without gallery:`, err);
+      llMediaSummary = "Photos available — contact property manager";
+    }
+  }
 
   const result = await sendAndLog(supabase, FN, "landlord-sms → Twilio send", {
     ticketId: ticket.id,
