@@ -52,12 +52,12 @@ export const TEMPLATES = {
   compliance_expiry_operator: "HX8f836e6e12955e849bf09b00e9f71295",  // compliance_expiry_operator_contractor
 
   // ─── Rent Reminders (yarro-rent-reminder) ───
-  rent_reminder_before:  "HXb413545f2da07b74058e874c66ea605d",   // 3 days before due
+  rent_reminder_before:  "HX5f33f45269bf1a50cf1921bc1b783c9a",   // 3 days before due (copy_yarro_rent_reminder_before)
   rent_reminder_due:     "HX8c7233c5378f6a55d1c9440fbbd722a1",   // on due date
   rent_reminder_overdue: "HXf6910c8f67b2d36b6aa22af42e860dd8",   // 3 days overdue
-  rent_chase_1d:         "PLACEHOLDER_rent_chase_1d",             // 1 day overdue chase
-  rent_chase_5d:         "PLACEHOLDER_rent_chase_5d",             // 5 days overdue chase
-  rent_chase_10d:        "PLACEHOLDER_rent_chase_10d",            // 10 days overdue chase
+  rent_chase_1d:         "HX55920887a983b849df142d410094bbff",   // 1 day overdue chase
+  rent_chase_5d:         "HX904bb8e9e662efeefc32ea7d93584589",   // 5 days overdue chase
+  rent_chase_10d:        "HX92a155003c4bdaa234dc0677f5e58f2d",   // 10 days overdue chase
 
   // ─── Onboarding (yarro-onboarding-send) ───
   onboarding_tenant:     "HXfdba8e6f489aaceb19b3c40b29d75c81",

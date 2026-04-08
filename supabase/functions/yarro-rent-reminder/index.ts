@@ -52,11 +52,13 @@ function isPlaceholder(sid: string): boolean {
 // ─── Build WhatsApp variables ───────────────────────────────────────────
 
 function buildVariables(entry: RentReminder): Record<string, string> {
-  const amount = `£${Number(entry.amount_due).toFixed(2)}`;
+  // Chase levels (4, 5, 6) show outstanding balance; pre-due reminders show full amount
+  const isChase = entry.reminder_level >= 4;
+  const amount = isChase
+    ? `£${(Number(entry.amount_due) - Number(entry.amount_paid || 0)).toFixed(2)}`
+    : `£${Number(entry.amount_due).toFixed(2)}`;
   const dueDateFormatted = formatFriendlyDate(entry.due_date);
 
-  // All 3 templates use: 1=tenant_name, 2=amount
-  // Templates 1 and 3 also use: 3=due_date
   return {
     "1": entry.tenant_name || "Tenant",
     "2": amount,
