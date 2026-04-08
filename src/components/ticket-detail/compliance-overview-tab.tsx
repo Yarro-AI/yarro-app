@@ -84,30 +84,51 @@ function getComplianceStage(basic: TicketBasic, cert: ComplianceCertData | null,
       icon: Wrench, iconBg: 'bg-muted', iconColor: 'text-muted-foreground',
       title: 'Waiting on the contractor',
       description: "The renewal request has been sent out. Sitting tight until the contractor gets back.",
-      cta: basic.contractor_id ? { label: 'Follow Up', href: `/contractors/${basic.contractor_id}` } : undefined,
+      cta: basic.compliance_certificate_id
+        ? { label: 'View Certificate', href: `/compliance/${basic.compliance_certificate_id}` }
+        : basic.contractor_id ? { label: 'Follow Up', href: `/contractors/${basic.contractor_id}` } : undefined,
     }
   }
 
-  // Default: expired or expiring
+  // compliance_pending: ticket exists but no contractor dispatched yet
+  if (reason === 'compliance_pending') {
+    const certId = basic.compliance_certificate_id
+    if (isExpired) {
+      return {
+        icon: AlertTriangle, iconBg: 'bg-danger/10', iconColor: 'text-danger',
+        title: 'Needs a contractor for renewal',
+        description: `This certificate expired${daysUntil !== null ? ` ${Math.abs(daysUntil)} days ago` : ''}. The property is non-compliant until it's renewed — get a contractor dispatched.`,
+        cta: certId ? { label: 'View Certificate', href: `/compliance/${certId}` } : undefined,
+      }
+    }
+    return {
+      icon: AlertTriangle, iconBg: 'bg-warning/10', iconColor: 'text-warning',
+      title: 'Needs a contractor for renewal',
+      description: daysUntil !== null
+        ? `This cert expires in ${daysUntil} days. A renewal ticket's been created — now dispatch a contractor to get it sorted.`
+        : 'A renewal ticket has been created. Dispatch a contractor to get it sorted.',
+      cta: certId ? { label: 'View Certificate', href: `/compliance/${certId}` } : undefined,
+    }
+  }
+
+  // Default: expired or expiring (no ticket context — shouldn't usually get here)
   if (isExpired) {
+    const certId = basic.compliance_certificate_id
     return {
       icon: AlertTriangle, iconBg: 'bg-danger/10', iconColor: 'text-danger',
       title: 'This certificate has expired',
-      description: `The property is currently non-compliant${daysUntil !== null ? ` — expired ${Math.abs(daysUntil)} days ago` : ''}. Get a renewal sorted as soon as possible.`,
-      cta: cert?.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${cert.contractor_id}` }
-        : basic.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${basic.contractor_id}` }
-        : undefined,
+      description: `The property is non-compliant${daysUntil !== null ? ` — expired ${Math.abs(daysUntil)} days ago` : ''}. Get a renewal sorted as soon as possible.`,
+      cta: certId ? { label: 'View Certificate', href: `/compliance/${certId}` } : undefined,
     }
   }
 
   if (daysUntil !== null && daysUntil <= 30) {
+    const certId = basic.compliance_certificate_id
     return {
       icon: AlertTriangle, iconBg: 'bg-warning/10', iconColor: 'text-warning',
       title: 'Certificate expiring soon',
       description: `This cert expires in ${daysUntil} days. Time to get a contractor booked in for the renewal.`,
-      cta: cert?.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${cert.contractor_id}` }
-        : basic.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${basic.contractor_id}` }
-        : undefined,
+      cta: certId ? { label: 'View Certificate', href: `/compliance/${certId}` } : undefined,
     }
   }
 
