@@ -2,7 +2,7 @@
 
 import { format, formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { Users, Wrench, Crown, Phone, Building2, CalendarClock, Play, BedDouble, Calendar, AlertTriangle, RotateCcw, GitBranch, Check } from 'lucide-react'
+import { Users, Wrench, Crown, Phone, Play, Calendar, AlertTriangle, RotateCcw, GitBranch, Check } from 'lucide-react'
 import type { TicketContext, TicketBasic, MessageData } from '@/hooks/use-ticket-detail'
 import Link from 'next/link'
 import { formatCurrency } from '@/hooks/use-ticket-detail'
@@ -24,11 +24,7 @@ function deriveCategoryFromTicket(category: string | null): TicketCategory {
 
 // --- Timeline ---
 
-interface TimelineStep {
-  label: string
-  complete: boolean
-  active: boolean
-}
+interface TimelineStep { label: string; complete: boolean; active: boolean }
 
 function deriveTimeline(basic: TicketBasic): TimelineStep[] {
   const reason = basic.next_action_reason || ''
@@ -38,7 +34,7 @@ function deriveTimeline(basic: TicketBasic): TimelineStep[] {
   const isQuoted = !!basic.contractor_quote || isApproved
   const isDispatched = !!basic.job_stage || isQuoted || ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking', 'no_contractors', 'manager_approval'].includes(reason)
 
-  const steps = [
+  const steps: TimelineStep[] = [
     { label: 'Reported', complete: true, active: false },
     { label: 'Dispatched', complete: isDispatched, active: false },
     { label: 'Quoted', complete: isQuoted, active: false },
@@ -46,45 +42,46 @@ function deriveTimeline(basic: TicketBasic): TimelineStep[] {
     { label: 'Scheduled', complete: isScheduled, active: false },
     { label: 'Completed', complete: isCompleted, active: false },
   ]
-
-  // Mark the current (last complete) step as active
   for (let i = steps.length - 1; i >= 0; i--) {
-    if (steps[i].complete) {
-      steps[i].active = true
-      break
-    }
+    if (steps[i].complete) { steps[i].active = true; break }
   }
-
   return steps
 }
 
 function HorizontalTimeline({ steps }: { steps: TimelineStep[] }) {
+  const allDone = steps.every(s => s.complete)
+  // Muted blue while in progress, green when fully complete
+  const doneCircle = allDone ? 'bg-success/20' : 'bg-primary/15'
+  const doneCheck = allDone ? 'text-success' : 'text-primary/60'
+  const doneLine = allDone ? 'bg-success/30' : 'bg-primary/20'
+
   return (
-    <div className="flex items-center w-full">
+    <div className="flex items-start w-full">
       {steps.map((step, i) => (
-        <div key={step.label} className="flex items-center flex-1 last:flex-none">
-          {/* Step circle + label */}
-          <div className="flex flex-col items-center gap-1.5">
+        <div key={step.label} className="flex items-start flex-1 last:flex-none">
+          <div className="flex flex-col items-center gap-1">
             <div className={cn(
-              'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors',
-              step.complete
-                ? step.active ? 'bg-primary ring-2 ring-primary/20' : 'bg-primary'
-                : 'bg-muted border-2 border-border'
+              'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0',
+              step.active
+                ? allDone ? 'bg-success' : 'bg-primary'
+                : step.complete
+                ? doneCircle
+                : 'border-2 border-border bg-transparent'
             )}>
-              {step.complete && <Check className="w-3 h-3 text-white" />}
+              {step.active && <div className="w-2 h-2 rounded-full bg-white" />}
+              {step.complete && !step.active && <Check className={cn('w-3 h-3', doneCheck)} />}
             </div>
             <span className={cn(
-              'text-[10px] font-medium whitespace-nowrap',
-              step.complete ? step.active ? 'text-primary font-semibold' : 'text-card-foreground' : 'text-muted-foreground'
+              'text-[10px] whitespace-nowrap',
+              step.active ? (allDone ? 'font-semibold text-success' : 'font-semibold text-primary') : step.complete ? 'text-muted-foreground' : 'text-muted-foreground/50'
             )}>
               {step.label}
             </span>
           </div>
-          {/* Connector line */}
           {i < steps.length - 1 && (
             <div className={cn(
-              'flex-1 h-0.5 mx-1 mt-[-18px]',
-              steps[i + 1].complete ? 'bg-primary' : 'bg-border'
+              'flex-1 h-px mx-1 mt-[10px]',
+              steps[i + 1].complete ? doneLine : 'bg-border'
             )} />
           )}
         </div>
@@ -195,7 +192,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
         </div>
       </div>
 
-      {/* ── Card 2: Current Stage — Timeline ── */}
+      {/* ── Card 2: Current Stage ── */}
       <div className="bg-card rounded-xl border border-border p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Current Stage</p>
 
@@ -203,7 +200,7 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
 
         {/* Deviation branches */}
         {(basic.landlord_allocated || basic.ooh_dispatched || basic.next_action_reason === 'job_not_completed' || basic.reschedule_requested) && (
-          <div className="mt-4 space-y-2">
+          <div className="space-y-2">
             {basic.ooh_dispatched && (
               <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
                 <Phone className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
@@ -299,7 +296,65 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
         })()}
       </div>
 
-      {/* ── Card 3: People — 3 square cards ── */}
+      {/* ── Card 3: Job Details ── */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Job Details</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Quote</span>
+            {basic.contractor_quote ? (
+              <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(basic.contractor_quote)}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground/60">Not yet received</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Markup</span>
+            {markup != null ? (
+              <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(markup)}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground/60">—</span>
+            )}
+          </div>
+
+          {basic.final_amount != null && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Final Amount</span>
+              <span className="text-base font-bold text-card-foreground font-mono">{formatCurrency(basic.final_amount)}</span>
+            </div>
+          )}
+
+          {basic.contractor_quote && context.auto_approve_limit != null && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Approval</span>
+              {basic.contractor_quote <= context.auto_approve_limit ? (
+                <span className="text-sm text-success font-semibold">Within limit ({formatCurrency(context.auto_approve_limit)})</span>
+              ) : (
+                <span className="text-sm text-warning font-semibold">Requires landlord · limit {formatCurrency(context.auto_approve_limit)}</span>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Scheduled</span>
+            {basic.scheduled_date ? (
+              <span className="text-sm font-semibold text-card-foreground">
+                {format(new Date(basic.scheduled_date), 'd MMM yyyy')}
+                {(() => {
+                  const h = new Date(basic.scheduled_date).getHours()
+                  const slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
+                  return <span className="text-muted-foreground font-normal ml-1.5">· {slot}</span>
+                })()}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground/60">Not yet scheduled</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Card 4: People — 3 square cards ── */}
       <div className="bg-card rounded-xl border border-border p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">People</p>
         <div className="grid grid-cols-3 gap-2">
@@ -404,64 +459,6 @@ export function TicketOverviewTab({ context, basic, onTabChange }: TicketOvervie
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* ── Card 4: Job Details ── */}
-      <div className="bg-card rounded-xl border border-border p-5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Job Details</p>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Quote</span>
-            {basic.contractor_quote ? (
-              <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(basic.contractor_quote)}</span>
-            ) : (
-              <span className="text-sm text-muted-foreground/60">Not yet received</span>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Markup</span>
-            {markup != null ? (
-              <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(markup)}</span>
-            ) : (
-              <span className="text-sm text-muted-foreground/60">—</span>
-            )}
-          </div>
-
-          {basic.final_amount != null && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Final Amount</span>
-              <span className="text-base font-bold text-card-foreground font-mono">{formatCurrency(basic.final_amount)}</span>
-            </div>
-          )}
-
-          {basic.contractor_quote && context.auto_approve_limit != null && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Approval</span>
-              {basic.contractor_quote <= context.auto_approve_limit ? (
-                <span className="text-sm text-success font-semibold">Within limit ({formatCurrency(context.auto_approve_limit)})</span>
-              ) : (
-                <span className="text-sm text-warning font-semibold">Requires landlord · limit {formatCurrency(context.auto_approve_limit)}</span>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Scheduled</span>
-            {basic.scheduled_date ? (
-              <span className="text-sm font-semibold text-card-foreground">
-                {format(new Date(basic.scheduled_date), 'd MMM yyyy')}
-                {(() => {
-                  const h = new Date(basic.scheduled_date).getHours()
-                  const slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
-                  return <span className="text-muted-foreground font-normal ml-1.5">· {slot}</span>
-                })()}
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground/60">Not yet scheduled</span>
-            )}
-          </div>
         </div>
       </div>
 

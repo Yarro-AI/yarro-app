@@ -129,7 +129,7 @@ export function TicketDetailModal({
         side="right"
         hideCloseButton={true}
         title={context?.property_address || 'Ticket Details'}
-        className="w-[50vw] min-w-[600px] max-w-none p-0 flex flex-col overflow-x-hidden"
+        className="w-[50vw] min-w-[600px] max-w-none p-0 !gap-0 flex flex-col overflow-x-hidden"
       >
         {/* Header — slim nav bar */}
         <div className="px-4 py-2 flex items-center justify-between flex-shrink-0">
