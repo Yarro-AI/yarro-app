@@ -13,6 +13,7 @@ interface RentReminder {
   room_id: string;
   tenant_id: string;
   property_manager_id: string;
+  property_id: string;
   due_date: string;
   amount_due: number;
   amount_paid: number;
@@ -207,23 +208,16 @@ Deno.serve(async (_req: Request) => {
     if (rpcError) {
       await alertTelegram(FN, "RPC get_rent_reminders_due", rpcError.message);
       return new Response(JSON.stringify({ error: rpcError.message }), {
-        status: 500,
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    if (!entries || entries.length === 0) {
-      console.log(`[${FN}] No rent reminders due today`);
-      return new Response(
-        JSON.stringify({ message: "No rent reminders due", count: 0 }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    console.log(`[${FN}] Processing ${entries.length} rent reminders`);
+    const reminderEntries = (entries ?? []) as RentReminder[];
+    console.log(`[${FN}] Processing ${reminderEntries.length} rent reminders`);
 
     const results: ReminderResult[] = [];
-    for (const entry of entries as RentReminder[]) {
+    for (const entry of reminderEntries) {
       try {
         const result = await processReminder(supabase, entry);
         results.push(result);
@@ -249,27 +243,35 @@ Deno.serve(async (_req: Request) => {
     const skipped = results.filter((r) => r.skipped).length;
     const failed = results.filter((r) => !r.sent && !r.skipped).length;
 
-    // ─── Escalation pass: create tickets for tenants past all reminders ───
+    // ─── Ticket pass: create/update arrears tickets for overdue tenants ───
+    // Runs independently of reminders — even if no WhatsApp reminders are due,
+    // overdue tenants still need tickets created/priority escalated.
     let escalated = 0;
     try {
-      // Get distinct PM IDs from the entries we just processed
-      const pmIds = [...new Set((entries as RentReminder[]).map((e) => e.property_manager_id))];
+      const { data: pmRows } = await supabase
+        .from("c1_rent_ledger")
+        .select("property_manager_id")
+        .in("status", ["overdue", "partial"])
+        .gte("due_date", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
+        .lt("due_date", new Date().toISOString().split("T")[0]);
+
+      const pmIds = [...new Set((pmRows ?? []).map((r: { property_manager_id: string }) => r.property_manager_id))];
 
       for (const pmId of pmIds) {
-        const { data: escalations, error: escError } = await supabase.rpc(
-          "rent_escalation_check",
+        const { data: overdue, error: overdueError } = await supabase.rpc(
+          "get_rent_overdue_for_tickets",
           { p_pm_id: pmId },
         );
 
-        if (escError) {
-          console.error(`[${FN}] rent_escalation_check failed for PM ${pmId}:`, escError.message);
-          await alertTelegram(FN, "rent_escalation_check", escError.message, { pm_id: pmId });
+        if (overdueError) {
+          console.error(`[${FN}] get_rent_overdue_for_tickets failed for PM ${pmId}:`, overdueError.message);
+          await alertTelegram(FN, "get_rent_overdue_for_tickets", overdueError.message, { pm_id: pmId });
           continue;
         }
 
-        if (!escalations || escalations.length === 0) continue;
+        if (!overdue || overdue.length === 0) continue;
 
-        for (const esc of escalations as Array<{
+        for (const tenant of overdue as Array<{
           tenant_id: string;
           property_manager_id: string;
           property_id: string;
@@ -278,36 +280,41 @@ Deno.serve(async (_req: Request) => {
           months_overdue: number;
           total_arrears: number;
           earliest_overdue: string;
+          days_overdue: number;
+          priority: string;
         }>) {
-          const title = `Rent arrears: ${esc.tenant_name || "Unknown tenant"}`;
-          const desc = `${esc.months_overdue} month(s) overdue, £${Number(esc.total_arrears).toFixed(2)} total arrears since ${esc.earliest_overdue}`;
+          const title = `Rent arrears: ${tenant.tenant_name || "Unknown tenant"}`;
+          const desc = `${tenant.months_overdue} month(s) overdue, £${Number(tenant.total_arrears).toFixed(2)} total arrears since ${tenant.earliest_overdue} (${tenant.days_overdue} days)`;
 
           const { error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
-            p_property_manager_id: esc.property_manager_id,
-            p_property_id: esc.property_id,
-            p_tenant_id: esc.tenant_id,
+            p_property_manager_id: tenant.property_manager_id,
+            p_property_id: tenant.property_id,
+            p_tenant_id: tenant.tenant_id,
             p_issue_title: title,
             p_issue_description: desc,
+            p_priority: tenant.priority,
           });
 
           if (ticketError) {
-            console.error(`[${FN}] create_rent_arrears_ticket failed for tenant ${esc.tenant_id}:`, ticketError.message);
+            console.error(`[${FN}] create_rent_arrears_ticket failed for tenant ${tenant.tenant_id}:`, ticketError.message);
             await alertTelegram(FN, "create_rent_arrears_ticket", ticketError.message, {
-              tenant: esc.tenant_name,
-              property: esc.property_address,
+              tenant: tenant.tenant_name,
+              property: tenant.property_address,
             });
           } else {
             escalated++;
-            console.log(`[${FN}] Created rent arrears ticket for ${esc.tenant_name} at ${esc.property_address}`);
+            console.log(`[${FN}] Rent arrears ticket [${tenant.priority}] for ${tenant.tenant_name} at ${tenant.property_address}`);
 
             await supabase.rpc("c1_log_system_event", {
-              p_pm_id: esc.property_manager_id,
-              p_event_type: "RENT_ARREARS_ESCALATED",
-              p_property_label: esc.property_address,
+              p_pm_id: tenant.property_manager_id,
+              p_event_type: "RENT_ARREARS_TICKET_CREATED",
+              p_property_label: tenant.property_address,
               p_metadata: {
-                tenant_name: esc.tenant_name,
-                months_overdue: esc.months_overdue,
-                total_arrears: esc.total_arrears,
+                tenant_name: tenant.tenant_name,
+                months_overdue: tenant.months_overdue,
+                total_arrears: tenant.total_arrears,
+                days_overdue: tenant.days_overdue,
+                priority: tenant.priority,
               },
             });
           }
@@ -315,8 +322,8 @@ Deno.serve(async (_req: Request) => {
       }
     } catch (escErr) {
       const msg = escErr instanceof Error ? escErr.message : String(escErr);
-      console.error(`[${FN}] Escalation pass error:`, msg);
-      await alertTelegram(FN, "Escalation pass", msg);
+      console.error(`[${FN}] Ticket pass error:`, msg);
+      await alertTelegram(FN, "Ticket pass", msg);
     }
 
     const summary = { total: results.length, sent, skipped, failed, escalated, results };
@@ -341,7 +348,7 @@ Deno.serve(async (_req: Request) => {
     console.error(`[${FN}] Unhandled error:`, msg);
     await alertTelegram(FN, "Unhandled exception", msg);
     return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
+      status: 200,
       headers: { "Content-Type": "application/json" },
     });
   }

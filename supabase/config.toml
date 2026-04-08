@@ -26,5 +26,8 @@ verify_jwt = false
 [functions.yarro-ticket-notify]
 verify_jwt = false
 
+[functions.yarro-rent-reminder]
+verify_jwt = false
+
 [functions.yarro-compliance-reminder]
 verify_jwt = false

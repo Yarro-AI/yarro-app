@@ -106,11 +106,12 @@ All 5 are SECURITY DEFINER and protected. Called only by `c1_compute_next_action
 ## Rent Arrears Functions
 
 ### create_rent_arrears_ticket
-- **Purpose:** Creates consolidated rent arrears ticket per tenant. Dedup built-in — returns existing ticket if open.
-- **Signature:** `(p_property_manager_id uuid, p_property_id uuid, p_tenant_id uuid, p_issue_title text, p_issue_description text) RETURNS uuid`
-- **Live in:** `20260404300000_polymorphic_subroutines.sql`
-- **Called by:** `yarro-rent-reminder` edge function (escalation pass)
-- **Breaks:** Rent escalation creates no tickets — overdue tenants invisible on dashboard
+- **Purpose:** Creates consolidated rent arrears ticket per tenant. Dedup built-in — returns existing ticket if open. Escalates priority on dedup.
+- **Signature:** `(p_property_manager_id uuid, p_property_id uuid, p_tenant_id uuid, p_issue_title text, p_issue_description text, p_priority text DEFAULT 'high') RETURNS uuid`
+- **Live in:** `20260409400000_rent_day1_tickets.sql` (was `20260404300000_polymorphic_subroutines.sql`)
+- **Called by:** `yarro-rent-reminder` edge function (day-1 ticket pass)
+- **Breaks:** Rent arrears creates no tickets — overdue tenants invisible on dashboard
+- **Last modified:** 2026-04-09 — Added p_priority parameter, dedup now updates priority + description
 
 ### record_rent_payment
 - **Purpose:** Records payment with audit trail. Trigger recomputes ledger. Auto-closes ticket if all arrears cleared.

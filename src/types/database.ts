@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       c1_compliance_certificates: {
@@ -2427,16 +2402,28 @@ export type Database = {
           next_action_reason: string
         }[]
       }
-      create_rent_arrears_ticket: {
-        Args: {
-          p_issue_description: string
-          p_issue_title: string
-          p_property_id: string
-          p_property_manager_id: string
-          p_tenant_id: string
-        }
-        Returns: string
-      }
+      create_rent_arrears_ticket:
+        | {
+            Args: {
+              p_issue_description: string
+              p_issue_title: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_issue_description: string
+              p_issue_title: string
+              p_priority?: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id: string
+            }
+            Returns: string
+          }
       create_rent_ledger_entries: {
         Args: {
           p_month: number
@@ -2522,6 +2509,21 @@ export type Database = {
           tenant_name: string
         }[]
       }
+      get_rent_overdue_for_tickets: {
+        Args: { p_pm_id: string }
+        Returns: {
+          days_overdue: number
+          earliest_overdue: string
+          months_overdue: number
+          priority: string
+          property_address: string
+          property_id: string
+          property_manager_id: string
+          tenant_id: string
+          tenant_name: string
+          total_arrears: number
+        }[]
+      }
       get_rent_portfolio_summary: {
         Args: { p_month: number; p_pm_id: string; p_year: number }
         Returns: {
@@ -2548,6 +2550,7 @@ export type Database = {
           due_date: string
           ledger_id: string
           property_address: string
+          property_id: string
           property_manager_id: string
           reminder_level: number
           room_id: string
@@ -2869,9 +2872,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       certificate_type: [
