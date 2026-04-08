@@ -69,9 +69,15 @@ export function TicketDetailModal({
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState(defaultTab || 'overview')
 
+  // Derive template once — used for tab reset and rendering
+  const ticketTemplate = (basic?.category || context?.category) === 'compliance_renewal' ? 'compliance'
+    : (basic?.category || context?.category) === 'rent_arrears' ? 'rent'
+    : 'maintenance'
+
+  // Reset tab when ticket or template changes
   useEffect(() => {
     setActiveTab(defaultTab || 'overview')
-  }, [defaultTab, ticketId])
+  }, [defaultTab, ticketId, ticketTemplate])
 
   const handleCloseTicket = async () => {
     if (!ticketId) return
@@ -191,17 +197,11 @@ export function TicketDetailModal({
             </div>
           ) : context && basic ? (
             <div className="flex-1 min-h-0 flex flex-col animate-in fade-in-0 duration-200">
-              {/* Template: determine which layout to render */}
+              {/* Template: render layout based on ticketTemplate */}
               {(() => {
-                const cat = basic.category || context.category
-                const template = cat === 'compliance_renewal' ? 'compliance'
-                  : cat === 'rent_arrears' ? 'rent'
-                  : 'maintenance'
-
-                if (template === 'compliance') {
+                if (ticketTemplate === 'compliance') {
                   return (
                     <>
-                      {/* Tab bar */}
                       <div className="flex items-end gap-6 border-b border-border/40 px-6 flex-shrink-0 overflow-x-auto">
                         <button onClick={() => setActiveTab('overview')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
                           <span className={cn('text-sm font-medium transition-colors', activeTab === 'overview' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Overview</span>
@@ -226,12 +226,12 @@ export function TicketDetailModal({
                   )
                 }
 
-                if (template === 'rent') {
+                if (ticketTemplate === 'rent') {
                   return (
                     <>
                       <div className="flex items-end gap-6 border-b border-border/40 px-6 flex-shrink-0 overflow-x-auto">
                         <button onClick={() => setActiveTab('overview')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
-                          <span className={cn('text-sm font-medium transition-colors', activeTab === 'overview' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Overview</span>
+                          <span className="text-sm font-medium text-primary">Overview</span>
                         </button>
                       </div>
                       <div className="flex-1 min-h-0 overflow-y-auto">
