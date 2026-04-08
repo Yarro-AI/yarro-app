@@ -37,9 +37,10 @@ export function TicketDrawerProvider({ children }: { children: ReactNode }) {
   const tab = searchParams.get('tab') ?? undefined
   const action = searchParams.get('action')
 
-  // Open when ticketId appears (not when closing)
+  // Sync open state with ticketId presence
   useEffect(() => {
     if (ticketId && !closingRef.current) setOpen(true)
+    if (!ticketId && !closingRef.current) setOpen(false)
   }, [ticketId])
 
   const handleClose = () => {
