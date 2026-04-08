@@ -92,7 +92,7 @@ export default function AuditProfilePage() {
 
   if (loading) {
     return (
-      <PageShell title="Audit Trail">
+      <PageShell scrollable>
         <div className="flex items-center justify-center py-24 text-muted-foreground">
           <p className="text-sm">Loading audit profile...</p>
         </div>
@@ -102,7 +102,7 @@ export default function AuditProfilePage() {
 
   if (error || !ticket) {
     return (
-      <PageShell title="Audit Trail">
+      <PageShell scrollable>
         <div className="flex items-center justify-center py-24 text-muted-foreground">
           <p className="text-sm">{error || 'Ticket not found'}</p>
         </div>
@@ -111,7 +111,7 @@ export default function AuditProfilePage() {
   }
 
   return (
-    <PageShell title="Audit Trail">
+    <PageShell scrollable>
       <div className="space-y-6 pb-8">
         <AuditProfileHeader
           ticket={ticket}

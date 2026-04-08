@@ -2,7 +2,7 @@ import { PageShell } from '@/components/page-shell'
 
 export default function AuditProfileLoading() {
   return (
-    <PageShell title="Audit Trail">
+    <PageShell scrollable>
       <div className="space-y-4 animate-pulse">
         {/* Back link placeholder */}
         <div className="h-4 w-32 bg-muted rounded" />
