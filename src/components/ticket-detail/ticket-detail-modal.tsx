@@ -281,7 +281,7 @@ export function TicketDetailModal({
                     {/* Tab content */}
                     {activeTab === 'overview' && (
                       <div className="flex-1 min-h-0 overflow-y-auto">
-                        <TicketOverviewTab context={context} basic={basic} messages={messages} onTabChange={setActiveTab} onActionTaken={() => { refetch(); onTicketUpdated?.() }} onToggleHold={handleToggleHold} />
+                        <TicketOverviewTab context={context} basic={basic} messages={messages} onTabChange={setActiveTab} onActionTaken={() => { refetch(); onTicketUpdated?.() }} onToggleHold={handleToggleHold} onClose={onClose} />
                       </div>
                     )}
                     {activeTab === 'conversation' && showConversationTab && (

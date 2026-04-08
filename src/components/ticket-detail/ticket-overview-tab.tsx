@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { format, formatDistanceToNow, differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { Users, Wrench, Crown, Phone, Play, Calendar, AlertTriangle, RotateCcw, Check, Circle, CircleDollarSign, XCircle, HelpCircle, AlertCircle, MessageSquare, CalendarClock, Pause, CheckCircle2 } from 'lucide-react'
@@ -318,10 +319,12 @@ interface TicketOverviewTabProps {
   onTabChange?: (tab: string) => void
   onActionTaken?: () => void
   onToggleHold?: () => void
+  onClose?: () => void
 }
 
-export function TicketOverviewTab({ context, basic, messages, onTabChange, onActionTaken, onToggleHold }: TicketOverviewTabProps) {
+export function TicketOverviewTab({ context, basic, messages, onTabChange, onActionTaken, onToggleHold, onClose }: TicketOverviewTabProps) {
   const router = useRouter()
+  const [showNotes, setShowNotes] = useState(false)
   const images = basic.images || []
   const markup = basic.final_amount && basic.contractor_quote
     ? Math.abs(basic.final_amount - basic.contractor_quote)
@@ -339,6 +342,14 @@ export function TicketOverviewTab({ context, basic, messages, onTabChange, onAct
   const stageDesc = typeof stage.description === 'function' ? stage.description(basic, context) : stage.description
   const stageTimer = stage.timer?.(basic)
 
+  // Check if this state has notes to show
+  const hasNotes = !!(
+    ((reason === 'ooh_unresolved' || reason === 'ooh_resolved' || reason === 'ooh_dispatched') && basic.ooh_notes) ||
+    ((reason === 'ooh_unresolved' || reason === 'ooh_resolved') && basic.ooh_cost != null && basic.ooh_cost > 0) ||
+    ((reason === 'landlord_resolved' || reason === 'landlord_needs_help') && basic.landlord_notes) ||
+    (reason === 'landlord_resolved' && basic.landlord_cost != null && basic.landlord_cost > 0)
+  )
+
   const handleCta = () => {
     if (!stage.cta) return
     if (stage.cta.action === 'tab') {
@@ -349,6 +360,7 @@ export function TicketOverviewTab({ context, basic, messages, onTabChange, onAct
       const url = stage.cta.destination
         .replace('{landlord_id}', context.landlord_id || '')
         .replace('{contractor_id}', basic.contractor_id || '')
+      onClose?.()
       router.push(url)
     }
     // inline_approve and inline_dispatch handled by rendering components below
@@ -387,37 +399,52 @@ export function TicketOverviewTab({ context, basic, messages, onTabChange, onAct
       </div>
 
       {/* ── Card 2: Current Stage ── */}
-      <div className="bg-card rounded-xl border border-border p-5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Current Stage</p>
+      <div className="bg-card rounded-xl border border-border p-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-5">Current Stage</p>
 
         <HorizontalTimeline steps={timelineSteps} />
 
         {/* Stage block */}
-        <div className="mt-4 flex items-start gap-3">
-          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0', stage.iconBg)}>
-            <StageIcon className={cn('w-4.5 h-4.5', stage.iconColor)} />
+        <div className="mt-6 flex items-start gap-4">
+          <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', stage.iconBg)}>
+            <StageIcon className={cn('w-5 h-5', stage.iconColor)} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-card-foreground">{stage.title}</p>
-            <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{stageDesc}</p>
+            {/* Title row with optional "View notes" */}
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-card-foreground">{stage.title}</p>
+              {hasNotes && (
+                <button
+                  onClick={() => setShowNotes(v => !v)}
+                  className="text-xs font-medium text-primary hover:text-primary/70 transition-colors whitespace-nowrap flex-shrink-0"
+                >
+                  {showNotes ? 'Hide notes' : 'View notes'}
+                </button>
+              )}
+            </div>
+
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{stageDesc}</p>
+
             {stageTimer && (
-              <p className="text-xs text-muted-foreground/70 mt-1">{stageTimer}</p>
+              <p className="text-xs text-muted-foreground/70 mt-2">{stageTimer}</p>
             )}
 
-            {/* OOH notes/cost */}
-            {(reason === 'ooh_unresolved' || reason === 'ooh_resolved' || reason === 'ooh_dispatched') && basic.ooh_notes && (
-              <p className="text-xs text-muted-foreground mt-1.5">Notes: {basic.ooh_notes}</p>
-            )}
-            {(reason === 'ooh_unresolved' || reason === 'ooh_resolved') && basic.ooh_cost != null && basic.ooh_cost > 0 && (
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">Cost: {formatCurrency(basic.ooh_cost)}</p>
-            )}
-
-            {/* Landlord notes/cost */}
-            {(reason === 'landlord_resolved' || reason === 'landlord_needs_help') && basic.landlord_notes && (
-              <p className="text-xs text-muted-foreground mt-1.5">Notes: {basic.landlord_notes}</p>
-            )}
-            {reason === 'landlord_resolved' && basic.landlord_cost != null && basic.landlord_cost > 0 && (
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">Cost: {formatCurrency(basic.landlord_cost)}</p>
+            {/* Notes panel (toggled) */}
+            {showNotes && hasNotes && (
+              <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5 space-y-1">
+                {(reason === 'ooh_unresolved' || reason === 'ooh_resolved' || reason === 'ooh_dispatched') && basic.ooh_notes && (
+                  <p className="text-sm text-card-foreground">{basic.ooh_notes}</p>
+                )}
+                {(reason === 'ooh_unresolved' || reason === 'ooh_resolved') && basic.ooh_cost != null && basic.ooh_cost > 0 && (
+                  <p className="text-xs text-muted-foreground font-mono">Cost: {formatCurrency(basic.ooh_cost)}</p>
+                )}
+                {(reason === 'landlord_resolved' || reason === 'landlord_needs_help') && basic.landlord_notes && (
+                  <p className="text-sm text-card-foreground">{basic.landlord_notes}</p>
+                )}
+                {reason === 'landlord_resolved' && basic.landlord_cost != null && basic.landlord_cost > 0 && (
+                  <p className="text-xs text-muted-foreground font-mono">Cost: {formatCurrency(basic.landlord_cost)}</p>
+                )}
+              </div>
             )}
 
             {/* Inline actions */}

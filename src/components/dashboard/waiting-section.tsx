@@ -58,20 +58,27 @@ function groupWaitingItems(items: TodoItem[]): Group[] {
   ].filter(g => g.items.length > 0)
 }
 
+const BLOCKED_REASONS = new Set([
+  'landlord_declined', 'landlord_needs_help', 'ooh_unresolved', 'job_not_completed',
+])
+
 function groupStuckItems(items: TodoItem[]): Group[] {
   const unresponsive: TodoItem[] = []
-  const stale: TodoItem[] = []
+  const blocked: TodoItem[] = []
+  const noResponse: TodoItem[] = []
   const overdue: TodoItem[] = []
 
   for (const item of items) {
     if (item.action_type === 'CONTRACTOR_UNRESPONSIVE') unresponsive.push(item)
     else if (item.action_type === 'SCHEDULED_OVERDUE') overdue.push(item)
-    else stale.push(item) // STALE_AWAITING + fallback
+    else if (BLOCKED_REASONS.has(item.next_action_reason || '')) blocked.push(item)
+    else noResponse.push(item) // landlord_no_response, STALE_AWAITING, fallback
   }
 
   return [
     { key: 'unresponsive', label: 'Unresponsive contractor', items: unresponsive },
-    { key: 'stale', label: 'Waiting too long', items: stale },
+    { key: 'blocked', label: 'Blocked', items: blocked },
+    { key: 'no-response', label: 'No response', items: noResponse },
     { key: 'overdue', label: 'Overdue', items: overdue },
   ].filter(g => g.items.length > 0)
 }

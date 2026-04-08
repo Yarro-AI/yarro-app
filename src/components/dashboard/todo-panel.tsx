@@ -137,25 +137,41 @@ export function getTodoHref(item: TodoItem): string | null {
 // ─────────────────────────────────────────────────────────
 // Filtering helpers (used in parent to lift counts)
 // ─────────────────────────────────────────────────────────
+// Classification by nature of the state:
+//   Needs Action = PM must make a decision
+//   Waiting      = someone else is on it, not timed out
+//   Stuck        = someone else dropped the ball OR RPC timeout escalated
+//   Scheduled    = booked, waiting for date
 
-// Aligned with polymorphic dispatch: next_action = 'in_progress' states
-export const IN_PROGRESS_REASONS = new Set([
-  'scheduled', 'awaiting_booking', 'awaiting_contractor',
-  'awaiting_landlord', 'allocated_to_landlord', 'landlord_in_progress',
-  'ooh_in_progress',
+export const WAITING_REASONS = new Set([
+  'awaiting_contractor', 'awaiting_landlord', 'awaiting_booking',
+  'allocated_to_landlord', 'landlord_in_progress', 'ooh_in_progress', 'ooh_dispatched',
 ])
 
-// Escalation action_types — items that have stalled and need a push
+export const SCHEDULED_REASONS = new Set(['scheduled'])
+
+// Items stuck by nature — someone blocked or failed
+export const STUCK_REASONS = new Set([
+  'landlord_no_response', 'landlord_declined', 'landlord_needs_help',
+  'ooh_unresolved', 'job_not_completed',
+])
+
+// RPC timeout escalations that promote waiting → stuck
 export const STUCK_ACTION_TYPES = new Set([
   'CONTRACTOR_UNRESPONSIVE',
   'STALE_AWAITING',
   'SCHEDULED_OVERDUE',
 ])
 
+// Keep for backward compat — union of waiting + scheduled
+export const IN_PROGRESS_REASONS = new Set([...WAITING_REASONS, ...SCHEDULED_REASONS])
+
 export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
     if (STUCK_ACTION_TYPES.has(i.action_type)) return false
-    if (IN_PROGRESS_REASONS.has(i.next_action_reason || '')) return false
+    if (STUCK_REASONS.has(i.next_action_reason || '')) return false
+    if (WAITING_REASONS.has(i.next_action_reason || '')) return false
+    if (SCHEDULED_REASONS.has(i.next_action_reason || '')) return false
     return true
   })
 }
@@ -163,11 +179,14 @@ export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
 export function filterInProgress(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
     if (STUCK_ACTION_TYPES.has(i.action_type)) return false
-    return IN_PROGRESS_REASONS.has(i.next_action_reason || '')
+    if (STUCK_REASONS.has(i.next_action_reason || '')) return false
+    return WAITING_REASONS.has(i.next_action_reason || '') || SCHEDULED_REASONS.has(i.next_action_reason || '')
   })
 }
 
 export function filterStuck(todoItems: TodoItem[]): TodoItem[] {
-  return todoItems.filter(i => STUCK_ACTION_TYPES.has(i.action_type))
+  return todoItems.filter(i =>
+    STUCK_ACTION_TYPES.has(i.action_type) || STUCK_REASONS.has(i.next_action_reason || '')
+  )
 }
 
