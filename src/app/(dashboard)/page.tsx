@@ -38,6 +38,8 @@ import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { filterActionable, filterInProgress } from '@/components/dashboard/todo-panel'
 import { JobsList } from '@/components/dashboard/jobs-list'
+import { WaitingSection } from '@/components/dashboard/waiting-section'
+import { ScheduledSection } from '@/components/dashboard/scheduled-section'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
 import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
 import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
@@ -369,9 +371,17 @@ export default function DashboardPage() {
   // Lift filtered lists to parent scope for stat cards + TodoPanel props
   const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
   const inProgressItems = useMemo(() => filterInProgress(todoItems), [todoItems])
-  const waitingItems = useMemo(
-    () => inProgressItems.filter(i => i.next_action_reason !== 'scheduled'),
-    [inProgressItems]
+  const contractorItems = useMemo(
+    () => inProgressItems.filter(i =>
+      i.next_action_reason === 'awaiting_contractor' || i.next_action_reason === 'awaiting_booking'
+    ), [inProgressItems]
+  )
+  const landlordItems = useMemo(
+    () => inProgressItems.filter(i =>
+      i.next_action_reason === 'awaiting_landlord' ||
+      i.next_action_reason === 'allocated_to_landlord' ||
+      i.next_action_reason === 'landlord_in_progress'
+    ), [inProgressItems]
   )
   const scheduledItems = useMemo(
     () => inProgressItems.filter(i => i.next_action_reason === 'scheduled'),
@@ -379,9 +389,11 @@ export default function DashboardPage() {
   )
   const scheduledDateMap = useMemo(() => {
     const map = new Map<string, string>()
-    allTickets.forEach(t => { if (t.scheduled_date) map.set(t.id, t.scheduled_date) })
+    todoItems.forEach(t => {
+      if (t.scheduled_date) map.set(t.ticket_id, t.scheduled_date)
+    })
     return map
-  }, [allTickets])
+  }, [todoItems])
 
   // Pre-compute category sub-filter for onboarding mode (maintenance only)
   const maintenanceTodos = useMemo(() => actionable.filter(i => {
@@ -567,53 +579,18 @@ export default function DashboardPage() {
 
           {/* Right column — Waiting + Scheduled */}
           <div className="flex flex-col min-w-0 lg:flex-1 gap-6">
-
-            {/* Waiting card */}
-            <div className="flex flex-col bg-card border border-border rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
-                <span className="text-base font-semibold text-foreground">Waiting</span>
-                {waitingItems.length > 0 && (
-                  <span className="text-xs font-bold text-primary bg-primary/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                    {waitingItems.length}
-                  </span>
-                )}
-              </div>
-              {waitingItems.length === 0 ? (
-                <div className="flex items-center justify-center p-6">
-                  <p className="text-sm text-muted-foreground">Nothing waiting</p>
-                </div>
-              ) : (
-                <JobsList
-                  items={waitingItems}
-                  onHandoffClick={() => {}}
-                  onTicketClick={(item) => openTicket(item.ticket_id)}
-                />
-              )}
-            </div>
-
-            {/* Scheduled card */}
-            <div className="flex flex-col bg-card border border-border rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
-                <span className="text-base font-semibold text-foreground">Scheduled</span>
-                {scheduledItems.length > 0 && (
-                  <span className="text-xs font-bold text-success bg-success/10 rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                    {scheduledItems.length}
-                  </span>
-                )}
-              </div>
-              {scheduledItems.length === 0 ? (
-                <div className="flex items-center justify-center p-6">
-                  <p className="text-sm text-muted-foreground">No scheduled jobs</p>
-                </div>
-              ) : (
-                <JobsList
-                  items={scheduledItems}
-                  onHandoffClick={() => {}}
-                  onTicketClick={(item) => openTicket(item.ticket_id)}
-                  scheduledDateMap={scheduledDateMap}
-                />
-              )}
-            </div>
+            {/* Top half: Waiting cards */}
+            <WaitingSection
+              contractorItems={contractorItems}
+              landlordItems={landlordItems}
+              onTicketClick={(item) => openTicket(item.ticket_id)}
+            />
+            {/* Bottom half: Calendar + Week panel */}
+            <ScheduledSection
+              scheduledItems={scheduledItems}
+              scheduledDateMap={scheduledDateMap}
+              onTicketClick={(item) => openTicket(item.ticket_id)}
+            />
 
           </div>
         </div>

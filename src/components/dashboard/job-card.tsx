@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 import { CategoryBadge } from './category-badge'
 import { getTodoHref, deriveUrgency, deriveCategory } from './todo-panel'
@@ -12,7 +11,6 @@ interface JobCardProps {
   item: TodoItem
   onHandoffClick: (item: TodoItem) => void
   onTicketClick: (item: TodoItem) => void
-  scheduledDate?: string | null
 }
 
 /** Circular SLA countdown — only visible when <=24h remain */
@@ -49,7 +47,7 @@ function SlaRing({ slaDueAt }: { slaDueAt: string }) {
   )
 }
 
-export function JobCard({ item, onHandoffClick, onTicketClick, scheduledDate }: JobCardProps) {
+export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
   const href = getTodoHref(item)
   const urgency = deriveUrgency(item)
   const category = deriveCategory(item)
@@ -84,15 +82,16 @@ export function JobCard({ item, onHandoffClick, onTicketClick, scheduledDate }: 
       <div className="min-w-0">
         <p className="text-[15px] font-semibold text-[#111827] truncate">{item.issue_summary}</p>
         <p className="text-sm text-[#6B7280] truncate mt-0.5">{item.property_label}</p>
-        {scheduledDate && (
-          <p className="text-sm text-success font-medium mt-0.5">
-            {format(new Date(scheduledDate), 'd MMM')}
-          </p>
-        )}
       </div>
-      {/* Col 3: SLA ring (fixed width, centered) */}
+      {/* Col 3: SLA ring OR stale indicator */}
       <div className="flex items-center justify-center">
-        {item.sla_due_at ? <SlaRing slaDueAt={item.sla_due_at} /> : null}
+        {item.sla_due_at ? (
+          <SlaRing slaDueAt={item.sla_due_at} />
+        ) : (item.action_type === 'STALE_AWAITING' || item.action_type === 'SCHEDULED_OVERDUE') ? (
+          <div className="w-6 h-6 rounded-full bg-warning/15 flex items-center justify-center" title={item.action_label}>
+            <span className="text-sm font-bold text-warning leading-none">!</span>
+          </div>
+        ) : null}
       </div>
       {/* Col 4: Arrow (hover reveal) */}
       <ChevronRight className="w-5 h-5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />

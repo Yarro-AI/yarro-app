@@ -23,6 +23,8 @@ export interface TodoItem {
   priority_score?: number
   sla_breached: boolean
   sla_due_at?: string | null
+  scheduled_date?: string | null
+  is_past_timeout?: boolean
 }
 
 export interface TicketSummary {
@@ -146,13 +148,11 @@ export type JobCategory = 'maintenance' | 'compliance' | 'finance'
 export function deriveUrgency(item: TodoItem): Urgency {
   if (item.sla_breached || item.priority === 'Emergency') return 'emergency'
   if (item.priority === 'Urgent') return 'urgent'
+  // priority_bucket from RPC may escalate beyond static priority (e.g. stale → HIGH)
+  if (item.priority_bucket === 'URGENT') return 'urgent'
+  if (item.priority_bucket === 'HIGH') return 'high'
   if (item.priority === 'High') return 'high'
   if (item.priority === 'Medium') return 'medium'
-  // Fallback to priority_bucket for items without a priority text (tenancy, handoff)
-  if (!item.priority) {
-    if (item.priority_bucket === 'URGENT') return 'urgent'
-    if (item.priority_bucket === 'HIGH') return 'high'
-  }
   return 'low'
 }
 
@@ -192,6 +192,8 @@ export const IN_PROGRESS_REASONS = new Set([
 export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
     if (i.action_type === 'CONTRACTOR_UNRESPONSIVE') return true
+    if (i.action_type === 'STALE_AWAITING') return true
+    if (i.action_type === 'SCHEDULED_OVERDUE') return true
     if (IN_PROGRESS_REASONS.has(i.next_action_reason || '')) return false
     return true
   })
@@ -200,6 +202,8 @@ export function filterActionable(todoItems: TodoItem[]): TodoItem[] {
 export function filterInProgress(todoItems: TodoItem[]): TodoItem[] {
   return todoItems.filter(i => {
     if (i.action_type === 'CONTRACTOR_UNRESPONSIVE') return false
+    if (i.action_type === 'STALE_AWAITING') return false
+    if (i.action_type === 'SCHEDULED_OVERDUE') return false
     return IN_PROGRESS_REASONS.has(i.next_action_reason || '')
   })
 }

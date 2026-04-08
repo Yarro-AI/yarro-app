@@ -71,7 +71,11 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
     onTicketClick(item)
   }
 
-  const badge = REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
+  const badge = item.is_past_timeout
+    ? { label: item.action_label, dot: 'bg-danger', text: 'text-danger' }
+    : item.action_type === 'SCHEDULED_OVERDUE'
+    ? { label: item.action_label, dot: 'bg-danger', text: 'text-danger' }
+    : REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
   const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
   const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger' : waitHrs > 24 ? 'text-xs font-medium text-warning' : 'text-[11px] text-muted-foreground/60'
 
