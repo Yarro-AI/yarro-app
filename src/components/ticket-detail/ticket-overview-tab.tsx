@@ -42,10 +42,10 @@ const NEXT_ACTION_MAP: Record<string, {
     button: { label: 'View Dispatch', action: 'tab', destination: 'dispatch' },
   },
   awaiting_contractor: {
-    message: 'Waiting for a contractor to accept the job. No action needed yet.',
+    message: 'Waiting for a contractor to respond.',
   },
   awaiting_landlord: {
-    message: 'Quote sent to landlord awaiting approval. No action needed yet.',
+    message: 'Quote sent to landlord — awaiting approval.',
   },
   awaiting_booking: {
     message: 'Waiting for the contractor to book a slot.',
@@ -54,7 +54,7 @@ const NEXT_ACTION_MAP: Record<string, {
     message: 'This job has been allocated to the landlord to manage.',
   },
   scheduled: {
-    message: 'Job is scheduled. No action needed.',
+    message: 'Job is scheduled — awaiting contractor completion.',
   },
   ooh_dispatched: {
     message: 'Out-of-hours contact has been notified. Awaiting response.',

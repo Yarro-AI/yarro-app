@@ -33,19 +33,6 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
     : src === 'handoff' ? MessageSquare
     : null
 
-  const ctaText = (() => {
-    if (src === 'compliance') {
-      if (item.next_action_reason === 'compliance_expired') return 'Renew'
-      if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
-      if (item.next_action_reason === 'compliance_missing') return 'Add'
-      return 'View'
-    }
-    if (src === 'rent') return item.next_action_reason === 'rent_partial' ? 'Follow up' : 'Chase'
-    if (src === 'tenancy') return item.next_action_reason === 'tenancy_expired' ? 'Update' : 'Review'
-    if (src === 'handoff') return 'Create ticket'
-    return ({'Review issue': 'Triage', 'Needs attention': 'Review', 'Landlord declined': 'Review', 'Job not completed': 'Review', 'Assign contractor': 'Assign', 'Review quote': 'Approve', 'Awaiting landlord': 'Follow up', 'Contractor unresponsive': 'Redispatch', 'OOH dispatched': 'Review', 'OOH resolved': 'Close', 'OOH unresolved': 'Review', 'OOH in progress': 'View'} as Record<string, string>)[item.action_label] || 'View'
-  })()
-
   const isTicket = item.id.startsWith('todo_')
 
   const getHref = (): string | null => {
@@ -72,9 +59,9 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
   }
 
   const badge = item.is_past_timeout
-    ? { label: item.action_label, dot: 'bg-danger', text: 'text-danger' }
+    ? { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
     : item.action_type === 'SCHEDULED_OVERDUE'
-    ? { label: item.action_label, dot: 'bg-danger', text: 'text-danger' }
+    ? { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
     : REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
   const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
   const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger' : waitHrs > 24 ? 'text-xs font-medium text-warning' : 'text-[11px] text-muted-foreground/60'
@@ -98,7 +85,6 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
           <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
         </div>
       </div>
-      <span className="text-sm font-medium text-primary hover:text-primary/70 transition-colors flex-shrink-0 whitespace-nowrap pt-0.5">{ctaText}</span>
     </>
   )
 

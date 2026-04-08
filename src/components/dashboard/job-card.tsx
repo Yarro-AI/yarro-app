@@ -78,9 +78,16 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
       <div className="flex items-center pr-3 border-r-2 border-[#F3F4F6] self-stretch">
         <CategoryBadge category={category} urgency={urgency} />
       </div>
-      {/* Col 2: Issue + property (truncates) */}
-      <div className="min-w-0">
-        <p className="text-[15px] font-semibold text-[#111827] truncate">{item.issue_summary}</p>
+      {/* Col 2: Issue + action + property */}
+      <div className="min-w-0" title={item.action_context || undefined}>
+        <div className="flex items-baseline min-w-0">
+          <span className="truncate text-[15px] font-semibold text-[#111827]">{item.issue_summary}</span>
+          {item.action_label && (
+            <span className="flex-shrink-0 font-medium text-[13px] text-muted-foreground ml-1.5">
+              · {item.action_label}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-[#6B7280] truncate mt-0.5">{item.property_label}</p>
       </div>
       {/* Col 3: SLA ring OR stale indicator */}

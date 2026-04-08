@@ -51,90 +51,46 @@ export interface TicketSummary {
 // Constants
 // ─────────────────────────────────────────────────────────
 
-// CTA button text per action_label
-const ACTION_CTA: Record<string, string> = {
-  // Ticket CTAs
-  'Review issue': 'Triage',
-  'Needs attention': 'Review',
-  'Landlord declined': 'Review',
-  'Job not completed': 'Review',
-  'Assign contractor': 'Assign',
-  'Review quote': 'Approve',
-  'Awaiting landlord': 'Follow up',
-  'Contractor unresponsive': 'Redispatch',
-  'OOH dispatched': 'Review',
-  'OOH resolved': 'Close',
-  'OOH unresolved': 'Review',
-  'OOH in progress': 'View',
-  // Rent CTAs
-  'Rent overdue': 'Chase',
-  'Partial payment': 'Follow up',
-  // Tenancy CTAs
-  'Tenancy ending': 'Review',
-  'Tenancy expired': 'Update',
-  // Handoff CTAs
-  'Handoff conversation': 'Create ticket',
-}
+// Uniform muted style — urgency is shown by meters/borders, not badge colors
+const BS = { dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
 
-// CTA fallback for compliance items (action_label is dynamic, e.g. "Gas Safety (CP12) expired")
-export function getCtaText(item: TodoItem): string {
-  const fromMap = ACTION_CTA[item.action_label]
-  if (fromMap) return fromMap
-  // Compliance items have dynamic labels — match by reason key
-  if (item.next_action_reason === 'compliance_expired') return 'Renew'
-  if (item.next_action_reason === 'compliance_expiring') return 'Schedule'
-  if (item.next_action_reason === 'compliance_missing') return 'Add'
-  return 'View'
-}
-
-// Dot + text badges per next_action_reason
+// Dot + text badges per next_action_reason — action verb labels
 export const REASON_BADGE: Record<string, { label: string; dot: string; text: string }> = {
-  on_hold:              { label: 'On Hold',              dot: 'bg-muted-foreground', text: 'text-muted-foreground' },
-  pending_review:       { label: 'Needs review',         dot: 'bg-primary',          text: 'text-primary' },
-  handoff_review:       { label: 'Handoff',              dot: 'bg-danger',           text: 'text-danger' },
-  ooh_dispatched:       { label: 'OOH Dispatched',       dot: 'bg-primary',          text: 'text-primary' },
-  ooh_resolved:         { label: 'OOH Resolved',         dot: 'bg-success',          text: 'text-success' },
-  ooh_unresolved:       { label: 'OOH Unresolved',       dot: 'bg-danger',           text: 'text-danger' },
-  ooh_in_progress:      { label: 'OOH In Progress',      dot: 'bg-warning',          text: 'text-warning' },
-  no_contractors:       { label: 'No contractors',       dot: 'bg-warning',          text: 'text-warning' },
-  job_not_completed:    { label: 'Not completed',        dot: 'bg-primary',          text: 'text-primary' },
-  landlord_declined:    { label: 'Landlord declined',    dot: 'bg-danger',           text: 'text-danger' },
-  landlord_no_response: { label: 'Landlord silent',      dot: 'bg-warning',          text: 'text-warning' },
-  manager_approval:     { label: 'Needs approval',       dot: 'bg-primary',          text: 'text-primary' },
-  allocated_to_landlord:{ label: 'Landlord Managing',    dot: 'bg-primary',          text: 'text-primary' },
-  landlord_in_progress: { label: 'Landlord In Progress', dot: 'bg-warning',          text: 'text-warning' },
-  landlord_resolved:    { label: 'Landlord Resolved',    dot: 'bg-success',          text: 'text-success' },
-  landlord_needs_help:  { label: 'Landlord Needs Help',  dot: 'bg-danger',           text: 'text-danger' },
-  awaiting_contractor:  { label: 'Awaiting reply',       dot: 'bg-warning',          text: 'text-warning' },
-  awaiting_booking:     { label: 'Awaiting booking',     dot: 'bg-warning',          text: 'text-warning' },
-  scheduled:            { label: 'Scheduled',             dot: 'bg-success',          text: 'text-success' },
-  awaiting_landlord:    { label: 'Awaiting landlord',    dot: 'bg-warning',          text: 'text-warning' },
+  // Needs Action — action verbs
+  pending_review:       { label: 'Triage issue',          ...BS },
+  handoff_review:       { label: 'Review handoff',        ...BS },
+  manager_approval:     { label: 'Approve quote',         ...BS },
+  no_contractors:       { label: 'Chase contractor',      ...BS },
+  job_not_completed:    { label: 'Review incomplete job',  ...BS },
+  landlord_declined:    { label: 'Contact landlord',      ...BS },
+  landlord_needs_help:  { label: 'Contact landlord',      ...BS },
+  landlord_resolved:    { label: 'Review completion',     ...BS },
+  landlord_no_response: { label: 'Chase landlord',        ...BS },
+  // In Progress — descriptive (PM isn't the actor)
+  awaiting_contractor:  { label: 'Awaiting contractor',   ...BS },
+  awaiting_booking:     { label: 'Awaiting booking',      ...BS },
+  scheduled:            { label: 'Awaiting completion',   ...BS },
+  awaiting_landlord:    { label: 'Awaiting landlord',     ...BS },
+  allocated_to_landlord:{ label: 'Landlord managing',     ...BS },
+  landlord_in_progress: { label: 'Landlord in progress',  ...BS },
+  // OOH
+  ooh_dispatched:       { label: 'Follow up OOH',         ...BS },
+  ooh_resolved:         { label: 'Review completion',     ...BS },
+  ooh_unresolved:       { label: 'Chase resolution',      ...BS },
+  ooh_in_progress:      { label: 'OOH in progress',       ...BS },
+  on_hold:              { label: 'On hold',               ...BS },
   // Compliance
-  compliance_expired:   { label: 'Expired',              dot: 'bg-danger',           text: 'text-danger' },
-  compliance_expiring:  { label: 'Expiring',             dot: 'bg-warning',          text: 'text-warning' },
-  compliance_missing:   { label: 'Missing',              dot: 'bg-danger',           text: 'text-danger' },
+  compliance_expired:   { label: 'Renew certificate',     ...BS },
+  compliance_expiring:  { label: 'Schedule renewal',      ...BS },
+  compliance_missing:   { label: 'Add certificate',       ...BS },
   // Rent
-  rent_overdue:         { label: 'Overdue',              dot: 'bg-danger',           text: 'text-danger' },
-  rent_partial:         { label: 'Partial payment',      dot: 'bg-warning',          text: 'text-warning' },
+  rent_overdue:         { label: 'Chase arrears',         ...BS },
+  rent_partial:         { label: 'Follow up payment',     ...BS },
   // Tenancy
-  tenancy_ending:       { label: 'Ending soon',          dot: 'bg-warning',          text: 'text-warning' },
-  tenancy_expired:      { label: 'Tenancy ended',        dot: 'bg-danger',           text: 'text-danger' },
+  tenancy_ending:       { label: 'Review tenancy',        ...BS },
+  tenancy_expired:      { label: 'Update tenancy',        ...BS },
   // Handoff
-  handoff_conversation: { label: 'Needs ticket',         dot: 'bg-primary',          text: 'text-primary' },
-}
-
-// Recommended next-step descriptions per state
-export const NEXT_STEPS: Record<string, string> = {
-  pending_review: 'Triage and assign a category',
-  handoff_review: 'Review AI conversation and create ticket',
-  no_contractors: 'Add or assign a new contractor',
-  manager_approval: 'Review quote and approve or decline',
-  landlord_declined: 'Contact landlord to discuss alternatives',
-  landlord_no_response: 'Follow up with landlord directly',
-  job_not_completed: 'Review contractor reason and redispatch',
-  ooh_dispatched: 'Waiting for OOH contact response',
-  ooh_unresolved: 'Escalate or redispatch to contractor',
-  landlord_needs_help: 'Landlord needs help — take over',
+  handoff_conversation: { label: 'Create ticket',         ...BS },
 }
 
 
