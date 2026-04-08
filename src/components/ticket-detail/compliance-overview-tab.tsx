@@ -1,7 +1,7 @@
 'use client'
 
-import { format, differenceInDays } from 'date-fns'
-import { Crown, Wrench, ExternalLink, Calendar, ShieldCheck } from 'lucide-react'
+import { format, differenceInDays, formatDistanceToNow } from 'date-fns'
+import { Crown, Wrench, ExternalLink, Calendar, ShieldCheck, AlertTriangle, CalendarClock, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import type { TicketContext, TicketBasic, ComplianceCertData } from '@/hooks/use-ticket-detail'
 import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
@@ -37,6 +37,89 @@ function ExpiryLabel({ expiryDate }: { expiryDate: string }) {
   )
 }
 
+// --- Stage Config ---
+
+interface ComplianceStage {
+  icon: typeof AlertTriangle
+  iconBg: string
+  iconColor: string
+  title: string
+  description: string
+  cta?: { label: string; href?: string }
+}
+
+function getComplianceStage(basic: TicketBasic, cert: ComplianceCertData | null, context: TicketContext): ComplianceStage {
+  const reason = basic.next_action_reason || ''
+  const isExpired = cert?.expiry_date ? differenceInDays(new Date(cert.expiry_date), new Date()) < 0 : false
+  const daysUntil = cert?.expiry_date ? differenceInDays(new Date(cert.expiry_date), new Date()) : null
+
+  if (reason === 'cert_renewed' || reason === 'completed') {
+    return {
+      icon: CheckCircle2, iconBg: 'bg-success/10', iconColor: 'text-success',
+      title: 'All renewed',
+      description: "Certificate has been renewed. You're all good.",
+    }
+  }
+
+  if (reason === 'scheduled') {
+    return {
+      icon: CalendarClock, iconBg: 'bg-primary/10', iconColor: 'text-primary',
+      title: 'Renewal booked in',
+      description: basic.scheduled_date
+        ? `The contractor's coming on ${format(new Date(basic.scheduled_date), 'd MMM yyyy')} to do the renewal.`
+        : 'A date has been booked for the renewal.',
+    }
+  }
+
+  if (reason === 'awaiting_booking') {
+    return {
+      icon: CalendarClock, iconBg: 'bg-muted', iconColor: 'text-muted-foreground',
+      title: 'Waiting for a date',
+      description: "The contractor's accepted — just waiting for them to lock in a time.",
+    }
+  }
+
+  if (reason === 'awaiting_contractor') {
+    return {
+      icon: Wrench, iconBg: 'bg-muted', iconColor: 'text-muted-foreground',
+      title: 'Waiting on the contractor',
+      description: "The renewal request has been sent out. Sitting tight until the contractor gets back.",
+      cta: basic.contractor_id ? { label: 'Follow Up', href: `/contractors/${basic.contractor_id}` } : undefined,
+    }
+  }
+
+  // Default: expired or expiring
+  if (isExpired) {
+    return {
+      icon: AlertTriangle, iconBg: 'bg-danger/10', iconColor: 'text-danger',
+      title: 'This certificate has expired',
+      description: `The property is currently non-compliant${daysUntil !== null ? ` — expired ${Math.abs(daysUntil)} days ago` : ''}. Get a renewal sorted as soon as possible.`,
+      cta: cert?.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${cert.contractor_id}` }
+        : basic.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${basic.contractor_id}` }
+        : undefined,
+    }
+  }
+
+  if (daysUntil !== null && daysUntil <= 30) {
+    return {
+      icon: AlertTriangle, iconBg: 'bg-warning/10', iconColor: 'text-warning',
+      title: 'Certificate expiring soon',
+      description: `This cert expires in ${daysUntil} days. Time to get a contractor booked in for the renewal.`,
+      cta: cert?.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${cert.contractor_id}` }
+        : basic.contractor_id ? { label: 'Contact Contractor', href: `/contractors/${basic.contractor_id}` }
+        : undefined,
+    }
+  }
+
+  return {
+    icon: ShieldCheck, iconBg: 'bg-primary/10', iconColor: 'text-primary',
+    title: 'Renewal in progress',
+    description: 'This certificate renewal is being managed.',
+  }
+}
+
+// --- Component ---
+
 interface ComplianceOverviewTabProps {
   context: TicketContext
   basic: TicketBasic
@@ -49,6 +132,9 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
   const certLabel = cert
     ? CERTIFICATE_LABELS[cert.certificate_type as CertificateType] || cert.certificate_type
     : basic.issue_title || context.issue_description || 'Certificate Renewal'
+
+  const stage = getComplianceStage(basic, cert, context)
+  const StageIcon = stage.icon
 
   return (
     <div className="px-4 pb-4 space-y-3">
@@ -82,7 +168,35 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
         </div>
       </div>
 
-      {/* ── Card 2: Certificate & Expiry ── */}
+      {/* ── Card 2: Current Stage ── */}
+      <div className="bg-card rounded-xl border border-border p-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Current Stage</p>
+
+        <div className="flex items-start gap-4">
+          <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', stage.iconBg)}>
+            <StageIcon className={cn('w-5 h-5', stage.iconColor)} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-card-foreground">{stage.title}</p>
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{stage.description}</p>
+            {basic.date_logged && (
+              <p className="text-xs text-muted-foreground/70 mt-2">
+                Open {formatDistanceToNow(new Date(basic.date_logged), { addSuffix: true })}
+              </p>
+            )}
+            {stage.cta && (
+              <Link
+                href={stage.cta.href || '#'}
+                className="mt-2 inline-block text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
+              >
+                {stage.cta.label} →
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Card 3: Certificate Details ── */}
       <div className="bg-card rounded-xl border border-border p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Certificate</p>
 
@@ -96,7 +210,6 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
           <p className="text-sm text-muted-foreground">No certificate linked to this ticket.</p>
         ) : (
           <div className="space-y-3">
-            {/* Expiry — prominent */}
             {cert.expiry_date && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Expiry</span>
@@ -148,7 +261,6 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
               )}
             </div>
 
-            {/* Scheduled renewal date */}
             {basic.scheduled_date && (
               <div className="flex items-center justify-between pt-2 border-t border-border/40">
                 <span className="text-sm text-muted-foreground">Renewal scheduled</span>
@@ -161,11 +273,10 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
         )}
       </div>
 
-      {/* ── Card 3: People — Landlord & Contractor ── */}
+      {/* ── Card 4: People ── */}
       <div className="bg-card rounded-xl border border-border p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">People</p>
         <div className="grid grid-cols-2 gap-2">
-          {/* Landlord */}
           {context.landlord_name && context.landlord_id ? (
             <Link
               href={`/landlords/${context.landlord_id}`}
@@ -191,7 +302,6 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
             </div>
           )}
 
-          {/* Contractor */}
           {cert?.contractor_name && cert.contractor_id ? (
             <Link
               href={`/contractors/${cert.contractor_id}`}
@@ -232,7 +342,7 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
         </div>
       </div>
 
-      {/* ── Media (conditional) ── */}
+      {/* ── Media ── */}
       {images.length > 0 && (
         <div className="bg-card rounded-xl border border-border p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
