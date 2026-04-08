@@ -1095,6 +1095,9 @@ export type Database = {
         Row: {
           amount_due: number
           amount_paid: number | null
+          chase_10d_sent_at: string | null
+          chase_1d_sent_at: string | null
+          chase_5d_sent_at: string | null
           created_at: string | null
           due_date: string
           id: string
@@ -1113,6 +1116,9 @@ export type Database = {
         Insert: {
           amount_due: number
           amount_paid?: number | null
+          chase_10d_sent_at?: string | null
+          chase_1d_sent_at?: string | null
+          chase_5d_sent_at?: string | null
           created_at?: string | null
           due_date: string
           id?: string
@@ -1131,6 +1137,9 @@ export type Database = {
         Update: {
           amount_due?: number
           amount_paid?: number | null
+          chase_10d_sent_at?: string | null
+          chase_1d_sent_at?: string | null
+          chase_5d_sent_at?: string | null
           created_at?: string | null
           due_date?: string
           id?: string

@@ -40,6 +40,9 @@ const TEMPLATE_BY_LEVEL: Record<number, keyof typeof TEMPLATES> = {
   1: "rent_reminder_before",
   2: "rent_reminder_due",
   3: "rent_reminder_overdue",
+  4: "rent_chase_1d",
+  5: "rent_chase_5d",
+  6: "rent_chase_10d",
 };
 
 function isPlaceholder(sid: string): boolean {
@@ -134,13 +137,16 @@ async function processReminder(
     };
   }
 
-  // Mark reminder as sent
-  const reminderCol =
-    entry.reminder_level === 1
-      ? "reminder_1_sent_at"
-      : entry.reminder_level === 2
-        ? "reminder_2_sent_at"
-        : "reminder_3_sent_at";
+  // Mark reminder/chase as sent
+  const COLUMN_BY_LEVEL: Record<number, string> = {
+    1: "reminder_1_sent_at",
+    2: "reminder_2_sent_at",
+    3: "reminder_3_sent_at",
+    4: "chase_1d_sent_at",
+    5: "chase_5d_sent_at",
+    6: "chase_10d_sent_at",
+  };
+  const reminderCol = COLUMN_BY_LEVEL[entry.reminder_level];
 
   const updatePayload: Record<string, string> = {
     [reminderCol]: new Date().toISOString(),
