@@ -32,7 +32,7 @@ function SlaRing({ slaDueAt }: { slaDueAt: string }) {
 
   return (
     <svg width="28" height="28" viewBox="0 0 28 28" aria-label={`SLA: ${Math.ceil(hoursLeft)}h remaining`}>
-      <circle cx="14" cy="14" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+      <circle cx="14" cy="14" r={radius} fill="none" className="stroke-border" strokeWidth="2.5" />
       <circle
         cx="14" cy="14" r={radius}
         fill="none"
@@ -69,19 +69,19 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
     'hover:-translate-y-0.5 hover:shadow-sm',
     isEmergency
       ? 'bg-danger/5 border-danger/20 hover:border-danger/30'
-      : 'bg-white border-[#F3F4F6]',
+      : 'bg-card border-border',
   )
 
   const content = (
     <>
       {/* Col 1: Category badge + urgency meter */}
-      <div className="flex items-center pr-3 border-r-2 border-[#F3F4F6] self-stretch">
+      <div className="flex items-center pr-3 border-r-2 border-border self-stretch">
         <CategoryBadge category={category} urgency={urgency} />
       </div>
       {/* Col 2: Issue + property (truncates) */}
       <div className="min-w-0">
-        <p className="text-[15px] font-semibold text-[#111827] truncate">{item.issue_summary}</p>
-        <p className="text-sm text-[#6B7280] truncate mt-0.5">{item.property_label}</p>
+        <p className="text-[15px] font-semibold text-foreground truncate">{item.issue_summary}</p>
+        <p className="text-sm text-muted-foreground truncate mt-0.5">{item.property_label}</p>
       </div>
       {/* Col 3: SLA ring */}
       <div className="flex items-center justify-center">

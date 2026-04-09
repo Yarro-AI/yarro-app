@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { differenceInDays, differenceInHours } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { typography } from '@/lib/typography'
+import { StatCard } from './stat-card'
+import { StatusBadge } from '@/components/status-badge'
 import {
   Dialog,
   DialogContent,
@@ -20,22 +23,34 @@ interface WaitingSectionProps {
   onTicketClick: (item: TodoItem) => void
 }
 
-function waitDaysColor(waitingSince: string) {
-  const days = differenceInDays(new Date(), new Date(waitingSince))
-  if (days >= 5) return 'text-danger'
-  if (days >= 3) return 'text-warning'
-  return 'text-muted-foreground'
-}
+// ─── Wait duration pill (matches SlaBadge visual pattern) ────────────────────
 
-function waitLabel(waitingSince: string) {
+function WaitDurationBadge({ waitingSince }: { waitingSince: string }) {
   const hours = differenceInHours(new Date(), new Date(waitingSince))
-  if (hours < 24) return `${hours}h`
   const days = Math.floor(hours / 24)
-  if (days === 1) return '1 day'
-  return `${days} days`
+
+  let label: string
+  if (hours < 24) label = `${hours}h`
+  else if (days === 1) label = '1d'
+  else label = `${days}d`
+
+  let style: string
+  if (days >= 5) style = 'bg-danger/10 text-danger font-semibold'
+  else if (days >= 3) style = 'bg-warning/10 text-warning font-medium'
+  else style = 'bg-muted text-muted-foreground'
+
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-xs whitespace-nowrap flex-shrink-0',
+      style,
+    )}>
+      {label}
+    </span>
+  )
 }
 
-// Group items into labelled sections, omitting empty groups
+// ─── Grouping logic ──────────────────────────────────────────────────────────
+
 interface Group { key: string; label: string; items: TodoItem[] }
 
 function groupWaitingItems(items: TodoItem[]): Group[] {
@@ -72,7 +87,7 @@ function groupStuckItems(items: TodoItem[]): Group[] {
     if (item.action_type === 'CONTRACTOR_UNRESPONSIVE') unresponsive.push(item)
     else if (item.action_type === 'SCHEDULED_OVERDUE') overdue.push(item)
     else if (BLOCKED_REASONS.has(item.next_action_reason || '')) blocked.push(item)
-    else noResponse.push(item) // landlord_no_response, STALE_AWAITING, fallback
+    else noResponse.push(item)
   }
 
   return [
@@ -89,6 +104,8 @@ function sortByWaitingSince(items: TodoItem[]) {
   )
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function WaitingSection({ waitingItems, stuckItems, onTicketClick }: WaitingSectionProps) {
   const [modalType, setModalType] = useState<'waiting' | 'stuck' | null>(null)
 
@@ -98,43 +115,26 @@ export function WaitingSection({ waitingItems, stuckItems, onTicketClick }: Wait
     : groupStuckItems(activeItems)
 
   const hasStuck = stuckItems.length > 0
+  const accentBorder = modalType === 'stuck' ? 'border-danger/40' : 'border-primary/40'
 
   return (
     <>
       <div className="grid grid-cols-2 gap-4">
-        {/* Waiting card */}
-        <button
+        <StatCard
+          label="Waiting"
+          value={waitingItems.length}
+          icon={Clock}
+          accentColor="primary"
           onClick={() => setModalType('waiting')}
-          className={cn(
-            'flex flex-col items-center justify-center gap-3 p-6',
-            'bg-card border border-border rounded-xl',
-            'cursor-pointer transition-all duration-150',
-            'hover:-translate-y-1 hover:shadow-md hover:border-primary/20',
-            'aspect-square'
-          )}
-        >
-          <Clock className="w-6 h-6 text-primary" />
-          <span className="text-sm font-medium text-card-foreground">Waiting</span>
-          <span className="text-4xl font-bold text-card-foreground">{waitingItems.length}</span>
-        </button>
-
-        {/* Stuck card */}
-        <button
+        />
+        <StatCard
+          label="Stuck"
+          value={stuckItems.length}
+          icon={AlertTriangle}
+          accentColor={hasStuck ? 'danger' : 'muted'}
+          subtitle={hasStuck ? `${stuckItems.length} need attention` : undefined}
           onClick={() => setModalType('stuck')}
-          className={cn(
-            'flex flex-col items-center justify-center gap-3 p-6',
-            'bg-card border border-border rounded-xl',
-            'cursor-pointer transition-all duration-150',
-            'hover:-translate-y-1 hover:shadow-md hover:border-primary/20',
-            'aspect-square'
-          )}
-        >
-          <AlertTriangle className={cn('w-6 h-6', hasStuck ? 'text-danger' : 'text-primary')} />
-          <span className="text-sm font-medium text-card-foreground">Stuck</span>
-          <span className="text-4xl font-bold text-card-foreground">
-            {stuckItems.length}
-          </span>
-        </button>
+        />
       </div>
 
       {/* Breakdown modal */}
@@ -153,44 +153,39 @@ export function WaitingSection({ waitingItems, stuckItems, onTicketClick }: Wait
           </DialogHeader>
           <DialogBody>
             {activeItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
+              <p className={cn(typography.bodyText, 'text-center py-8')}>
                 {modalType === 'waiting' ? 'Nothing waiting' : 'Nothing stuck'}
               </p>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 {groups.map(group => (
                   <div key={group.key}>
-                    {/* Section header — only show if multiple groups */}
+                    {/* Group subheader — pronounced, no counter */}
                     {groups.length > 1 && (
-                      <div className="flex items-center justify-between px-1 pb-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {group.label}
-                        </span>
-                        <span className="text-xs font-bold text-muted-foreground">
-                          {group.items.length}
-                        </span>
+                      <div className={cn('flex items-center gap-2 pl-3 border-l-2 mb-3', accentBorder)}>
+                        <span className={typography.cardTitle}>{group.label}</span>
                       </div>
                     )}
-                    <div className="flex flex-col divide-y divide-border/50">
+                    <div className="flex flex-col gap-1">
                       {sortByWaitingSince(group.items).map(item => (
                         <button
                           key={item.id}
                           onClick={() => { onTicketClick(item); setModalType(null) }}
-                          className="flex items-start justify-between gap-4 py-3 px-1 text-left hover:bg-muted/30 rounded-lg transition-colors cursor-pointer"
+                          className="flex items-start gap-3 py-3 px-3 text-left hover:bg-muted/30 rounded-lg transition-colors cursor-pointer"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-foreground truncate">{item.issue_summary}</p>
-                            <p className="text-sm text-muted-foreground truncate mt-0.5">{item.property_label}</p>
+                            <p className={cn(typography.dataLabel, 'truncate')}>{item.issue_summary}</p>
+                            <p className={cn(typography.metaText, 'truncate mt-0.5')}>{item.property_label}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {item.next_action_reason && (
+                                <StatusBadge status={item.next_action_reason} size="sm" />
+                              )}
+                            </div>
                             {item.action_context && (
-                              <p className="text-xs text-muted-foreground/70 mt-0.5">{item.action_context}</p>
+                              <p className={cn(typography.microText, 'mt-1')}>{item.action_context}</p>
                             )}
                           </div>
-                          <span className={cn(
-                            'text-sm font-medium whitespace-nowrap flex-shrink-0 pt-0.5',
-                            waitDaysColor(item.waiting_since)
-                          )}>
-                            {waitLabel(item.waiting_since)}
-                          </span>
+                          <WaitDurationBadge waitingSince={item.waiting_since} />
                         </button>
                       ))}
                     </div>
