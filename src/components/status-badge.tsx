@@ -65,6 +65,7 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   'landlord in progress': { border: 'border-warning/40',  text: 'text-warning' },
   'landlord resolved':    { border: 'border-success/40',  text: 'text-success' },
   'reschedule requested': { border: 'border-warning/40',  text: 'text-warning' },
+  'job not completed':    { border: 'border-danger/40',   text: 'text-danger' },
   'on hold':              { border: 'border-border',       text: 'text-muted-foreground' },
   'dismissed':            { border: 'border-border',       text: 'text-muted-foreground' },
   'archived':             { border: 'border-border',       text: 'text-muted-foreground' },

@@ -8,6 +8,7 @@ interface StatCardProps {
   subtitle?: string
   accentColor?: 'danger' | 'warning' | 'success' | 'primary' | 'muted'
   icon?: LucideIcon
+  onClick?: () => void
 }
 
 const accentClasses: Record<string, string> = {
@@ -26,9 +27,16 @@ const iconBgClasses: Record<string, string> = {
   muted: 'bg-muted text-muted-foreground',
 }
 
-export function StatCard({ label, value, subtitle, accentColor, icon: Icon }: StatCardProps) {
+export function StatCard({ label, value, subtitle, accentColor, icon: Icon, onClick }: StatCardProps) {
+  const Wrapper = onClick ? 'button' : 'div'
   return (
-    <div className="bg-card rounded-xl border border-border p-5 flex items-start justify-between gap-3">
+    <Wrapper
+      onClick={onClick}
+      className={cn(
+        'bg-card rounded-xl border border-border p-5 flex items-start justify-between gap-3',
+        onClick && 'w-full text-left cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/20',
+      )}
+    >
       <div className="flex flex-col gap-1">
         <span className={cn(typography.sectionTitle)}>{label}</span>
         <span className={cn(typography.statValue)}>{value}</span>
@@ -46,6 +54,6 @@ export function StatCard({ label, value, subtitle, accentColor, icon: Icon }: St
           <Icon className="h-5 w-5" />
         </div>
       )}
-    </div>
+    </Wrapper>
   )
 }
