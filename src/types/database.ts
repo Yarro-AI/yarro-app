@@ -1895,23 +1895,42 @@ export type Database = {
         Args: { _conversation_id: string; _entry: Json }
         Returns: Json
       }
-      c1_create_manual_ticket: {
-        Args: {
-          p_access?: string
-          p_availability?: string
-          p_category?: string
-          p_compliance_certificate_id?: string
-          p_contractor_ids?: string[]
-          p_images?: Json
-          p_issue_description?: string
-          p_issue_title?: string
-          p_priority?: string
-          p_property_id: string
-          p_property_manager_id: string
-          p_tenant_id?: string
-        }
-        Returns: string
-      }
+      c1_create_manual_ticket:
+        | {
+            Args: {
+              p_access?: string
+              p_availability?: string
+              p_category?: string
+              p_compliance_certificate_id?: string
+              p_contractor_ids?: string[]
+              p_images?: Json
+              p_issue_description?: string
+              p_issue_title?: string
+              p_maintenance_trade?: string
+              p_priority?: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_access?: string
+              p_availability?: string
+              p_category?: string
+              p_compliance_certificate_id?: string
+              p_contractor_ids?: string[]
+              p_images?: Json
+              p_issue_description?: string
+              p_issue_title?: string
+              p_priority?: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id?: string
+            }
+            Returns: string
+          }
       c1_create_ticket: {
         Args: { _conversation_id: string; _issue: Json }
         Returns: {

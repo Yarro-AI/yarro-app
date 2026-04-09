@@ -523,6 +523,10 @@ Deno.serve(async (req: Request) => {
             issueData.category = match;
           }
         }
+
+        // Route + trade split: AI outputs trade (e.g. "Plumber"), we set the route
+        issueData.maintenance_trade = issueData.category;
+        issueData.category = "maintenance";
       } catch (e) {
         aiFallback = true;
         const msg = e instanceof Error ? e.message : String(e);
@@ -534,7 +538,8 @@ Deno.serve(async (req: Request) => {
         issueData = {
           issue_summary: twilioBody,
           issue_title: "[Needs review] Maintenance request",
-          category: "General / Handyman",
+          category: "maintenance",
+          maintenance_trade: "General / Handyman",
           priority: "Standard",
           access: "UNCLEAR",
           availability: "",
