@@ -430,13 +430,14 @@ async function handleIntake(
     let handoffPrefix = "";
     if (!ctx.property_id) {
       handoffPrefix = "[Property not matched] ";
-    } else if (!ctx.category || ctx.category === "") {
+    } else if (!ctx.maintenance_trade && !ctx.category || ctx.category === "") {
       handoffPrefix = "[Issue type unclear] ";
     } else {
+      const trade = ctx.maintenance_trade || ctx.category;
       const mapping = ctx.contractor_mapping as Record<string, any> | null;
-      const mapped = mapping?.[ctx.category];
+      const mapped = mapping?.[trade];
       if (!mapped || (Array.isArray(mapped) && mapped.length === 0)) {
-        handoffPrefix = `[No ${ctx.category} contractor mapped] `;
+        handoffPrefix = `[No ${trade} contractor mapped] `;
       }
     }
 

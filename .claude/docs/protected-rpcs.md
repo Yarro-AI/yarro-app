@@ -17,8 +17,8 @@ wins — earlier definitions are dead code.
 | `c1_compute_next_action` | `20260404400000_compute_next_action_router.sql` | `20260327041845` has the original monolithic version (dead code) |
 | `compute_compliance_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
 | `compute_rent_arrears_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
-| `compute_landlord_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
-| `compute_ooh_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
+| ~~`compute_landlord_next_action`~~ | DROPPED in `20260410400000` | Logic moved into `compute_maintenance_next_action` |
+| ~~`compute_ooh_next_action`~~ | DROPPED in `20260410400000` | Logic moved into `compute_maintenance_next_action` |
 | `compute_maintenance_next_action` | `20260404300000_polymorphic_subroutines.sql` | — |
 | `create_rent_arrears_ticket` | `20260404300000_polymorphic_subroutines.sql` | — |
 | `record_rent_payment` | `20260404200000_rent_payments_table.sql` | Replaces `mark_rent_paid` |
@@ -89,9 +89,8 @@ c1_message_next_action (9+ callers)
   → c1_compute_next_action (ROUTER — dispatches by category/flag)
     → compute_compliance_next_action (category = 'compliance_renewal')
     → compute_rent_arrears_next_action (category = 'rent_arrears')
-    → compute_landlord_next_action (landlord_allocated = true)
-    → compute_ooh_next_action (ooh_dispatched = true)
-    → compute_maintenance_next_action (default fallback)
+    → compute_maintenance_next_action (category = 'maintenance')
+    → error/unknown_category (anything else — fail loud)
 
 c1_trigger_recompute_next_action (trigger)
   → c1_compute_next_action

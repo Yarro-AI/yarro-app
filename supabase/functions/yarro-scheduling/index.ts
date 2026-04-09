@@ -407,7 +407,7 @@ async function handleFilloutScheduling(
   if (updatePhone) {
     const tenantFirstName = (ctx.tenant?.name || "").split(" ")[0] || "there";
     const friendlyDate = formatFriendlyDate(startIso);
-    const category = withArticle(ctx.ticket?.category || "contractor");
+    const category = withArticle(ctx.ticket?.maintenance_trade || ctx.ticket?.category || "contractor");
     const slot = timeOfDay(startIso);
     const contrPhone = ctx.contractor?.contractor_phone || "";
     const tenantToken = await ensureTenantToken(supabase, ticketId, ctx.ticket?.tenant_token);
@@ -459,7 +459,7 @@ async function handleFilloutScheduling(
   // Landlord
   if (llPhone) {
     const llName = ctx.property?.landlord_name || "there";
-    const category = categoryDisplayName(ctx.ticket?.category || "contractor");
+    const category = categoryDisplayName(ctx.ticket?.maintenance_trade || ctx.ticket?.category || "contractor");
     const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "fillout → ll_job_booked", {
@@ -662,7 +662,7 @@ async function handlePortalSchedule(
   if (updatePhone) {
     const tenantFirstName = (ctx.tenant?.name || "").split(" ")[0] || "there";
     const friendlyDate = formatFriendlyDate(date);
-    const category = withArticle(ctx.ticket?.category || "contractor");
+    const category = withArticle(ctx.ticket?.maintenance_trade || ctx.ticket?.category || "contractor");
     const slot = timeOfDay(time_slot || date);
     const contrPhoneTenant = ctx.contractor?.contractor_phone || "";
     const tenantToken = await ensureTenantToken(supabase, ticketId, ctx.ticket?.tenant_token);
@@ -712,7 +712,7 @@ async function handlePortalSchedule(
 
   if (llPhone) {
     const llName = ctx.property?.landlord_name || "there";
-    const category = categoryDisplayName(ctx.ticket?.category || "contractor");
+    const category = categoryDisplayName(ctx.ticket?.maintenance_trade || ctx.ticket?.category || "contractor");
     const mgrContact = ctx.manager?.phone ? formatUkPhone(ctx.manager.phone) : "your property manager";
     sends.push((async () => {
       const r = await sendAndLog(supabase, FN, "portal-schedule → ll_job_booked", {

@@ -29,20 +29,14 @@ IF closed              → 'completed' / 'completed'
 IF on_hold             → 'on_hold' / 'on_hold'
 
 -- ── Category dispatch (domain-specific lifecycles) ───────────
+-- ── 3 explicit routes (THE LAW) ──────────────────────────────
 IF category = 'compliance_renewal' → compute_compliance_next_action()
 IF category = 'rent_arrears'       → compute_rent_arrears_next_action()
+IF category = 'maintenance'        → compute_maintenance_next_action()
+  -- (maintenance owns: landlord, OOH, handoff, pending_review, contractor flow)
 
--- ── Lifecycle flag dispatch ───────────────────────────��──────
--- status = 'open' guard preserved on all flags — matches original behavior
-IF landlord_allocated AND status = 'open' → compute_landlord_next_action()
-IF ooh_dispatched AND status = 'open'     → compute_ooh_next_action()
-
--- ── Simple flags (inline, single-state, no progression) ─────
-IF handoff AND status = 'open'        → 'needs_attention' / 'handoff_review'
-IF pending_review AND status = 'open' → 'needs_attention' / 'pending_review'
-
--- ── Standard maintenance ─────────────────────────────────────
-→ compute_maintenance_next_action()
+-- ── Fail loud ────────────────────────────────────────────────
+ELSE → 'error' / 'unknown_category'  (RAISE WARNING)
 ```
 
 ### Design decisions

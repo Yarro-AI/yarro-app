@@ -92,6 +92,8 @@ export const REASON_BADGE: Record<string, { label: string; dot: string; text: st
   tenancy_expired:      { label: 'Update tenancy',        ...BS },
   // Handoff
   handoff_conversation: { label: 'Create ticket',         ...BS },
+  // Error
+  unknown_category:     { label: 'Unknown category',      ...BS },
 }
 
 

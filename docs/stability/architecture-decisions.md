@@ -110,27 +110,31 @@ They authenticate internally using `SERVICE_ROLE_KEY` to create admin Supabase c
 
 ---
 
-## AD-9: Polymorphic Ticket Dispatch (Router + Sub-routines)
+## AD-9: Polymorphic Ticket Dispatch (Router + 3 Sub-routines)
 
-**Files:** `supabase/migrations/20260404400000_compute_next_action_router.sql` (router), `supabase/migrations/20260404300000_polymorphic_subroutines.sql` (5 sub-routines)
+**Files:** `supabase/migrations/20260410400000_category_split_and_router.sql` (current), `supabase/migrations/20260404300000_polymorphic_subroutines.sql` (compliance + rent sub-routines)
 
-**Decision:** `c1_compute_next_action` was refactored from a 150-line monolithic function with 11 sequential IF/ELSE branches into a ~30-line router that dispatches to 5 domain-specific sub-routines.
+**Decision:** `c1_compute_next_action` is a pure dispatch router with zero business logic. 3 explicit routes by category, fail loud on unknown.
 
-**Why:** The monolithic function made every new ticket category (compliance, rent arrears) a risk to all existing branches. Adding compliance required scattering exceptions across other functions (`c1_contractor_timeout_check`). Rent arrears had no escalation path. Each new category would have increased the function's complexity and blast radius.
+**Why:** The original refactor preserved 5 dispatch paths including lifecycle flags (landlord, OOH) in the router. This bled maintenance logic into the router and prevented each domain from owning its full lifecycle. The clean 3-route architecture ensures: router dispatches, domains own everything.
 
-**Dispatch order:**
+**The Law:**
 1. Universal states (archived, closed, on_hold) — inline in router
-2. Category dispatch (`compliance_renewal` → compliance handler, `rent_arrears` → rent handler)
-3. Lifecycle flags (`landlord_allocated`, `ooh_dispatched`) — flag-specific handlers
-4. Simple flags (`handoff`, `pending_review`) — inline, single-state
-5. Maintenance fallback — standard contractor dispatch
+2. `compliance_renewal` → `compute_compliance_next_action()`
+3. `rent_arrears` → `compute_rent_arrears_next_action()`
+4. `maintenance` → `compute_maintenance_next_action()` (owns landlord, OOH, handoff, pending_review, contractor flow)
+5. Anything else → `error` / `unknown_category` (fail loud)
+
+**Category split:** `c1_tickets.category` is the route discriminator (always `maintenance`, `compliance_renewal`, or `rent_arrears`). `c1_tickets.maintenance_trade` stores the contractor trade type (`Plumber`, `Electrician`) for maintenance tickets only.
 
 **Rules:**
-- Never add IF/ELSE branches to the router itself — add logic to the appropriate sub-routine
-- New ticket categories get a new sub-routine registered in the router
-- Category dispatch runs before lifecycle flags — a `compliance_renewal` ticket that's also `landlord_allocated` routes to compliance, not landlord
+- Router has ZERO business logic — all domain logic in sub-routines
+- Every ticket MUST have a category (NOT NULL constraint)
+- New categories = new explicit route + new sub-routine + CHECK constraint update
+- Never add IF/ELSE to the router — add logic to the appropriate sub-routine
 - All sub-routines are SECURITY DEFINER and protected
-- Rollback: `supabase/rollbacks/rollback_phase_c.sql` restores the original monolithic function
-- CHECK constraint on `next_action_reason` enforces ~25 valid values at DB level
+- `compute_landlord_next_action` and `compute_ooh_next_action` were DROPPED — logic absorbed into `compute_maintenance_next_action`
+- CHECK constraint on `next_action_reason` enforces valid values at DB level
+- Rollback: `supabase/rollbacks/rollback_category_split_and_router.sql`
 
 **Full architecture:** `docs/POLYMORPHIC-DISPATCH-PLAN.md`

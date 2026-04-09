@@ -36,9 +36,7 @@ c1_complete_handoff_ticket
 c1_completion_followup_check
 c1_compute_next_action
 compute_compliance_next_action
-compute_landlord_next_action
 compute_maintenance_next_action
-compute_ooh_next_action
 compute_rent_arrears_next_action
 create_rent_arrears_ticket
 c1_context_logic

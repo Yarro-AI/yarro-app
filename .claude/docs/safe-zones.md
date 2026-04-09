@@ -48,7 +48,7 @@ A bad change here takes down WhatsApp intake, breaks tenant conversations, or co
 | Path | What It Is | Why It's Dangerous |
 |------|-----------|-------------------|
 | **69 Protected RPCs** | Listed in `supabase/core-rpcs/README.md` | `CREATE OR REPLACE` silently overwrites. No undo. `get_pm_id` used by 33+ RLS policies. |
-| **5 Sub-routines + rent RPCs** | `compute_*_next_action`, `create_rent_arrears_ticket`, `record_rent_payment` | Protected as of 2026-04-04. Same rules as `c1_compute_next_action` — they form a single atomic unit. |
+| **3 Sub-routines + rent RPCs** | `compute_maintenance/compliance/rent_arrears_next_action`, `create_rent_arrears_ticket`, `record_rent_payment` | Protected. `compute_landlord/ooh_next_action` were DROPPED — logic moved into `compute_maintenance_next_action`. |
 | `supabase/migrations/20260327041845_remote_schema.sql` | Core schema (72 functions) | Original production definitions of all RPCs, triggers, RLS. |
 | `supabase/migrations/20260329000000_whatsapp_room_awareness.sql` | c1_context_logic + c1_create_ticket | Current production versions of the 2 most critical RPCs. |
 | `supabase/functions/yarro-tenant-intake/` | WhatsApp intake state machine | AI + Twilio + RPCs. Load-bearing phrases in `prompts.ts` — backend parses exact emoji + phrases. See `.claude/docs/hmo-pivot-plan.md` Section 10 for the full list. See AD-8. |

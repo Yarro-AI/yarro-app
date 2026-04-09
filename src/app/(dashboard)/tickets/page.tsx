@@ -150,6 +150,7 @@ export default function TicketsPage() {
         status,
         job_stage,
         category,
+        maintenance_trade,
         priority,
         date_logged,
         scheduled_date,
@@ -442,7 +443,7 @@ export default function TicketsPage() {
       key: 'category',
       header: 'Category',
       sortable: true,
-      render: (ticket) => ticket.category || '-',
+      render: (ticket) => (ticket as unknown as { maintenance_trade?: string }).maintenance_trade || ticket.category || '-',
     },
     {
       key: 'priority',
@@ -620,7 +621,8 @@ export default function TicketsPage() {
       result = result.filter(t =>
         t.issue_description?.toLowerCase().includes(q) ||
         t.address?.toLowerCase().includes(q) ||
-        t.category?.toLowerCase().includes(q)
+        t.category?.toLowerCase().includes(q) ||
+        (t as unknown as { maintenance_trade?: string }).maintenance_trade?.toLowerCase().includes(q)
       )
     }
 

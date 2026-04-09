@@ -1423,7 +1423,7 @@ export type Database = {
           archived: boolean | null
           archived_at: string | null
           availability: string | null
-          category: string | null
+          category: string
           compliance_certificate_id: string | null
           confirmation_date: string | null
           contractor_id: string | null
@@ -1453,6 +1453,7 @@ export type Database = {
           landlord_outcome_at: string | null
           landlord_submissions: Json | null
           landlord_token: string | null
+          maintenance_trade: string | null
           next_action: string | null
           next_action_reason: string | null
           on_hold: boolean | null
@@ -1496,7 +1497,7 @@ export type Database = {
           archived?: boolean | null
           archived_at?: string | null
           availability?: string | null
-          category?: string | null
+          category: string
           compliance_certificate_id?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
@@ -1526,6 +1527,7 @@ export type Database = {
           landlord_outcome_at?: string | null
           landlord_submissions?: Json | null
           landlord_token?: string | null
+          maintenance_trade?: string | null
           next_action?: string | null
           next_action_reason?: string | null
           on_hold?: boolean | null
@@ -1569,7 +1571,7 @@ export type Database = {
           archived?: boolean | null
           archived_at?: string | null
           availability?: string | null
-          category?: string | null
+          category?: string
           compliance_certificate_id?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
@@ -1599,6 +1601,7 @@ export type Database = {
           landlord_outcome_at?: string | null
           landlord_submissions?: Json | null
           landlord_token?: string | null
+          maintenance_trade?: string | null
           next_action?: string | null
           next_action_reason?: string | null
           on_hold?: boolean | null
@@ -1918,7 +1921,7 @@ export type Database = {
           archived: boolean | null
           archived_at: string | null
           availability: string | null
-          category: string | null
+          category: string
           compliance_certificate_id: string | null
           confirmation_date: string | null
           contractor_id: string | null
@@ -1948,6 +1951,7 @@ export type Database = {
           landlord_outcome_at: string | null
           landlord_submissions: Json | null
           landlord_token: string | null
+          maintenance_trade: string | null
           next_action: string | null
           next_action_reason: string | null
           on_hold: boolean | null
@@ -2225,6 +2229,7 @@ export type Database = {
           landlord_id: string
           landlord_name: string
           landlord_phone: string
+          maintenance_trade: string
           manager_email: string
           manager_name: string
           manager_phone: string
@@ -2372,27 +2377,7 @@ export type Database = {
           next_action_reason: string
         }[]
       }
-      compute_landlord_next_action: {
-        Args: {
-          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
-          p_ticket_id: string
-        }
-        Returns: {
-          next_action: string
-          next_action_reason: string
-        }[]
-      }
       compute_maintenance_next_action: {
-        Args: {
-          p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
-          p_ticket_id: string
-        }
-        Returns: {
-          next_action: string
-          next_action_reason: string
-        }[]
-      }
-      compute_ooh_next_action: {
         Args: {
           p_ticket: Database["public"]["Tables"]["c1_tickets"]["Row"]
           p_ticket_id: string

@@ -26,24 +26,31 @@ Tenant messages WhatsApp
 
 ### Ticket State Machine — Polymorphic Dispatch
 
-`c1_compute_next_action` is a router. Universal states are handled inline (archived, closed, on_hold), then dispatch by category or lifecycle flag:
+`c1_compute_next_action` is a **pure dispatch router**. Zero business logic. Universal states first (archived, closed, on_hold), then 3 explicit category routes, then fail loud.
 
 ```
-c1_compute_next_action routes by category:
-   ├─ compliance_renewal → cert renewal lifecycle
-   ├─ rent_arrears → arrears tracking (no contractor)
-   └─ default → standard contractor dispatch flow
+c1_compute_next_action (THE LAW):
+   Universal: archived → archived/dismissed, closed → completed, on_hold → on_hold
+   ├─ compliance_renewal → compute_compliance_next_action()
+   ├─ rent_arrears       → compute_rent_arrears_next_action()
+   ├─ maintenance        → compute_maintenance_next_action()
+   └─ anything else      → error/unknown_category (RAISE WARNING)
 ```
 
 | Route | Sub-routine | Handles |
 |-------|-------------|---------|
 | `compliance_renewal` | `compute_compliance_next_action` | Cert renewal lifecycle |
 | `rent_arrears` | `compute_rent_arrears_next_action` | Per-tenant arrears tracking |
-| `landlord_allocated` flag | `compute_landlord_next_action` | Landlord-managed outcomes |
-| `ooh_dispatched` flag | `compute_ooh_next_action` | Emergency outcomes |
-| _(default)_ | `compute_maintenance_next_action` | Standard contractor dispatch |
+| `maintenance` | `compute_maintenance_next_action` | Full maintenance lifecycle: contractor dispatch, landlord allocation, OOH, handoff, pending review |
+| _(anything else)_ | **Error** | `unknown_category` — every ticket MUST have a valid category |
 
-**Dispatch order:** universal states → category → lifecycle flags → simple flags → maintenance fallback.
+**Rules:**
+- Router has zero business logic. All domain logic lives in sub-routines.
+- Every ticket MUST have a `category` (NOT NULL constraint). NULL = creation bug.
+- `c1_tickets.category` = route discriminator (`maintenance`, `compliance_renewal`, `rent_arrears`).
+- `c1_tickets.maintenance_trade` = contractor trade type (`Plumber`, `Electrician`, etc.) — only for maintenance tickets.
+- Landlord allocation, OOH dispatch, pending review, handoff are all INSIDE `compute_maintenance_next_action`, not in the router.
+- `next_action_reason` has a CHECK constraint — adding new reasons requires a migration.
 
 **How to add a new ticket category:**
 1. Create `compute_{category}_next_action()` in a new migration (SECURITY DEFINER)
@@ -194,4 +201,5 @@ Every new feature that involves business logic starts here:
 - Add to the appropriate sub-routine, not the router
 - New ticket categories need a new sub-routine + router registration
 - Sub-routines are SECURITY DEFINER and protected
-- See `docs/POLYMORPHIC-DISPATCH-PLAN.md` for the dispatch pattern and all 5 sub-routines
+- See `docs/POLYMORPHIC-DISPATCH-PLAN.md` for the dispatch pattern and all 3 sub-routines
+- Landlord/OOH/pending_review/handoff logic lives INSIDE `compute_maintenance_next_action`, not in the router

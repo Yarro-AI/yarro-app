@@ -89,6 +89,7 @@ const badgeStyles: Record<string, { border: string; text: string }> = {
   'renewal scheduled': { border: 'border-primary/40', text: 'text-primary' },
   'awaiting dispatch':   { border: 'border-warning/40',  text: 'text-warning' },
   'awaiting approval':   { border: 'border-warning/40',  text: 'text-warning' },
+  'unknown category':    { border: 'border-danger',       text: 'text-danger' },
 
   // Rent statuses
   'rent overdue':         { border: 'border-danger/40',   text: 'text-danger' },

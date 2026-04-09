@@ -21,11 +21,15 @@ All business logic lives in Supabase RPCs, not the frontend.
 - Never compute derived state (status, counts, summaries) in the frontend
 - Every new feature starts with the RPC, then UI consumes it
 - Direct `.from().select()` only for simple reads with no logic
-- **Polymorphic Dispatch Pattern** for all ticket state logic:
-  - `c1_compute_next_action` is a ~30-line router — dispatches to domain-specific sub-routines
+- **Polymorphic Dispatch Pattern — THE LAW** for all ticket state logic:
+  - `c1_compute_next_action` is a pure dispatch router — ZERO business logic
+  - 3 explicit routes: `maintenance` → `compliance_renewal` → `rent_arrears` → else error
+  - Each route owns its FULL lifecycle (maintenance includes landlord, OOH, handoff, pending review)
   - Never add IF/ELSE branches to the router — add logic to the appropriate sub-routine
-  - New ticket categories get a new sub-routine registered in the router
-  - Every workflow (intake, dispatch, reminders, followups) flows through the ticket system
+  - `c1_tickets.category` = route (`maintenance`/`compliance_renewal`/`rent_arrears`), NOT NULL
+  - `c1_tickets.maintenance_trade` = contractor trade type (`Plumber`, `Electrician`) for maintenance only
+  - `next_action_reason` has a CHECK constraint — new reasons require a migration
+  - New categories = new explicit route + new sub-routine + CHECK constraint update
   - Reference: `docs/POLYMORPHIC-DISPATCH-PLAN.md`
 
 RPC development workflow: `.claude/docs/architecture.md#rpc-development-workflow`
