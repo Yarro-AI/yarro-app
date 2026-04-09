@@ -96,7 +96,7 @@ export default function CertificateDetailPage() {
         .single(),
       supabase
         .from('c1_tickets')
-        .select('id, job_stage')
+        .select('id, job_stage, next_action_reason')
         .eq('compliance_certificate_id', certId)
         .eq('status', 'open')
         .eq('archived', false)
@@ -114,12 +114,18 @@ export default function CertificateDetailPage() {
       return
     }
 
-    // Compute display status — matches RPC CASE logic exactly
+    // Compute display status — matches compliance_get_all_statuses RPC CASE logic
     let status = 'incomplete'
-    if (activeTicket && ['booked', 'scheduled'].includes(activeTicket.job_stage ?? '')) {
-      status = 'renewal_scheduled'
-    } else if (activeTicket) {
-      status = 'renewal_requested'
+    if (activeTicket) {
+      const reason = activeTicket.next_action_reason as string | null
+      if (reason === 'compliance_pending') status = 'awaiting_dispatch'
+      else if (reason === 'awaiting_contractor') status = 'awaiting_contractor'
+      else if (reason === 'awaiting_booking') status = 'awaiting_booking'
+      else if (reason === 'scheduled' || reason === 'awaiting_completion') status = 'renewal_scheduled'
+      else if (['booked', 'scheduled'].includes(activeTicket.job_stage ?? '')) status = 'renewal_scheduled'
+      else if (reason === 'no_contractors') status = 'no_contractors'
+      else if (reason === 'manager_approval') status = 'awaiting_approval'
+      else status = 'renewal_requested'
     } else if (data.document_url && data.expiry_date) {
       const expiry = new Date(data.expiry_date)
       const now = new Date()
