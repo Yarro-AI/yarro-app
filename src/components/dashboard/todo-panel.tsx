@@ -80,6 +80,7 @@ export const REASON_BADGE: Record<string, { label: string; dot: string; text: st
   ooh_in_progress:      { label: 'OOH in progress',       ...BS },
   on_hold:              { label: 'On hold',               ...BS },
   // Compliance
+  compliance_pending:   { label: 'Dispatch contractor',   ...BS },
   compliance_expired:   { label: 'Renew certificate',     ...BS },
   compliance_expiring:  { label: 'Schedule renewal',      ...BS },
   compliance_missing:   { label: 'Add certificate',       ...BS },

@@ -1841,6 +1841,7 @@ export type Database = {
         Returns: string
       }
       c1_completion_followup_check: { Args: never; Returns: number }
+      c1_compliance_escalate: { Args: never; Returns: undefined }
       c1_compute_next_action: {
         Args: { p_ticket_id: string }
         Returns: {
