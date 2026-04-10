@@ -910,7 +910,14 @@ If a reschedule is requested within 24 hours of the original `scheduled_date`, t
 IF reason = 'reschedule_pending' AND scheduled_date - now() <= interval '24 hours'
   → display bucket = 'needs_action' (PM must call contractor/tenant directly)
 ```
-Same pattern as stuck override — router returns `waiting`, dashboard overrides for display.
+
+**Display override evaluation order (dashboard RPC — first match wins):**
+1. **Reschedule urgency** → `needs_action` (PM must call, job is imminent)
+2. **Stuck override** → `stuck` (external party timed out, PM must chase)
+
+Order matters: if a reschedule is pending AND timed out AND within 24h of the scheduled date, the PM must call — that's more urgent than chasing. `needs_action` wins over `stuck`.
+
+If the reschedule is pending and timed out but the scheduled date is >24h away, the stuck override applies — the PM should chase the other party through normal channels, there's still time for the portal flow.
 
 **Frontend display:**
 `reschedule_initiated_by` tells the frontend who we're waiting for:
