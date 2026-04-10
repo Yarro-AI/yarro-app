@@ -617,6 +617,24 @@ c1_compute_priority_score(t.priority, t.deadline_date, t.sla_due_at, t.waiting_s
 
 One function, both views, identical scores.
 
+### Why there are no reason-specific boosts
+
+The previous dashboard RPC had hardcoded boosts: `compliance_pending` +30, `handoff_review` +30, `no_contractors` +25, unresponsive contractor +25. These are intentionally removed.
+
+**Why:** Reason-specific boosts were a crude approximation of what SLA proximity does precisely. A flat +30 for `handoff_review` says "this type is always important." SLA proximity says "+50 because you have 1 hour left to act" — it escalates over time based on how close the PM is to missing the response window. That's more accurate and drives better behaviour.
+
+**The math proves it:**
+
+| Scenario | Old score | New score (hour 0 → hour 3) |
+|---|---|---|
+| Fresh handoff, Medium | 55 (flat) | 50 → 103 (SLA ramp) |
+| `no_contractors`, Medium, 2h old | 52 (flat) | 102 (SLA ≤4h kicks in) |
+| Expired cert, High, 48h old | 178 | 398 (deadline + SLA breach) |
+
+The new formula starts slightly lower for fresh tickets (50 vs 55) because a handoff that JUST arrived is genuinely the same urgency as any other fresh Medium ticket. The urgency comes from the SLA clock running — after 1-2 hours the SLA proximity component pushes it well above where the flat boost ever was.
+
+Every reason that previously had a boost now has an SLA entry in the defaults table (`handoff_review`: 4h, `no_contractors`: 4h, `pending_review`: 4h). The SLA does what the boost did, but better — it escalates progressively instead of being a constant, and it's configurable per PM in the future.
+
 ### Awaab's Law — future sprint
 
 The current system tracks one SLA per ticket per state. Awaab's Law requires multi-stage tracking:
