@@ -1246,6 +1246,117 @@ Trigger:
 
 ---
 
+## `next_action` value rename — migration
+
+### What changes
+
+The `next_action` column on `c1_tickets` changes from 6+ inconsistent values to clean bucket values:
+
+```
+Old → New:
+  needs_attention  → needs_action
+  assign_contractor → needs_action
+  follow_up        → needs_action
+  new              → needs_action
+  in_progress      → waiting OR scheduled (depends on reason)
+  completed        → completed (unchanged)
+  archived         → archived (unchanged)
+  dismissed        → dismissed (unchanged)
+  on_hold          → on_hold (unchanged)
+  error            → error (unchanged)
+```
+
+### Why this needs an explicit migration
+
+The trigger (`c1_trigger_recompute_next_action`) fires on column changes to the ticket row — NOT on function redefinition. Updating the router via `CREATE OR REPLACE FUNCTION` changes what the router *returns*, but doesn't cause the trigger to re-run on existing tickets. All open tickets keep their old `next_action` values until something else changes on them.
+
+Without the backfill, the dashboard would show a mix of old values (`needs_attention`, `in_progress`) and new values (`needs_action`, `waiting`) depending on when each ticket was last recomputed. The frontend would break because it's looking for the new values.
+
+### Migration order (within a single migration file)
+
+**Step 1: Deploy new router + sub-routines**
+```sql
+CREATE OR REPLACE FUNCTION c1_compute_next_action(...) -- returns new bucket values
+CREATE OR REPLACE FUNCTION compute_maintenance_next_action(...) -- new values
+CREATE OR REPLACE FUNCTION compute_compliance_next_action(...) -- new values + cert_incomplete
+CREATE OR REPLACE FUNCTION compute_rent_arrears_next_action(...) -- new values
+```
+
+After this, any NEW state change on any ticket will compute with the new values. But existing rows are unchanged.
+
+**Step 2: Update the trigger**
+```sql
+CREATE OR REPLACE FUNCTION c1_trigger_recompute_next_action() -- writes 4 fields now
+```
+
+The trigger function is replaced. Next time it fires for any ticket, it writes the new values including `waiting_since` and `sla_due_at`.
+
+**Step 3: Backfill open tickets (force recompute)**
+```sql
+-- For each open ticket, call the router and write the result
+UPDATE c1_tickets t SET
+  next_action = r.next_action,
+  next_action_reason = r.next_action_reason
+FROM c1_compute_next_action(t.id) r
+WHERE t.status != 'closed'
+  AND COALESCE(t.archived, false) = false;
+```
+
+This forces the router to run on every open ticket and writes the new bucket values. The trigger's recursion guard (`pg_trigger_depth() > 1`) prevents cascading — the UPDATE fires the trigger, the trigger sees depth > 1 and returns immediately.
+
+**Note:** This is a bulk UPDATE — with ~94 tickets it takes under a second. At 10,000 tickets it would take a few seconds. Not a concern at current scale.
+
+**Step 4: Backfill terminal tickets (simple value map)**
+
+Closed/archived/dismissed tickets don't go through the router (it early-returns for them). But their `next_action` column still has old values that queries might filter on:
+
+```sql
+UPDATE c1_tickets SET next_action = 'needs_action'
+  WHERE next_action IN ('needs_attention', 'assign_contractor', 'follow_up', 'new')
+  AND (status = 'closed' OR archived = true);
+
+UPDATE c1_tickets SET next_action = 'waiting'
+  WHERE next_action = 'in_progress' AND next_action_reason != 'scheduled'
+  AND (status = 'closed' OR archived = true);
+
+UPDATE c1_tickets SET next_action = 'scheduled'
+  WHERE next_action = 'in_progress' AND next_action_reason = 'scheduled'
+  AND (status = 'closed' OR archived = true);
+```
+
+**Step 5: Rename `compliance_pending` on all tickets**
+```sql
+UPDATE c1_tickets SET next_action_reason = 'compliance_needs_dispatch'
+  WHERE next_action_reason = 'compliance_pending';
+```
+
+**Step 6: Update CHECK constraint**
+```sql
+ALTER TABLE c1_tickets DROP CONSTRAINT IF EXISTS chk_next_action_reason;
+ALTER TABLE c1_tickets ADD CONSTRAINT chk_next_action_reason
+CHECK (next_action_reason IS NULL OR next_action_reason IN (
+  -- full new list...
+));
+```
+
+**Step 7: Generate types**
+```bash
+supabase gen types typescript --linked > src/types/database.ts
+```
+
+### Rollback
+
+Rollback script reverses all changes:
+1. Re-deploy old router + sub-routines (from `supabase/rollbacks/`)
+2. Re-deploy old trigger function
+3. Force recompute all open tickets (same bulk UPDATE, old router produces old values)
+4. Restore old CHECK constraint
+5. Rename `compliance_needs_dispatch` back to `compliance_pending`
+
+The rollback is safe because the old router still works with the existing data. The only risk is if new reasons (`cert_incomplete`, `awaiting_tenant`, `reschedule_pending`) were written to tickets during the migration window — the old CHECK constraint doesn't include them. The rollback script handles this by clearing those values before restoring the constraint.
+
+---
+
 ## `job_stage` — removed
 
 ### What it was
