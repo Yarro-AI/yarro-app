@@ -196,6 +196,46 @@ The current drawer makes 7 separate queries (`c1_ticket_context`, `c1_tickets`, 
 
 One RPC means: one query, one timestamp, consistent data. Both `c1_get_dashboard_todo` and `c1_ticket_detail` return the same state fields (`next_action`, `next_action_reason`, `is_past_timeout`, timestamps). Labels and context text are computed by the frontend from these fields — one mapping, used by both dashboard and drawer.
 
+### Handoff review — inline transcript
+
+The drawer no longer has a conversation tab. But for `handoff_review` tickets, the PM must read the AI transcript to understand what happened before assigning the ticket. The transcript is shown as a collapsible section on the overview, only for handoff tickets.
+
+**How it works:**
+- `c1_ticket_detail` returns `conversation_id` and `handoff_reason`
+- If `next_action_reason = 'handoff_review'` AND `conversation_id IS NOT NULL`, the drawer makes one additional query:
+  ```
+  SELECT log FROM c1_conversations WHERE id = conversation_id
+  ```
+- The transcript renders as a collapsible "AI Transcript" section below the stage card
+- The stage card shows the handoff reason immediately: "No plumber contractor mapped" or "Couldn't categorise issue"
+- The PM reads the reason (instant), optionally expands the transcript (detail), then clicks "Review & assign"
+
+**Why only `handoff_review`, not `pending_review`:**
+- `pending_review`: AI successfully categorised the issue. The ticket already has category, trade, and description filled in. PM just reviews the AI's work and approves dispatch. Transcript is available but rarely needed.
+- `handoff_review`: AI failed. The PM needs to understand what the tenant said to figure out what the issue is. Transcript is essential.
+
+Both have the transcript accessible (the query fires for both), but the drawer only auto-expands the transcript section for `handoff_review`.
+
+**`handoff_reason` column:**
+
+New `TEXT DEFAULT NULL` column on `c1_tickets`. Set by `c1_create_ticket` when `handoff = true`, based on why the AI handed off:
+
+| Handoff scenario | `handoff_reason` value |
+|---|---|
+| Property not matched | `'property_not_matched'` |
+| Issue type unclear / couldn't categorise | `'category_unclear'` |
+| No contractor mapped for the trade | `'no_contractor_mapped'` |
+| Confidence too low | `'low_confidence'` |
+| Tenant requested human | `'tenant_requested'` |
+
+The stage card displays this as human-readable text: "AI couldn't categorise this issue" or "No plumber contractor mapped for 14 Elm Street." PM sees the reason immediately without reading the transcript.
+
+For the audit trail: the `ISSUE_CREATED` event metadata includes `handoff_reason`, proving why the AI couldn't handle it autonomously.
+
+**CTA difference:**
+- `handoff_review` → "Review & assign" (PM must set category + contractor)
+- `pending_review` → "Approve dispatch" (AI already set category + contractor, PM confirms)
+
 ### Labels and context — frontend display logic, not backend computation
 
 `action_label` and `action_context` are **display text**, not business logic. The business logic is: what bucket, what reason, is it timed out? The display logic is: given those fields, what text do we show?
