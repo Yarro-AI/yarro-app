@@ -61,9 +61,9 @@ function getCTA(reason: string | null, isStuck: boolean, ticket: TicketDetail): 
       return { label: 'Complete certificate', type: 'navigate',
         href: ticket.compliance_certificate_id ? `/compliance/${ticket.compliance_certificate_id}` : undefined }
     case 'rent_overdue':
-      return { label: 'Contact tenant', type: 'contact' }
+      return { label: 'Contact tenant', type: 'contact', phone: ticket.tenant?.phone || undefined }
     case 'rent_partial_payment':
-      return { label: 'Follow up payment', type: 'contact' }
+      return { label: 'Follow up payment', type: 'contact', phone: ticket.tenant?.phone || undefined }
     case 'manager_approval':
       return { label: 'Approve quote', type: 'inline_approve' }
     case 'handoff_review':

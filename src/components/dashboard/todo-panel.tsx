@@ -69,9 +69,7 @@ export function deriveCategory(item: TodoItem): JobCategory {
 }
 
 export function getTodoHref(item: TodoItem): string | null {
-  if (item.category === 'compliance_renewal' && item.compliance_certificate_id) {
-    return `/compliance/${item.compliance_certificate_id}`
-  }
+  // Compliance items open the drawer (not direct cert link) — PM reviews ticket first
   if (item.next_action_reason === 'handoff_review') return `/tickets?ticketId=${item.ticket_id}&action=complete`
   if (item.next_action_reason === 'pending_review') return `/tickets?ticketId=${item.ticket_id}&action=review`
   return null

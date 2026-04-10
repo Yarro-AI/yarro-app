@@ -147,8 +147,32 @@ Plan didn't account for `trg_same_day_reminder` (trigger on `job_stage` column) 
 
 ---
 
+## Sprint G/H/I Notes (Frontend SSOT — 2026-04-10)
+
+### Issues Found During Testing
+
+**BACKEND BUG: `no_contractors` appearing in `waiting` bucket**
+- A ticket with `next_action_reason = 'no_contractors'` has `bucket = 'waiting'` in the dashboard
+- Per architecture spec § bucket assignment, `no_contractors` should be `needs_action`
+- Root cause: Either the router assigns wrong `next_action`, or the ticket's column is stale from before the router fix
+- **Fix needed:** Check `c1_compute_next_action` for `no_contractors` handling. May need a one-time recompute migration.
+
+**Compliance table page (/compliance) not loading**
+- Not caused by refactor — page doesn't import anything from refactored files
+- Uses `compliance_get_all_statuses` RPC directly
+- Needs browser console investigation
+
+**Assign contractor CTA intermittent**
+- `StageDispatchAction` component not modified in this refactor — likely pre-existing
+
+### Fixes Applied Post-Testing
+- `getTodoHref`: removed direct `/compliance/${id}` link — compliance items now open the drawer first (correct flow: dashboard → drawer → cert page)
+- Rent CTA: added `ticket.tenant?.phone` to `rent_overdue` and `rent_partial_payment` CTAs so the contact button works
+
+---
+
 ## Risks Encountered
 
 _Record any risks that materialised or new risks discovered._
 
-(none yet)
+- Sprint I (drawer) exposed that `TicketDetail.tenant` is a nested object — consumers that used `context.tenant_name` now use `ticket.tenant?.name`. Risk of silent `undefined` if RPC doesn't return nested objects for some tickets.
