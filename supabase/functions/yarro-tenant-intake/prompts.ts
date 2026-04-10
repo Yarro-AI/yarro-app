@@ -586,7 +586,7 @@ Use the TENANT-SAFE status mapping below. Weave in the issue description and tim
 | completed | “Your [description] job has been marked as completed” |
 | no_contractors | “We’re working on finding the right contractor for your [description] issue” |
 | landlord_declined | “Your [description] issue is being reviewed — the team is exploring next steps” |
-| landlord_no_response | “Your [description] issue is being followed up by your property management team” |
+| awaiting_landlord | “Your [description] issue is being followed up by your property management team” |
 | job_not_completed | “We’re following up on your [description] job — the team is looking into it” |
 | on_hold | “Your [description] issue is currently on hold — the property management team will update you when there’s progress” |
 

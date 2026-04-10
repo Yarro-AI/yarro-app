@@ -335,7 +335,7 @@ async function handleFilloutScheduling(
   // Dedup: reject if ticket already has a scheduled date or is closed
   const { data: currentTicket } = await supabase
     .from("c1_tickets")
-    .select("status, scheduled_date, job_stage")
+    .select("status, scheduled_date")
     .eq("id", ticketId)
     .maybeSingle();
 
