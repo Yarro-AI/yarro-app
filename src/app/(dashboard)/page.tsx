@@ -361,22 +361,7 @@ export default function DashboardPage() {
     const channel = supabase
       .channel('pm-tickets')
       .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'c1_tickets',
-        filter: `property_manager_id=eq.${propertyManager.id}`,
-      }, (payload) => {
-        const n = payload.new as Record<string, unknown>
-        const o = payload.old as Record<string, unknown>
-        if (n.next_action !== o.next_action ||
-            n.next_action_reason !== o.next_action_reason ||
-            n.priority !== o.priority ||
-            n.status !== o.status) {
-          fetchData()
-        }
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'c1_tickets',
         filter: `property_manager_id=eq.${propertyManager.id}`,
@@ -388,7 +373,8 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [propertyManager?.id, supabase, fetchData])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyManager?.id])
 
   // Lift filtered lists to parent scope for stat cards + TodoPanel props
   const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
