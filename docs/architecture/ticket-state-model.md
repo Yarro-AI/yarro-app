@@ -1039,8 +1039,8 @@ SET awaiting_tenant = true,
     tenant_contacted_at = now()
 WHERE id = p_ticket_id;
 
--- Audit event (same transaction):
-PERFORM c1_log_event(p_ticket_id, 'PM_AWAITING_TENANT', 'PM', NULL, NULL,
+-- Audit event (same transaction — resolve property_label from ticket):
+PERFORM c1_log_event(p_ticket_id, 'PM_AWAITING_TENANT', 'PM', NULL, v_property_label,
   jsonb_build_object('reason', p_reason));  -- 'access', 'availability', 'payment', etc.
 ```
 
@@ -1698,10 +1698,22 @@ AUTO_TICKET_RENT          — system auto-created ticket for overdue rent
 
 ### Where new events get written
 
-**`STATE_CHANGED`** — in `c1_trigger_recompute_next_action`. The trigger already checks `IS DISTINCT FROM` before writing. Add `c1_log_event()` call when the reason actually changes:
+**`STATE_CHANGED`** — in `c1_trigger_recompute_next_action`. The trigger already checks `IS DISTINCT FROM` before writing. Add `c1_log_event()` call when the reason actually changes.
+
+The `c1_log_event` signature is: `(p_ticket_id uuid, p_event_type text, p_actor_type text, p_actor_name text, p_property_label text, p_metadata jsonb)`. The trigger should resolve `property_label` from the ticket's property (same pattern as `trg_c1_events_on_ticket`):
+
 ```sql
+-- Resolve property label (same pattern as existing event triggers)
+SELECT p.address INTO v_property_label
+FROM c1_properties p WHERE p.id = v_ticket.property_id;
+
 IF v_result.next_action_reason IS DISTINCT FROM current_reason THEN
-  PERFORM c1_log_event(ticket_id, 'STATE_CHANGED', 'SYSTEM', NULL, NULL,
+  PERFORM c1_log_event(
+    v_ticket_id,
+    'STATE_CHANGED',
+    'SYSTEM',
+    NULL,                    -- actor_name (system event, no actor)
+    v_property_label,        -- property_label (for audit filtering by property)
     jsonb_build_object(
       'from_reason', current_reason,
       'to_reason', v_result.next_action_reason,
@@ -1710,6 +1722,8 @@ IF v_result.next_action_reason IS DISTINCT FROM current_reason THEN
     ));
 END IF;
 ```
+
+**Why include `property_label`:** Audit queries like "show all state changes for 14 Elm Street" need the property label denormalized on the event row. Without it, every query joins through `c1_tickets` → `c1_properties`. All existing event triggers (`trg_c1_events_on_ticket`, `trg_c1_events_on_message`) already resolve and pass `property_label` — `STATE_CHANGED` should follow the same pattern.
 
 **`TIMEOUT_TRIGGERED`** — in the timeout cron jobs (`contractor-timeout-check`, `landlord-timeout-check`). When they detect a timeout, call `c1_log_event()`. Dedup: only log if no `TIMEOUT_TRIGGERED` event exists for this ticket since the current wait started (`waiting_since`).
 
