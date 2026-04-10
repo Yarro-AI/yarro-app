@@ -3,13 +3,11 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/status-badge'
-import { REASON_BADGE } from '@/components/dashboard/todo-panel'
+import { getReasonDisplay } from '@/lib/reason-display'
 import type { TodoItem } from '@/components/dashboard/todo-panel'
 import {
   ShieldCheck,
   Banknote,
-  CalendarDays,
-  MessageSquare,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -20,30 +18,20 @@ interface TodoRowProps {
 }
 
 export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
-  const borderAccent = (item.sla_breached || item.priority_bucket === 'URGENT')
+  const borderAccent = (item.priority === 'Emergency' || item.priority === 'Urgent')
     ? 'border-l-[3px] border-l-danger'
-    : item.priority_bucket === 'HIGH'
+    : item.priority === 'High'
     ? 'border-l-[3px] border-l-warning'
     : ''
-  const src = item.source_type || 'ticket'
 
-  const SourceIcon = src === 'compliance' ? ShieldCheck
-    : src === 'rent' ? Banknote
-    : src === 'tenancy' ? CalendarDays
-    : src === 'handoff' ? MessageSquare
+  const SourceIcon = item.category === 'compliance_renewal' ? ShieldCheck
+    : item.category === 'rent_arrears' ? Banknote
     : null
 
-  const isTicket = item.id.startsWith('todo_')
-
   const getHref = (): string | null => {
-    // Ticket-sourced compliance/rent items → open ticket detail, not extras page
-    if (isTicket && (src === 'compliance' || src === 'rent')) return null
-    if (src === 'compliance') {
-      return item.next_action_reason === 'compliance_missing'
-        ? `/properties/${item.property_id}`
-        : `/compliance/${item.entity_id}`
+    if (item.category === 'compliance_renewal' && item.compliance_certificate_id) {
+      return `/compliance/${item.compliance_certificate_id}`
     }
-    if (src === 'rent' || src === 'tenancy') return `/properties/${item.property_id}`
     if (item.next_action_reason === 'handoff_review') return `/tickets?ticketId=${item.ticket_id}&action=complete`
     if (item.next_action_reason === 'pending_review') return `/tickets?ticketId=${item.ticket_id}&action=review`
     return null
@@ -51,19 +39,16 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
   const href = getHref()
 
   const handleClick = () => {
-    if (src === 'handoff') {
+    if (item.next_action_reason === 'handoff_review') {
       onHandoffClick(item)
       return
     }
     onTicketClick(item)
   }
 
-  const badge = item.is_past_timeout
-    ? { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-    : item.action_type === 'SCHEDULED_OVERDUE'
-    ? { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-    : REASON_BADGE[item.next_action_reason || ''] || { label: item.action_label, dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' }
-  const waitHrs = (Date.now() - new Date(item.waiting_since).getTime()) / 3_600_000
+  const { label } = getReasonDisplay(item.next_action_reason, item.is_past_timeout ?? false)
+  const waitingSince = item.waiting_since || item.created_at
+  const waitHrs = waitingSince ? (Date.now() - new Date(waitingSince).getTime()) / 3_600_000 : 0
   const waitStyle = waitHrs > 48 ? 'text-xs font-medium text-danger' : waitHrs > 24 ? 'text-xs font-medium text-warning' : 'text-[11px] text-muted-foreground/60'
 
   const rowContent = (
@@ -79,10 +64,12 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
         <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
         <div className="flex items-center gap-2 mt-1">
           <span className="flex items-center gap-1.5 flex-shrink-0">
-            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-            <span className={`text-xs font-medium ${badge.text}`}>{badge.label}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+            <span className="text-xs font-medium text-muted-foreground">{label}</span>
           </span>
-          <span className={waitStyle}>{formatDistanceToNow(new Date(item.waiting_since), { addSuffix: true })}</span>
+          {waitingSince && (
+            <span className={waitStyle}>{formatDistanceToNow(new Date(waitingSince), { addSuffix: true })}</span>
+          )}
         </div>
       </div>
     </>

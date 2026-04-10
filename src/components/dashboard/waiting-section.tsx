@@ -16,6 +16,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import type { TodoItem } from '@/components/dashboard/todo-panel'
+import { getReasonDisplay } from '@/lib/reason-display'
 
 interface WaitingSectionProps {
   waitingItems: TodoItem[]
@@ -78,29 +79,34 @@ const BLOCKED_REASONS = new Set([
 ])
 
 function groupStuckItems(items: TodoItem[]): Group[] {
-  const unresponsive: TodoItem[] = []
+  const chaseContractor: TodoItem[] = []
   const blocked: TodoItem[] = []
-  const noResponse: TodoItem[] = []
+  const chaseOther: TodoItem[] = []
   const overdue: TodoItem[] = []
 
   for (const item of items) {
-    if (item.action_type === 'CONTRACTOR_UNRESPONSIVE') unresponsive.push(item)
-    else if (item.action_type === 'SCHEDULED_OVERDUE') overdue.push(item)
-    else if (BLOCKED_REASONS.has(item.next_action_reason || '')) blocked.push(item)
-    else noResponse.push(item)
+    if (item.next_action_reason === 'scheduled' && item.is_past_timeout) {
+      overdue.push(item)
+    } else if (item.next_action_reason === 'awaiting_contractor' && item.is_past_timeout) {
+      chaseContractor.push(item)
+    } else if (BLOCKED_REASONS.has(item.next_action_reason || '')) {
+      blocked.push(item)
+    } else {
+      chaseOther.push(item)
+    }
   }
 
   return [
-    { key: 'unresponsive', label: 'Unresponsive contractor', items: unresponsive },
+    { key: 'chase-contractor', label: 'Chase contractor', items: chaseContractor },
     { key: 'blocked', label: 'Blocked', items: blocked },
-    { key: 'no-response', label: 'No response', items: noResponse },
+    { key: 'chase-other', label: 'No response', items: chaseOther },
     { key: 'overdue', label: 'Overdue', items: overdue },
   ].filter(g => g.items.length > 0)
 }
 
 function sortByWaitingSince(items: TodoItem[]) {
   return [...items].sort(
-    (a, b) => new Date(a.waiting_since).getTime() - new Date(b.waiting_since).getTime()
+    (a, b) => new Date(a.waiting_since || a.created_at || 0).getTime() - new Date(b.waiting_since || b.created_at || 0).getTime()
   )
 }
 
@@ -181,11 +187,14 @@ export function WaitingSection({ waitingItems, stuckItems, onTicketClick }: Wait
                                 <StatusBadge status={item.next_action_reason} size="sm" />
                               )}
                             </div>
-                            {item.action_context && (
-                              <p className={cn(typography.microText, 'mt-1')}>{item.action_context}</p>
-                            )}
+                            {(() => {
+                              const { context } = getReasonDisplay(item.next_action_reason, item.is_past_timeout ?? false)
+                              return context ? <p className={cn(typography.microText, 'mt-1')}>{context}</p> : null
+                            })()}
                           </div>
-                          <WaitDurationBadge waitingSince={item.waiting_since} />
+                          {(item.waiting_since || item.created_at) && (
+                            <WaitDurationBadge waitingSince={(item.waiting_since || item.created_at)!} />
+                          )}
                         </button>
                       ))}
                     </div>

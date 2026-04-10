@@ -36,7 +36,7 @@ import { Button } from '@/components/ui/button'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { PageShell } from '@/components/page-shell'
 import { useOpenTicket } from '@/hooks/use-open-ticket'
-import { filterActionable, filterInProgress, filterStuck } from '@/components/dashboard/todo-panel'
+import { getReasonDisplay } from '@/lib/reason-display'
 import { JobsList } from '@/components/dashboard/jobs-list'
 import { WaitingSection } from '@/components/dashboard/waiting-section'
 import { ScheduledSection } from '@/components/dashboard/scheduled-section'
@@ -263,35 +263,10 @@ export default function DashboardPage() {
         jobNotCompleted,
       })
 
-      // Map next_action_reason → display label
-      const reasonToDisplayStage: Record<string, string> = {
-        pending_review: 'Needs Review',
-        handoff_review: 'Handoff',
-        ooh_dispatched: 'OOH Dispatched',
-        ooh_resolved: 'OOH Resolved',
-        ooh_unresolved: 'OOH Unresolved',
-        manager_approval: 'Awaiting Manager',
-        no_contractors: 'No Contractors',
-        landlord_declined: 'Landlord Declined',
-        job_not_completed: 'Not Completed',
-        awaiting_contractor: 'Awaiting Contractor',
-        awaiting_landlord: 'Awaiting Landlord',
-        awaiting_booking: 'Awaiting Booking',
-        scheduled: 'Scheduled',
-        completed: 'Completed',
-        dismissed: 'Dismissed',
-        new: 'Created',
-      }
-
-      const mappedTickets = tickets.map((t) => {
-        let display_stage = reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created'
-        if (t.on_hold) display_stage = 'On Hold'
-        return {
+      const mappedTickets = tickets.map((t) => ({
           id: t.id,
           issue_description: t.issue_description,
           status: t.status,
-          display_stage,
-          message_stage: null,
           category: t.category,
           priority: t.priority,
           date_logged: t.date_logged,
@@ -303,8 +278,7 @@ export default function DashboardPage() {
           next_action: t.next_action || null,
           next_action_reason: t.next_action_reason || null,
           on_hold: t.on_hold || null,
-        }
-      })
+      }))
       setAllTickets(mappedTickets)
     }
 
@@ -376,18 +350,11 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyManager?.id])
 
-  // Lift filtered lists to parent scope for stat cards + TodoPanel props
-  const actionable = useMemo(() => filterActionable(todoItems), [todoItems])
-  const inProgressItems = useMemo(() => filterInProgress(todoItems), [todoItems])
-  const stuckItems = useMemo(() => filterStuck(todoItems), [todoItems])
-  const waitingItems = useMemo(
-    () => inProgressItems.filter(i => i.next_action_reason !== 'scheduled'),
-    [inProgressItems]
-  )
-  const scheduledItems = useMemo(
-    () => inProgressItems.filter(i => i.next_action_reason === 'scheduled'),
-    [inProgressItems]
-  )
+  // Group by bucket field from RPC — no frontend state computation
+  const actionable = useMemo(() => todoItems.filter(i => i.bucket === 'needs_action'), [todoItems])
+  const waitingItems = useMemo(() => todoItems.filter(i => i.bucket === 'waiting'), [todoItems])
+  const stuckItems = useMemo(() => todoItems.filter(i => i.bucket === 'stuck'), [todoItems])
+  const scheduledItems = useMemo(() => todoItems.filter(i => i.bucket === 'scheduled'), [todoItems])
   const scheduledDateMap = useMemo(() => {
     const map = new Map<string, string>()
     todoItems.forEach(t => {
@@ -397,10 +364,7 @@ export default function DashboardPage() {
   }, [todoItems])
 
   // Pre-compute category sub-filter for onboarding mode (maintenance only)
-  const maintenanceTodos = useMemo(() => actionable.filter(i => {
-    const src = i.source_type || 'ticket'
-    return src === 'ticket' || src === 'handoff'
-  }), [actionable])
+  const maintenanceTodos = useMemo(() => actionable.filter(i => i.category === 'maintenance' || !i.category), [actionable])
 
   const showAwaitingTickets = (type: string) => {
     let filtered: TicketSummary[]
@@ -563,11 +527,11 @@ export default function DashboardPage() {
                   <JobsList
                     items={onboardingDone ? actionable : maintenanceTodos}
                     onHandoffClick={(item) => {
-                      const convo = handoffConversations.find(c => c.id === item.entity_id)
-                      if (convo) { setSelectedHandoff(convo); setCreateTicketOpen(true) }
+                      // Handoff items are now tickets — open the ticket directly
+                      openTicket(item.ticket_id)
                     }}
                     onTicketClick={(item) => {
-                      const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+                      const needsDispatchTab = item.next_action_reason === 'no_contractors' || item.next_action_reason === 'manager_approval' || (item.is_past_timeout && item.next_action_reason === 'awaiting_contractor')
                       openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
                     }}
                   />
@@ -583,7 +547,7 @@ export default function DashboardPage() {
               waitingItems={waitingItems}
               stuckItems={stuckItems}
               onTicketClick={(item) => {
-                const needsDispatchTab = item.action_type === 'CONTRACTOR_UNRESPONSIVE'
+                const needsDispatchTab = item.is_past_timeout && item.next_action_reason === 'awaiting_contractor'
                 openTicket(item.ticket_id, needsDispatchTab ? 'dispatch' : undefined)
               }}
             />
@@ -629,7 +593,9 @@ export default function DashboardPage() {
                       </div>
                     </button>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      {ticket.display_stage && <StatusBadge status={ticket.display_stage} />}
+                      {ticket.next_action_reason && (
+                        <StatusBadge status={ticket.on_hold ? 'On hold' : getReasonDisplay(ticket.next_action_reason, false).label} />
+                      )}
                       {awaitingType === 'handoff' && ticket.handoff && (
                         <Link
                           href={`/tickets?ticketId=${ticket.id}&action=complete`}

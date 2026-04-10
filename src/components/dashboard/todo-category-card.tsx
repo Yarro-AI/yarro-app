@@ -29,7 +29,7 @@ export function TodoCategoryCard({
 }: TodoCategoryCardProps) {
   if (items.length === 0) return null
 
-  const urgentCount = items.filter(i => i.priority_bucket === 'URGENT' || i.sla_breached).length
+  const urgentCount = items.filter(i => i.priority === 'Emergency' || i.priority === 'Urgent').length
 
   return (
     <Collapsible open={expanded} onOpenChange={onToggle}>

@@ -51,10 +51,9 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
   const href = getTodoHref(item)
   const urgency = deriveUrgency(item)
   const category = deriveCategory(item)
-  const src = item.source_type || 'ticket'
 
   const handleClick = () => {
-    if (src === 'handoff') {
+    if (item.next_action_reason === 'handoff_review') {
       onHandoffClick(item)
       return
     }
