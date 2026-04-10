@@ -61,3 +61,69 @@ export function getReasonDisplay(reason: string | null, isStuck: boolean): { lab
     context: entry.context,
   }
 }
+
+/** Handoff reason → human-readable text (shown in stage card for handoff_review) */
+export const HANDOFF_REASON_DISPLAY: Record<string, string> = {
+  property_not_matched: "Property couldn't be matched",
+  category_unclear: "AI couldn't categorise this issue",
+  no_contractor_mapped: "No contractor mapped for this trade",
+  low_confidence: "AI confidence too low",
+  tenant_requested: "Tenant requested to speak to a person",
+  ai_handoff: "AI handed off to manager",
+}
+
+/** Stuck context — per-reason timestamp key from RPC data */
+const STUCK_TIMESTAMP_KEY: Record<string, string> = {
+  awaiting_contractor: 'contractor_sent_at',
+  awaiting_booking: 'waiting_since',
+  awaiting_landlord: 'waiting_since',
+  allocated_to_landlord: 'landlord_allocated_at',
+  ooh_dispatched: 'ooh_dispatched_at',
+  scheduled: 'scheduled_date',
+  awaiting_tenant: 'tenant_contacted_at',
+  reschedule_pending: 'waiting_since',
+}
+
+/** Dynamic context — enriches static REASON_DISPLAY with RPC data
+ *  Per architecture spec § "Dynamic context for specific reasons" */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getContextWithData(reason: string | null, isStuck: boolean, data: Record<string, any>): string {
+  if (!reason) return ''
+
+  // Compliance: show cert expiry info
+  if (reason === 'compliance_needs_dispatch' && data.compliance?.expiry_date) {
+    const expiry = new Date(data.compliance.expiry_date)
+    const days = Math.round((Date.now() - expiry.getTime()) / (1000 * 60 * 60 * 24))
+    if (days > 0) {
+      const certType = data.compliance?.cert_type || 'Certificate'
+      return `${certType} expired ${days} days ago — dispatch a contractor for renewal`
+    }
+    const daysUntil = Math.round((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    return `Certificate expires in ${daysUntil} days — dispatch a contractor for renewal`
+  }
+
+  if (reason === 'cert_incomplete' && data.compliance) {
+    const missingDoc = !data.compliance.document_url
+    const missingExpiry = !data.compliance.expiry_date
+    if (missingDoc && missingExpiry) return 'Certificate missing document and expiry date'
+    if (missingDoc) return 'Certificate missing document — upload to complete'
+    if (missingExpiry) return 'Certificate missing expiry date'
+  }
+
+  // Stuck: show duration since the relevant timestamp
+  if (isStuck) {
+    const tsKey = STUCK_TIMESTAMP_KEY[reason]
+    const ts = tsKey ? data[tsKey] : null
+    if (ts) {
+      const hours = Math.round((Date.now() - new Date(ts).getTime()) / (1000 * 60 * 60))
+      const duration = hours >= 48 ? `${Math.round(hours / 24)} days` : `${hours} hours`
+      const entry = REASON_DISPLAY[reason]
+      const label = entry?.label || reason
+      return `${label} — ${duration} ago, no response`
+    }
+  }
+
+  // Fall back to static context
+  const entry = REASON_DISPLAY[reason]
+  return entry?.context || ''
+}

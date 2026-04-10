@@ -520,6 +520,7 @@ interface UseTicketDetailResult {
   outboundLog: OutboundLogEntry[]
   complianceCert: ComplianceCertData | null
   rentLedger: RentLedgerRow[]
+  isStuck: boolean
   categoryDataLoading: boolean
   loading: boolean
   error: string | null
@@ -541,6 +542,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const [outboundLog, setOutboundLog] = useState<OutboundLogEntry[]>([])
   const [complianceCert, setComplianceCert] = useState<ComplianceCertData | null>(null)
   const [rentLedger, setRentLedger] = useState<RentLedgerRow[]>([])
+  const [isStuck, setIsStuck] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -555,6 +557,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setOutboundLog([])
     setComplianceCert(null)
     setRentLedger([])
+    setIsStuck(false)
     setError(null)
   }, [])
 
@@ -591,6 +594,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       // Map RPC response to legacy shapes
       setContext(rpcToContext(t))
       setBasic(rpcToBasic(t))
+      setIsStuck(t.is_past_timeout === true)
       setComplianceCert(rpcToComplianceCert(t))
       setRentLedger(rpcToRentLedger(t))
 
@@ -685,6 +689,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     outboundLog,
     complianceCert,
     rentLedger,
+    isStuck,
     categoryDataLoading: false,
     loading,
     error,
