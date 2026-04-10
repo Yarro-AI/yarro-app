@@ -118,7 +118,7 @@ export default function CertificateDetailPage() {
     let status = 'incomplete'
     if (activeTicket) {
       const reason = activeTicket.next_action_reason as string | null
-      if (reason === 'compliance_pending') status = 'awaiting_dispatch'
+      if (reason === 'compliance_needs_dispatch') status = 'awaiting_dispatch'
       else if (reason === 'awaiting_contractor') status = 'awaiting_contractor'
       else if (reason === 'awaiting_booking') status = 'awaiting_booking'
       else if (reason === 'scheduled' || reason === 'awaiting_completion') status = 'renewal_scheduled'

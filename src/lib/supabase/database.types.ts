@@ -2087,10 +2087,6 @@ export type Database = {
       }
       c1_get_contractor_ticket: { Args: { p_token: string }; Returns: Json }
       c1_get_dashboard_todo: { Args: { p_pm_id: string }; Returns: Json }
-      c1_get_dashboard_todo_extras: {
-        Args: { p_pm_id: string }
-        Returns: Json[]
-      }
       c1_get_landlord_ticket: { Args: { p_token: string }; Returns: Json }
       c1_get_onboarding_checklist: { Args: { p_pm_id: string }; Returns: Json }
       c1_get_ooh_contacts: {
@@ -2324,6 +2320,7 @@ export type Database = {
           updates_recipient: string
         }[]
       }
+      c1_ticket_detail: { Args: { p_ticket_id: string }; Returns: Json }
       c1_toggle_hold: {
         Args: { p_on_hold: boolean; p_ticket_id: string }
         Returns: Json

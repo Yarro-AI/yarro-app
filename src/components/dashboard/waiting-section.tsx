@@ -61,8 +61,8 @@ function groupWaitingItems(items: TodoItem[]): Group[] {
   for (const item of items) {
     const r = item.next_action_reason
     if (r === 'awaiting_contractor' || r === 'awaiting_booking') contractors.push(item)
-    else if (r === 'awaiting_landlord' || r === 'allocated_to_landlord' || r === 'landlord_in_progress') landlords.push(item)
-    else if (r === 'ooh_in_progress') ooh.push(item)
+    else if (r === 'awaiting_landlord' || r === 'allocated_to_landlord') landlords.push(item)
+    else if (r === 'ooh_dispatched') ooh.push(item)
     else contractors.push(item) // fallback
   }
 

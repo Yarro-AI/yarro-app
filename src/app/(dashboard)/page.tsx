@@ -54,7 +54,6 @@ interface DashboardStats {
   awaitingManager: number
   awaitingLandlord: number
   landlordDeclined: number
-  landlordNoResponse: number
   noContractorsLeft: number
   scheduledJobs: number
   awaitingBooking: number
@@ -162,7 +161,7 @@ export default function DashboardPage() {
 
     try {
     // Fetch tickets — next_action/next_action_reason is the single source of truth for state
-    const [ticketsRes, convosRes, todoRes, eventsRes, todoExtrasRes, onboardingRes] = await Promise.all([
+    const [ticketsRes, convosRes, todoRes, eventsRes, onboardingRes] = await Promise.all([
       supabase
         .from('c1_tickets')
         .select(`
@@ -213,8 +212,6 @@ export default function DashboardPage() {
         p_limit: 15,
         p_cursor: null,
       } as never),
-      // Non-ticket to-dos: compliance, rent, tenancy, handoff — same shape as c1_get_dashboard_todo
-      supabase.rpc('c1_get_dashboard_todo_extras' as never, { p_pm_id: propertyManager.id } as never),
       // Onboarding checklist — skip if already completed (DB field)
       propertyManager.onboarding_completed_at
         ? Promise.resolve({ data: null })
@@ -244,7 +241,6 @@ export default function DashboardPage() {
       const awaitingManager = tickets.filter((t) => t.next_action_reason === 'manager_approval').length
       const noContractorsLeft = tickets.filter((t) => t.next_action_reason === 'no_contractors').length
       const landlordDeclined = tickets.filter((t) => t.next_action_reason === 'landlord_declined').length
-      const landlordNoResponse = tickets.filter((t) => t.next_action_reason === 'landlord_no_response').length
       const jobNotCompleted = tickets.filter((t) => t.next_action_reason === 'job_not_completed').length
       const awaitingContractor = tickets.filter((t) => t.next_action_reason === 'awaiting_contractor').length
       const awaitingLandlord = tickets.filter((t) => t.next_action_reason === 'awaiting_landlord').length
@@ -261,7 +257,6 @@ export default function DashboardPage() {
         awaitingManager,
         awaitingLandlord,
         landlordDeclined,
-        landlordNoResponse,
         noContractorsLeft,
         scheduledJobs,
         awaitingBooking,
@@ -275,11 +270,9 @@ export default function DashboardPage() {
         ooh_dispatched: 'OOH Dispatched',
         ooh_resolved: 'OOH Resolved',
         ooh_unresolved: 'OOH Unresolved',
-        ooh_in_progress: 'OOH In Progress',
         manager_approval: 'Awaiting Manager',
         no_contractors: 'No Contractors',
         landlord_declined: 'Landlord Declined',
-        landlord_no_response: 'Landlord No Response',
         job_not_completed: 'Not Completed',
         awaiting_contractor: 'Awaiting Contractor',
         awaiting_landlord: 'Awaiting Landlord',
@@ -315,14 +308,9 @@ export default function DashboardPage() {
       setAllTickets(mappedTickets)
     }
 
-    // Merge ticket todos + extras (compliance, rent, tenancy, handoff), sort by priority_score
+    // Todo items from single RPC (sorted by priority_score in SQL)
     const ticketTodos = (todoRes.data as unknown as TodoItem[] | null) ?? []
-    const extraTodos = (todoExtrasRes.data as unknown as TodoItem[] | null) ?? []
-    const merged = [
-      ...ticketTodos.map(t => ({ ...t, source_type: t.source_type || 'ticket' as const })),
-      ...extraTodos,
-    ].sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0))
-    setTodoItems(merged)
+    setTodoItems(ticketTodos)
 
     const eventsPayload = (eventsRes.data as unknown as { events: RecentEvent[] } | null)
     setRecentEvents(eventsPayload?.events ?? [])
@@ -396,7 +384,7 @@ export default function DashboardPage() {
     let filtered: TicketSummary[]
 
     // To-do categories filter directly by next_action
-    if (type === 'needs_attention' || type === 'assign_contractor' || type === 'follow_up') {
+    if (type === 'needs_action') {
       filtered = allTickets.filter((t) => t.next_action === type)
     } else {
       // Scheduled section filters by next_action_reason
@@ -427,9 +415,7 @@ export default function DashboardPage() {
 
   const getSheetTitle = (type: string | null) => {
     switch (type) {
-      case 'needs_attention': return 'Needs Attention'
-      case 'assign_contractor': return 'Assign Contractors'
-      case 'follow_up': return 'Follow-up'
+      case 'needs_action': return 'Needs Action'
       case 'contractor': return 'Awaiting Contractor'
       case 'landlord': return 'Awaiting Landlord'
       case 'scheduled': return 'Scheduled Jobs'

@@ -12,7 +12,7 @@ const displayStageMap: Record<string, string> = {
   manager_approval: 'Awaiting Manager',
   no_contractors: 'No Contractors',
   landlord_declined: 'Landlord Declined',
-  landlord_no_response: 'Landlord No Response',
+  allocated_to_landlord: 'Landlord Managing',
   job_not_completed: 'Not Completed',
   awaiting_contractor: 'Awaiting Contractor',
   awaiting_landlord: 'Awaiting Landlord',

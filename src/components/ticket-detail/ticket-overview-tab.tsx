@@ -145,15 +145,6 @@ const STAGE_CONFIG: Record<string, StageEntry> = {
     description: "The landlord wasn't happy with the price. Worth getting in touch to talk through what they'd be comfortable with.",
     cta: { label: 'Contact Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
   },
-  landlord_no_response: {
-    icon: HelpCircle,
-    iconBg: 'bg-warning/10',
-    iconColor: 'text-warning',
-    title: "Landlord hasn't responded",
-    description: "The approval request went out but there's been no reply. Might be worth a nudge.",
-    timer: () => null, // TODO: compute from outbound log timestamp
-    cta: { label: 'Contact Landlord', action: 'navigate', destination: '/landlords/{landlord_id}' },
-  },
   landlord_needs_help: {
     icon: AlertCircle,
     iconBg: 'bg-warning/10',
@@ -290,23 +281,6 @@ const STAGE_CONFIG: Record<string, StageEntry> = {
     title: 'Landlord sorted it',
     description: 'The landlord took care of this one themselves.',
     cta: { label: 'Resume', action: 'toggle_hold' },
-  },
-  ooh_in_progress: {
-    icon: Phone,
-    iconBg: 'bg-primary/10',
-    iconColor: 'text-primary',
-    title: 'OOH working on it',
-    description: 'The out-of-hours contact is on the case. Hang tight.',
-    cta: { label: 'Follow Up', action: 'navigate', destination: '/contractors' },
-  },
-  landlord_in_progress: {
-    icon: Crown,
-    iconBg: 'bg-primary/10',
-    iconColor: 'text-primary',
-    title: "Landlord's on it",
-    description: 'The landlord is actively working on this one.',
-    timer: (b) => b.landlord_allocated_at ? `Started ${formatDistanceToNow(new Date(b.landlord_allocated_at), { addSuffix: true })}` : null,
-    cta: { label: 'Follow Up', action: 'navigate', destination: '/landlords/{landlord_id}' },
   },
 }
 

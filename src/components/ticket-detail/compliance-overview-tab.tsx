@@ -90,8 +90,8 @@ function getComplianceStage(basic: TicketBasic, cert: ComplianceCertData | null,
     }
   }
 
-  // compliance_pending: ticket exists but no contractor dispatched yet
-  if (reason === 'compliance_pending') {
+  // compliance_needs_dispatch: ticket exists but no contractor dispatched yet
+  if (reason === 'compliance_needs_dispatch') {
     const certId = basic.compliance_certificate_id
     if (isExpired) {
       return {

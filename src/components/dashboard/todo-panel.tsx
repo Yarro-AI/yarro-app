@@ -64,22 +64,19 @@ export const REASON_BADGE: Record<string, { label: string; dot: string; text: st
   landlord_declined:    { label: 'Contact landlord',      ...BS },
   landlord_needs_help:  { label: 'Contact landlord',      ...BS },
   landlord_resolved:    { label: 'Review completion',     ...BS },
-  landlord_no_response: { label: 'Chase landlord',        ...BS },
   // In Progress — descriptive (PM isn't the actor)
   awaiting_contractor:  { label: 'Awaiting contractor',   ...BS },
   awaiting_booking:     { label: 'Awaiting booking',      ...BS },
   scheduled:            { label: 'Awaiting completion',   ...BS },
   awaiting_landlord:    { label: 'Awaiting landlord',     ...BS },
   allocated_to_landlord:{ label: 'Landlord managing',     ...BS },
-  landlord_in_progress: { label: 'Landlord in progress',  ...BS },
   // OOH
   ooh_dispatched:       { label: 'Follow up OOH',         ...BS },
   ooh_resolved:         { label: 'Review completion',     ...BS },
   ooh_unresolved:       { label: 'Chase resolution',      ...BS },
-  ooh_in_progress:      { label: 'OOH in progress',       ...BS },
   on_hold:              { label: 'On hold',               ...BS },
   // Compliance
-  compliance_pending:   { label: 'Dispatch contractor',   ...BS },
+  compliance_needs_dispatch: { label: 'Dispatch contractor', ...BS },
   compliance_expired:   { label: 'Renew certificate',     ...BS },
   compliance_expiring:  { label: 'Schedule renewal',      ...BS },
   compliance_missing:   { label: 'Add certificate',       ...BS },
@@ -147,14 +144,14 @@ export function getTodoHref(item: TodoItem): string | null {
 
 export const WAITING_REASONS = new Set([
   'awaiting_contractor', 'awaiting_landlord', 'awaiting_booking',
-  'allocated_to_landlord', 'landlord_in_progress', 'ooh_in_progress', 'ooh_dispatched',
+  'allocated_to_landlord', 'ooh_dispatched',
 ])
 
 export const SCHEDULED_REASONS = new Set(['scheduled'])
 
 // Items stuck by nature — someone blocked or failed
 export const STUCK_REASONS = new Set([
-  'landlord_no_response', 'landlord_declined', 'landlord_needs_help',
+  'landlord_declined', 'landlord_needs_help',
   'ooh_unresolved', 'job_not_completed',
 ])
 
