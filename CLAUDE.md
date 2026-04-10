@@ -22,6 +22,11 @@ All business logic lives in Supabase RPCs, not the frontend.
 - Every new feature starts with the RPC, then UI consumes it
 - Direct `.from().select()` only for simple reads with no logic
 
+### Frontend Rules — Read Before Any UI/UX Work
+**Any change that touches React components, hooks, pages, or styling MUST follow `.claude/docs/frontend-rules.md`.**
+This includes: new components, UI fixes, display logic, label changes, layout work, styling, and interaction patterns.
+The rules define how the frontend reads backend state, where labels come from, what's allowed in the frontend layer, and what requires a backend change. No exceptions.
+
 ### Three-Layer State Model — THE LAW
 Every open ticket's state is described by three layers:
 - **Bucket** (`next_action`) — Where: `needs_action` | `waiting` | `scheduled` | `stuck` (display-only)
@@ -120,6 +125,7 @@ Specs: `docs/PRD.md` · `docs/BUILD-ORDER.md` · `docs/modules/01–04*.md` · `
 | `docs/schema/TECH-LEDGER.md` | Database schema, RPCs |
 | `docs/modules/01–04-*.md` | Feature module specs |
 | `.claude/docs/architecture.md` | System architecture + RPC workflow |
+| `.claude/docs/frontend-rules.md` | **REQUIRED** — Before ANY UI/UX work (components, hooks, pages, styling, labels, layout) |
 | `.claude/docs/patterns.md` | Before creating/modifying components |
 | `.claude/docs/safe-zones.md` | Before touching sensitive files |
 | `.claude/docs/protected-rpcs.md` | Before modifying SQL functions |
