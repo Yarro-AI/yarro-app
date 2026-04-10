@@ -2121,7 +2121,7 @@ export type Database = {
         Returns: Json
       }
       c1_get_contractor_ticket: { Args: { p_token: string }; Returns: Json }
-      c1_get_dashboard_todo: { Args: { p_pm_id: string }; Returns: Json[] }
+      c1_get_dashboard_todo: { Args: { p_pm_id: string }; Returns: Json }
       c1_get_dashboard_todo_extras: {
         Args: { p_pm_id: string }
         Returns: Json[]
