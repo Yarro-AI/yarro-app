@@ -716,41 +716,6 @@ export type Database = {
           },
         ]
       }
-      c1_ledger: {
-        Row: {
-          actor_role: string
-          created_at: string
-          data: Json | null
-          event_type: string
-          id: string
-          ticket_id: string
-        }
-        Insert: {
-          actor_role?: string
-          created_at?: string
-          data?: Json | null
-          event_type: string
-          id?: string
-          ticket_id: string
-        }
-        Update: {
-          actor_role?: string
-          created_at?: string
-          data?: Json | null
-          event_type?: string
-          id?: string
-          ticket_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "c1_ledger_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "c1_tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       c1_messages: {
         Row: {
           archived: boolean | null
@@ -1423,19 +1388,23 @@ export type Database = {
           archived: boolean | null
           archived_at: string | null
           availability: string | null
+          awaiting_tenant: boolean | null
           category: string
           compliance_certificate_id: string | null
           confirmation_date: string | null
           contractor_id: string | null
           contractor_ids: string[] | null
           contractor_quote: number | null
+          contractor_sent_at: string | null
           contractor_token: string | null
           contractor_token_at: string | null
           conversation_id: string | null
           date_logged: string
+          deadline_date: string | null
           dispatch_after: string | null
           final_amount: number | null
           handoff: boolean | null
+          handoff_reason: string | null
           held_at: string | null
           id: string
           images: Json | null
@@ -1443,7 +1412,6 @@ export type Database = {
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
-          job_stage: string | null
           landlord_allocated: boolean | null
           landlord_allocated_at: string | null
           landlord_approved_on: string | null
@@ -1473,6 +1441,7 @@ export type Database = {
           reporter_role: string | null
           reschedule_date: string | null
           reschedule_decided_at: string | null
+          reschedule_initiated_by: string | null
           reschedule_reason: string | null
           reschedule_requested: boolean | null
           reschedule_status: string | null
@@ -1481,6 +1450,7 @@ export type Database = {
           scheduled_date: string | null
           sla_due_at: string | null
           status: string
+          tenant_contacted_at: string | null
           tenant_id: string | null
           tenant_token: string | null
           tenant_token_at: string | null
@@ -1488,6 +1458,7 @@ export type Database = {
           total_hold_duration: string | null
           updates_recipient: string | null
           verified_by: string | null
+          waiting_since: string | null
           was_handoff: boolean | null
         }
         Insert: {
@@ -1497,19 +1468,23 @@ export type Database = {
           archived?: boolean | null
           archived_at?: string | null
           availability?: string | null
+          awaiting_tenant?: boolean | null
           category: string
           compliance_certificate_id?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
           contractor_ids?: string[] | null
           contractor_quote?: number | null
+          contractor_sent_at?: string | null
           contractor_token?: string | null
           contractor_token_at?: string | null
           conversation_id?: string | null
           date_logged?: string
+          deadline_date?: string | null
           dispatch_after?: string | null
           final_amount?: number | null
           handoff?: boolean | null
+          handoff_reason?: string | null
           held_at?: string | null
           id?: string
           images?: Json | null
@@ -1517,7 +1492,6 @@ export type Database = {
           is_manual?: boolean | null
           issue_description?: string | null
           issue_title?: string | null
-          job_stage?: string | null
           landlord_allocated?: boolean | null
           landlord_allocated_at?: string | null
           landlord_approved_on?: string | null
@@ -1547,6 +1521,7 @@ export type Database = {
           reporter_role?: string | null
           reschedule_date?: string | null
           reschedule_decided_at?: string | null
+          reschedule_initiated_by?: string | null
           reschedule_reason?: string | null
           reschedule_requested?: boolean | null
           reschedule_status?: string | null
@@ -1555,6 +1530,7 @@ export type Database = {
           scheduled_date?: string | null
           sla_due_at?: string | null
           status?: string
+          tenant_contacted_at?: string | null
           tenant_id?: string | null
           tenant_token?: string | null
           tenant_token_at?: string | null
@@ -1562,6 +1538,7 @@ export type Database = {
           total_hold_duration?: string | null
           updates_recipient?: string | null
           verified_by?: string | null
+          waiting_since?: string | null
           was_handoff?: boolean | null
         }
         Update: {
@@ -1571,19 +1548,23 @@ export type Database = {
           archived?: boolean | null
           archived_at?: string | null
           availability?: string | null
+          awaiting_tenant?: boolean | null
           category?: string
           compliance_certificate_id?: string | null
           confirmation_date?: string | null
           contractor_id?: string | null
           contractor_ids?: string[] | null
           contractor_quote?: number | null
+          contractor_sent_at?: string | null
           contractor_token?: string | null
           contractor_token_at?: string | null
           conversation_id?: string | null
           date_logged?: string
+          deadline_date?: string | null
           dispatch_after?: string | null
           final_amount?: number | null
           handoff?: boolean | null
+          handoff_reason?: string | null
           held_at?: string | null
           id?: string
           images?: Json | null
@@ -1591,7 +1572,6 @@ export type Database = {
           is_manual?: boolean | null
           issue_description?: string | null
           issue_title?: string | null
-          job_stage?: string | null
           landlord_allocated?: boolean | null
           landlord_allocated_at?: string | null
           landlord_approved_on?: string | null
@@ -1621,6 +1601,7 @@ export type Database = {
           reporter_role?: string | null
           reschedule_date?: string | null
           reschedule_decided_at?: string | null
+          reschedule_initiated_by?: string | null
           reschedule_reason?: string | null
           reschedule_requested?: boolean | null
           reschedule_status?: string | null
@@ -1629,6 +1610,7 @@ export type Database = {
           scheduled_date?: string | null
           sla_due_at?: string | null
           status?: string
+          tenant_contacted_at?: string | null
           tenant_id?: string | null
           tenant_token?: string | null
           tenant_token_at?: string | null
@@ -1636,6 +1618,7 @@ export type Database = {
           total_hold_duration?: string | null
           updates_recipient?: string | null
           verified_by?: string | null
+          waiting_since?: string | null
           was_handoff?: boolean | null
         }
         Relationships: [
@@ -1844,6 +1827,7 @@ export type Database = {
         Returns: string
       }
       c1_completion_followup_check: { Args: never; Returns: number }
+      c1_compliance_auto_ticket: { Args: never; Returns: number }
       c1_compliance_escalate: { Args: never; Returns: undefined }
       c1_compute_next_action: {
         Args: { p_ticket_id: string }
@@ -1851,6 +1835,15 @@ export type Database = {
           next_action: string
           next_action_reason: string
         }[]
+      }
+      c1_compute_priority_score: {
+        Args: {
+          p_deadline_date: string
+          p_priority: string
+          p_sla_due_at: string
+          p_waiting_since: string
+        }
+        Returns: number
       }
       c1_confirm_followup_sent: {
         Args: {
@@ -1921,6 +1914,25 @@ export type Database = {
               p_category?: string
               p_compliance_certificate_id?: string
               p_contractor_ids?: string[]
+              p_deadline_date?: string
+              p_images?: Json
+              p_issue_description?: string
+              p_issue_title?: string
+              p_maintenance_trade?: string
+              p_priority?: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_access?: string
+              p_availability?: string
+              p_category?: string
+              p_compliance_certificate_id?: string
+              p_contractor_ids?: string[]
               p_images?: Json
               p_issue_description?: string
               p_issue_title?: string
@@ -1940,19 +1952,23 @@ export type Database = {
           archived: boolean | null
           archived_at: string | null
           availability: string | null
+          awaiting_tenant: boolean | null
           category: string
           compliance_certificate_id: string | null
           confirmation_date: string | null
           contractor_id: string | null
           contractor_ids: string[] | null
           contractor_quote: number | null
+          contractor_sent_at: string | null
           contractor_token: string | null
           contractor_token_at: string | null
           conversation_id: string | null
           date_logged: string
+          deadline_date: string | null
           dispatch_after: string | null
           final_amount: number | null
           handoff: boolean | null
+          handoff_reason: string | null
           held_at: string | null
           id: string
           images: Json | null
@@ -1960,7 +1976,6 @@ export type Database = {
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
-          job_stage: string | null
           landlord_allocated: boolean | null
           landlord_allocated_at: string | null
           landlord_approved_on: string | null
@@ -1990,6 +2005,7 @@ export type Database = {
           reporter_role: string | null
           reschedule_date: string | null
           reschedule_decided_at: string | null
+          reschedule_initiated_by: string | null
           reschedule_reason: string | null
           reschedule_requested: boolean | null
           reschedule_status: string | null
@@ -1998,6 +2014,7 @@ export type Database = {
           scheduled_date: string | null
           sla_due_at: string | null
           status: string
+          tenant_contacted_at: string | null
           tenant_id: string | null
           tenant_token: string | null
           tenant_token_at: string | null
@@ -2005,6 +2022,7 @@ export type Database = {
           total_hold_duration: string | null
           updates_recipient: string | null
           verified_by: string | null
+          waiting_since: string | null
           was_handoff: boolean | null
         }
         SetofOptions: {
@@ -2043,11 +2061,7 @@ export type Database = {
         Returns: Json
       }
       c1_get_contractor_ticket: { Args: { p_token: string }; Returns: Json }
-      c1_get_dashboard_todo: { Args: { p_pm_id: string }; Returns: Json[] }
-      c1_get_dashboard_todo_extras: {
-        Args: { p_pm_id: string }
-        Returns: Json[]
-      }
+      c1_get_dashboard_todo: { Args: { p_pm_id: string }; Returns: Json }
       c1_get_landlord_ticket: { Args: { p_token: string }; Returns: Json }
       c1_get_onboarding_checklist: { Args: { p_pm_id: string }; Returns: Json }
       c1_get_ooh_contacts: {
@@ -2134,6 +2148,14 @@ export type Database = {
         Args: { p_approved: boolean; p_markup?: string; p_ticket_id: string }
         Returns: Json
       }
+      c1_mark_contractor_withdrawn: {
+        Args: {
+          p_contractor_id: string
+          p_reason?: string
+          p_ticket_id: string
+        }
+        Returns: undefined
+      }
       c1_message_next_action: { Args: { p_ticket_id: string }; Returns: Json }
       c1_msg_merge_contractor: {
         Args: { p_contractor_id: string; p_patch: Json; p_ticket_id: string }
@@ -2173,6 +2195,10 @@ export type Database = {
         Returns: Json
       }
       c1_reset_account: { Args: { p_pm_id: string }; Returns: Json }
+      c1_set_awaiting_tenant: {
+        Args: { p_awaiting: boolean; p_reason?: string; p_ticket_id: string }
+        Returns: undefined
+      }
       c1_submit_contractor_completion: {
         Args: { p_notes?: string; p_photos?: Json; p_token: string }
         Returns: Json
@@ -2242,7 +2268,6 @@ export type Database = {
           has_images: boolean
           is_matched_tenant: boolean
           issue_description: string
-          job_stage: string
           label: string
           landlord_email: string
           landlord_id: string
@@ -2270,6 +2295,7 @@ export type Database = {
           updates_recipient: string
         }[]
       }
+      c1_ticket_detail: { Args: { p_ticket_id: string }; Returns: Json }
       c1_toggle_hold: {
         Args: { p_on_hold: boolean; p_ticket_id: string }
         Returns: Json
@@ -2416,20 +2442,32 @@ export type Database = {
           next_action_reason: string
         }[]
       }
-      create_rent_arrears_ticket: {
-        Args: {
-          p_issue_description: string
-          p_issue_title: string
-          p_priority?: string
-          p_property_id: string
-          p_property_manager_id: string
-          p_tenant_id: string
-        }
-        Returns: {
-          is_new: boolean
-          ticket_id: string
-        }[]
-      }
+      create_rent_arrears_ticket:
+        | {
+            Args: {
+              p_deadline_date?: string
+              p_issue_description: string
+              p_issue_title: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_issue_description: string
+              p_issue_title: string
+              p_priority?: string
+              p_property_id: string
+              p_property_manager_id: string
+              p_tenant_id: string
+            }
+            Returns: {
+              is_new: boolean
+              ticket_id: string
+            }[]
+          }
       create_rent_ledger_entries: {
         Args: {
           p_month: number

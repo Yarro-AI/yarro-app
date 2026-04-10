@@ -3,24 +3,9 @@
 import { useOpenTicket } from '@/hooks/use-open-ticket'
 import { ProfileCard } from './profile-card'
 import { Wrench, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { getReasonDisplay } from '@/lib/reason-display'
 
 // --- Ticket display helpers ---
-
-const displayStageMap: Record<string, string> = {
-  pending_review: 'Needs Review',
-  handoff_review: 'Handoff',
-  manager_approval: 'Awaiting Manager',
-  no_contractors: 'No Contractors',
-  landlord_declined: 'Landlord Declined',
-  allocated_to_landlord: 'Landlord Managing',
-  job_not_completed: 'Not Completed',
-  awaiting_contractor: 'Awaiting Contractor',
-  awaiting_landlord: 'Awaiting Landlord',
-  awaiting_booking: 'Awaiting Booking',
-  scheduled: 'Scheduled',
-  completed: 'Completed',
-  dismissed: 'Dismissed',
-}
 
 export function getDisplayStage(
   reason: string | null,
@@ -29,8 +14,7 @@ export function getDisplayStage(
 ) {
   if (archived) return 'Archived'
   if (status === 'closed') return 'Completed'
-  if (reason && displayStageMap[reason]) return displayStageMap[reason]
-  return 'Open'
+  return getReasonDisplay(reason, false).label
 }
 
 // Status → visual mapping per PRD

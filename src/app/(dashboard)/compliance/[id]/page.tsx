@@ -96,7 +96,7 @@ export default function CertificateDetailPage() {
         .single(),
       supabase
         .from('c1_tickets')
-        .select('id, next_action_reason')
+        .select('id, next_action, next_action_reason')
         .eq('compliance_certificate_id', certId)
         .eq('status', 'open')
         .eq('archived', false)
@@ -114,16 +114,16 @@ export default function CertificateDetailPage() {
       return
     }
 
-    // Compute display status — matches compliance_get_all_statuses RPC CASE logic
+    // Compute display status from ticket bucket (next_action) — no hardcoded reason lists
     let status = 'incomplete'
     if (activeTicket) {
       const reason = activeTicket.next_action_reason as string | null
-      if (reason === 'compliance_needs_dispatch') status = 'awaiting_dispatch'
-      else if (reason === 'awaiting_contractor') status = 'awaiting_contractor'
-      else if (reason === 'awaiting_booking') status = 'awaiting_booking'
-      else if (reason === 'scheduled' || reason === 'awaiting_completion') status = 'renewal_scheduled'
-      else if (reason === 'no_contractors') status = 'no_contractors'
-      else if (reason === 'manager_approval') status = 'awaiting_approval'
+      const bucket = activeTicket.next_action as string | null
+
+      if (reason === 'cert_renewed' || reason === 'completed') status = 'renewed'
+      else if (bucket === 'scheduled') status = 'renewal_scheduled'
+      else if (bucket === 'waiting') status = 'in_progress'
+      else if (bucket === 'needs_action') status = 'awaiting_dispatch'
       else status = 'renewal_requested'
     } else if (data.document_url && data.expiry_date) {
       const expiry = new Date(data.expiry_date)

@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SlaBadge } from '@/components/sla-badge'
+import { getReasonDisplay } from '@/lib/reason-display'
 
 interface TicketRow {
   id: string
@@ -61,7 +62,6 @@ interface TicketRow {
   reschedule_status?: string | null
   sla_due_at?: string | null
   resolved_at?: string | null
-  message_stage?: string | null
   display_stage?: string | null
   address?: string
   tenant_name?: string
@@ -71,14 +71,6 @@ interface TicketRow {
 type LifecycleFilter = 'open' | 'closed' | 'archived'
 type WorkflowFilter = 'needsMgr' | 'waiting' | 'scheduled'
 type TypeFilter = 'auto' | 'manual'
-
-const WAITING_REASONS   = ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking', 'allocated_to_landlord'] as const
-const NEEDS_MGR_REASONS = ['no_contractors', 'landlord_declined',
-                           'landlord_needs_help', 'job_not_completed', 'manager_approval'] as const
-
-const isWaitingReason   = (r?: string | null): boolean => !!r && (WAITING_REASONS   as readonly string[]).includes(r)
-const isNeedsMgrReason  = (r?: string | null): boolean => !!r && (NEEDS_MGR_REASONS as readonly string[]).includes(r)
-const isScheduledReason = (r?: string | null): boolean => r === 'scheduled'
 
 export default function TicketsPage() {
   const { propertyManager } = usePM()
@@ -189,45 +181,17 @@ export default function TicketsPage() {
     if (error) { setFetchError('Failed to load tickets'); setLoading(false); return }
     setFetchError(null)
     if (data) {
-      // Map next_action_reason → display label
-      const reasonToDisplayStage: Record<string, string> = {
-        pending_review: 'Needs Review',
-        handoff_review: 'Handoff',
-        ooh_dispatched: 'OOH Dispatched',
-        ooh_resolved: 'OOH Resolved',
-        ooh_unresolved: 'OOH Unresolved',
-        manager_approval: 'Awaiting Manager',
-        no_contractors: 'No Contractors',
-        landlord_declined: 'Landlord Declined',
-        allocated_to_landlord: 'Landlord Managing',
-        landlord_resolved: 'Landlord Resolved',
-        landlord_needs_help: 'Landlord Needs Help',
-        job_not_completed: 'Not Completed',
-        awaiting_contractor: 'Awaiting Contractor',
-        awaiting_landlord: 'Awaiting Landlord',
-        awaiting_booking: 'Awaiting Booking',
-        scheduled: 'Scheduled',
-        completed: 'Completed',
-        archived: 'Archived',
-        dismissed: 'Dismissed',
-        on_hold: 'On Hold',
-        new: 'Created',
-      }
-
       const mapped = data.map((t) => {
-        let display_stage = reasonToDisplayStage[t.next_action_reason || ''] || reasonToDisplayStage[t.next_action || ''] || 'Created'
-        // Override display stage for pending reschedule requests
+        let display_stage = getReasonDisplay(t.next_action_reason, false).label
         if (t.reschedule_requested && t.reschedule_status === 'pending') {
           display_stage = 'Reschedule Requested'
         }
-        // On-hold overrides everything
         if (t.on_hold) display_stage = 'On Hold'
         return {
           ...t,
           address: (t.c1_properties as unknown as { address: string } | null)?.address,
           tenant_name: (t.c1_tenants as unknown as { full_name: string } | null)?.full_name,
           contractor_name: (t.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
-          message_stage: null,
           display_stage,
         }
       })
@@ -467,7 +431,7 @@ export default function TicketsPage() {
       sortable: true,
       render: (ticket) => {
         if (!ticket.display_stage) return '-'
-        const isWaiting = isWaitingReason(ticket.next_action_reason)
+        const isWaiting = ticket.next_action === 'waiting'
         if (!isWaiting) return <StatusBadge status={ticket.display_stage} className="opacity-90" />
         const daysSince = (Date.now() - new Date(ticket.date_logged).getTime()) / 86_400_000
         const waitColor = daysSince > 3 ? 'text-red-500' : daysSince > 1 ? 'text-amber-500' : 'text-muted-foreground/60'
@@ -592,9 +556,9 @@ export default function TicketsPage() {
         const isOpen = t.status !== 'closed' && t.archived !== true
         if (!isOpen) return false
         return selectedWorkflow.some(wf => {
-          if (wf === 'needsMgr')  return isNeedsMgrReason(t.next_action_reason)
-          if (wf === 'waiting')   return isWaitingReason(t.next_action_reason)
-          if (wf === 'scheduled') return isScheduledReason(t.next_action_reason)
+          if (wf === 'needsMgr')  return t.next_action === 'needs_action'
+          if (wf === 'waiting')   return t.next_action === 'waiting'
+          if (wf === 'scheduled') return t.next_action === 'scheduled'
           return false
         })
       })
