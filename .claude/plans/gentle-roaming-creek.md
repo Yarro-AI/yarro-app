@@ -115,20 +115,27 @@ IF cert has no document_url OR no expiry_date → needs_action / cert_incomplete
 
 ## How State Gets Written
 
-A trigger (`c1_trigger_recompute_next_action`) fires on ticket/message/job_completion changes, calls the router, writes `next_action` + `next_action_reason` to the ticket row.
+A trigger (`c1_trigger_recompute_next_action`) fires on ticket/message/job_completion changes, calls the router, writes 4 fields to the ticket row in a single UPDATE.
 
-**Three write sites (all updated to write new bucket values):**
+**Trigger writes (when `next_action_reason` changes):**
+- `next_action` — bucket value
+- `next_action_reason` — specific state
+- `waiting_since` — reset to `now()`
+- `sla_due_at` — set from defaults for `needs_action` states, NULL for `waiting`/`scheduled`/terminal
+
+**Trigger column watch list (updated):**
+- `c1_tickets`: status, handoff, archived, pending_review, on_hold, ooh_dispatched, ooh_outcome, landlord_allocated, landlord_outcome, awaiting_tenant, reschedule_requested, reschedule_status
+- `c1_messages`: stage, landlord
+- `c1_job_completions`: completed
+- (`job_stage` removed from watch list — column dropped)
+
+**Three write sites (all updated):**
 
 1. **`c1_trigger_recompute_next_action`** — the trigger (~90% of writes)
-   - Fires on: `c1_tickets` (status, handoff, job_stage, archived, pending_review, on_hold, ooh_dispatched, ooh_outcome, landlord_allocated, landlord_outcome), `c1_messages` (stage, landlord), `c1_job_completions` (completed)
-
 2. **`c1_auto_close_completed_tickets`** — reconciles completed tickets
-   - Does `SELECT * INTO v_result FROM c1_compute_next_action(...)` — must handle new return values
-
 3. **`c1_toggle_hold`** — hold/unhold
-   - Same pattern: calls router, writes result to row
 
-All three write `next_action` (bucket) + `next_action_reason` (state). No new columns. Same two fields, cleaner values.
+All three call the router and write the 4 fields. All `c1_log_event()` calls include `v_property_label`.
 
 ---
 
@@ -142,6 +149,24 @@ All three write `next_action` (bucket) + `next_action_reason` (state). No new co
 **Layer 2: AI intake dedup (separate, untouched)**
 - WhatsApp AI checks for similar open tickets on same property
 - Two tenants report same issue → AI asks "is this the same issue?"
+
+---
+
+## Deployment Strategy
+
+App goes offline during deployment. No zero-downtime requirement.
+
+**Order:**
+1. Take app offline
+2. Push all backend migrations (`supabase db push`)
+3. Deploy edge function changes (`supabase functions deploy`)
+4. Run `supabase gen types` → regenerate TypeScript types
+5. `npm run build` → verify frontend compiles with new types
+6. Deploy frontend
+7. Verify: dashboard loads, buckets render, drawer opens
+8. App back online
+
+If anything breaks: rollback script restores previous state before bringing app back up. See architecture doc § "Rollback".
 
 ---
 
@@ -353,7 +378,7 @@ Both the dashboard and drawer need the same labels/context. If computed in backe
 - CTA: `handoff_review` → "Review & assign" | `pending_review` → "Approve dispatch"
 - See architecture doc § "Handoff review — inline transcript"
 
-### Step 8: Kill extras (⚠️ separate PR, deploy after Steps 1–7 verified)
+### Step 8: Kill extras
 - Drop `c1_get_dashboard_todo_extras` RPC
 - Remove frontend: extras RPC call, merge logic, `filterActionable`/`filterInProgress`/`filterStuck`
 - Remove tenancy items entirely
