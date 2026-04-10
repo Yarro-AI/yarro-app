@@ -82,9 +82,8 @@ _Record decisions made during the refactor that aren't in the architecture spec 
 
 ## Gaps Found in Plans
 
-_Record anything missing from the sprint plans that needs addressing._
-
-(none yet)
+### 1. Sprint A backfill referenced non-existent `updated_at` column
+The plan's backfill SQL used `COALESCE(updated_at, date_logged)` for `waiting_since`, but `c1_tickets` has no `updated_at` column. Fixed to use `date_logged` directly. Migration had to be repaired and re-pushed.
 
 ---
 
