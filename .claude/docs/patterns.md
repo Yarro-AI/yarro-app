@@ -188,6 +188,53 @@ const { data } = await supabase
 
 ---
 
+## Dashboard Patterns
+
+### Bucket grouping
+Frontend groups dashboard items by `item.next_action` (bucket). `stuck` is a display-layer override from the RPC when `is_past_timeout = true` on a `waiting` ticket.
+
+### REASON_DISPLAY mapping
+One object, used by both dashboard cards AND ticket drawer. Maps `next_action_reason` to display text:
+```tsx
+// src/lib/reason-display.ts — THE SSOT for all state display text
+const REASON_DISPLAY: Record<string, { label: string; stuckLabel: string; context: string }> = {
+  awaiting_contractor: { label: 'Awaiting contractor', stuckLabel: 'Chase contractor', context: '...' },
+  // ... all reasons
+}
+```
+If you need a new label: add it to REASON_DISPLAY. It propagates to every view.
+
+### CTA mapping
+`next_action_reason` → button label + action type. `waiting`/`scheduled` reasons have no CTA (PM is not the actor).
+
+### Priority badge
+Reads `ticket.priority` directly from the RPC response. No frontend derivation.
+
+## Ticket Drawer Patterns
+
+### Universal layout (all categories)
+Stage card (from REASON_DISPLAY) → CTA → Timeline (from c1_events) → Category data → People
+
+### Timeline
+From `c1_events` query, not derived from ticket fields. `STATE_CHANGED` events provide the progression.
+
+### Category section
+Only the data section is per-category (cert details, payment ledger, job details). State display is universal.
+
+### Transcript
+Inline collapsible for `handoff_review` only. Not a tab. Auto-expanded for handoff, collapsed for pending_review.
+
+## State Display — Anti-Patterns
+
+**NEVER do these:**
+- Derive stage/status from multiple ticket fields in the frontend (old: `deriveTimeline()`)
+- Create per-category stage config objects (old: `STAGE_CONFIG`, `getComplianceStage()`)
+- Compute timeline from ticket fields (old: `deriveTimeline()`)
+- Duplicate label/context logic between dashboard and drawer
+- Add a CASE/IF/switch that maps `next_action_reason` to display text in a component — use `REASON_DISPLAY`
+
+---
+
 ## Styling Patterns
 
 ### The cn() helper
@@ -303,6 +350,28 @@ export default function MyPage() {
 - Always filter by `propertyManager.id` — PMs only see their own data
 - Use `useCallback` for fetch functions to prevent infinite loops
 - Use `createClient()` from `@/lib/supabase/client`
+
+### Dashboard data fetching
+```tsx
+// One RPC call — no merge, no extras
+const { data } = await supabase.rpc('c1_get_dashboard_todo', { p_pm_id: pm.id })
+// Group by item.next_action (bucket)
+```
+
+### Drawer data fetching
+```tsx
+// One RPC + one events query
+const { data: ticket } = await supabase.rpc('c1_ticket_detail', { p_ticket_id: id })
+const { data: events } = await supabase.from('c1_events').select('*').eq('ticket_id', id)
+```
+
+### Realtime subscription (dashboard only)
+```tsx
+supabase.channel('pm-tickets')
+  .on('postgres_changes', { event: 'UPDATE', table: 'c1_tickets', filter: `property_manager_id=eq.${pmId}` }, refetch)
+  .on('postgres_changes', { event: 'INSERT', table: 'c1_tickets', filter: `property_manager_id=eq.${pmId}` }, refetch)
+  .subscribe()
+```
 
 ---
 

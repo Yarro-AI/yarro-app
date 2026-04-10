@@ -63,7 +63,10 @@ Run this before telling Adam a change is complete:
 9. No `any` types or `@ts-ignore` in new code
 10. SESSION_LOG.md updated
 11. New ideas captured in BACKLOG.md
-12. Committed and pushed to task branch
+12. State changes produce audit events (check `c1_events` after testing)
+13. Dashboard and drawer show identical state for the same ticket (same label, same context)
+14. No new frontend stage derivation, timeline computation, or label mapping outside `REASON_DISPLAY`
+15. Committed and pushed to task branch
 
 ## Product Vision Questions
 
@@ -72,5 +75,7 @@ When making design decisions, ask:
 - Does this reduce chasing, context switching, or compliance risk?
 - Does this add to the audit trail or make it clearer?
 - Would a Fixflo user switch to Yarro for this feature?
+- Does this maintain a single source of truth, or does it introduce a parallel computation?
+- Does this produce an audit event that would hold up in a legal dispute?
 
 Full context: `docs/PRD.md`
