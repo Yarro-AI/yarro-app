@@ -945,14 +945,15 @@ When a contractor explicitly declines or withdraws (at any stage — before quot
 
 **Why not a ticket-level state:** Contractor withdrawal triggers cycling to the next contractor. The ticket is still `awaiting_contractor` — just with a different contractor. Only when ALL contractors are exhausted does the ticket-level state change (to `no_contractors` / `needs_action`). The withdrawal is per-contractor, the exhaustion is per-ticket.
 
-**This sprint (manual):** New RPC `c1_mark_contractor_withdrawn(p_ticket_id, p_contractor_id, p_reason)`:
+**`c1_mark_contractor_withdrawn(p_ticket_id, p_contractor_id, p_reason)` is the sole writer.** All contractor withdrawal — manual or automatic — flows through this one RPC. It:
 - Marks contractor as withdrawn in JSONB
 - If next contractor exists: cycles to them, stays `awaiting_contractor`
 - If no more: sets `no_contractors` state
 - Logs `CONTRACTOR_WITHDRAWN` event (+ second event if last contractor)
-- PM triggers this manually from the drawer
 
-**Future (automatic):** Contractor portal gets a "Decline/Cancel" button that calls this RPC via token auth.
+**This sprint (manual):** PM triggers the RPC from the drawer.
+
+**Future (automatic):** Contractor portal gets a "Decline/Cancel" button. The portal page calls the same `c1_mark_contractor_withdrawn` RPC via token auth. The edge function does NOT write the event itself — it calls the RPC, which handles state change + audit event in one transaction. One write path, one source of truth, same pattern as `c1_create_ticket`.
 
 **Audit trail for contractor flow:**
 ```
