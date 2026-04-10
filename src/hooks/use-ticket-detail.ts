@@ -3,8 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Json } from '@/types/database'
+import { getReasonDisplay } from '@/lib/reason-display'
 
 // --- Types ---
+
+// RPC response shape (c1_ticket_detail returns flat JSONB)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RpcTicket = Record<string, any>
 
 export interface TicketContext {
   ticket_id: string
@@ -21,13 +26,11 @@ export interface TicketContext {
   handoff: boolean
   is_matched_tenant: boolean
   has_images: boolean
-  // Tenant
   tenant_name: string
   tenant_phone: string
   tenant_email: string
   tenant_role_tag: string
   tenant_verified_by: string
-  // Property
   property_id: string
   property_address: string
   property_manager_id: string
@@ -43,16 +46,13 @@ export interface TicketContext {
   emergency_access_contact: string
   auto_approve_limit: number
   contractor_mapping: Json
-  // Caller
   caller_name: string
   caller_phone: string
   caller_role: string
   caller_tag: string
-  // Contacts
   recipient: Json
   update_contact: Json
   tenant_contact: Json
-  // Conversation
   conversation_id: string | null
   label: string | null
 }
@@ -375,6 +375,140 @@ export function getRecipientMessages(entry: RecipientEntry | null, title: string
   return messages
 }
 
+// --- Map RPC response to legacy shapes (backward compat for modal) ---
+
+function rpcToContext(t: RpcTicket): TicketContext {
+  const tenant = t.tenant as Record<string, string> | null
+  const landlord = t.landlord as Record<string, string> | null
+  const manager = t.manager as Record<string, string> | null
+  return {
+    ticket_id: t.id,
+    ticket_status: t.status,
+    date_logged: t.date_logged,
+    issue_description: t.issue_description || '',
+    category: t.category || '',
+    priority: t.priority || '',
+    access: t.access || '',
+    access_granted: t.access_granted ?? false,
+    availability: t.availability || '',
+    reporter_role: '',
+    updates_recipient: '',
+    handoff: t.handoff ?? false,
+    is_matched_tenant: !!tenant,
+    has_images: Array.isArray(t.images) && t.images.length > 0,
+    tenant_name: tenant?.name || '',
+    tenant_phone: tenant?.phone || '',
+    tenant_email: tenant?.email || '',
+    tenant_role_tag: '',
+    tenant_verified_by: '',
+    property_id: t.property_id || '',
+    property_address: t.property_address || '',
+    property_manager_id: manager?.id || '',
+    manager_name: manager?.name || '',
+    manager_phone: manager?.phone || '',
+    manager_email: manager?.email || '',
+    business_name: manager?.business_name || '',
+    landlord_id: landlord?.id || null,
+    landlord_name: landlord?.name || '',
+    landlord_email: landlord?.email || '',
+    landlord_phone: landlord?.phone || '',
+    access_instructions: '',
+    emergency_access_contact: '',
+    auto_approve_limit: t.auto_approve_limit ?? 0,
+    contractor_mapping: null,
+    caller_name: '',
+    caller_phone: '',
+    caller_role: '',
+    caller_tag: '',
+    recipient: null,
+    update_contact: null,
+    tenant_contact: null,
+    conversation_id: t.conversation_id,
+    label: t.label || null,
+  }
+}
+
+function rpcToBasic(t: RpcTicket): TicketBasic {
+  const tenant = t.tenant as Record<string, string> | null
+  const contractor = t.contractor as Record<string, string> | null
+  return {
+    id: t.id,
+    issue_title: t.issue_title,
+    issue_description: t.issue_description,
+    status: t.status,
+    category: t.category,
+    priority: t.priority,
+    date_logged: t.date_logged,
+    scheduled_date: t.scheduled_date,
+    contractor_quote: t.contractor_quote,
+    final_amount: t.final_amount,
+    availability: t.availability,
+    access: t.access,
+    handoff: t.handoff,
+    is_manual: t.is_manual,
+    verified_by: t.verified_by,
+    property_id: t.property_id,
+    tenant_id: t.tenant_id,
+    contractor_id: t.contractor_id,
+    conversation_id: t.conversation_id,
+    archived: t.archived,
+    images: t.images,
+    next_action: t.next_action,
+    next_action_reason: t.next_action_reason,
+    on_hold: t.on_hold,
+    sla_due_at: t.sla_due_at,
+    resolved_at: t.resolved_at,
+    ooh_dispatched: t.ooh_dispatched,
+    ooh_outcome: t.ooh_outcome,
+    ooh_notes: t.ooh_notes,
+    ooh_cost: t.ooh_cost,
+    ooh_dispatched_at: t.ooh_dispatched_at,
+    ooh_outcome_at: t.ooh_outcome_at,
+    ooh_submissions: t.ooh_submissions,
+    landlord_allocated: t.landlord_allocated,
+    landlord_allocated_at: t.landlord_allocated_at,
+    landlord_outcome: t.landlord_outcome,
+    landlord_notes: t.landlord_notes,
+    landlord_cost: t.landlord_cost,
+    landlord_outcome_at: t.landlord_outcome_at,
+    landlord_submissions: t.landlord_submissions,
+    reschedule_requested: t.reschedule_requested,
+    reschedule_date: t.reschedule_date,
+    reschedule_reason: t.reschedule_reason,
+    reschedule_status: t.reschedule_status,
+    reschedule_decided_at: t.reschedule_decided_at,
+    room_id: t.room_id,
+    compliance_certificate_id: t.compliance_certificate_id,
+    address: t.property_address,
+    tenant_name: tenant?.name,
+    contractor_name: contractor?.name,
+  }
+}
+
+function rpcToComplianceCert(t: RpcTicket): ComplianceCertData | null {
+  const c = t.compliance as Record<string, string> | null
+  if (!c) return null
+  return {
+    id: c.cert_id,
+    certificate_type: c.cert_type,
+    expiry_date: c.expiry_date,
+    issued_date: c.issued_date,
+    certificate_number: c.certificate_number,
+    issued_by: c.issued_by,
+    document_url: c.document_url,
+    status: c.status,
+    notes: null,
+    contractor_id: c.contractor_id || null,
+    contractor_name: null,
+  }
+}
+
+function rpcToRentLedger(t: RpcTicket): RentLedgerRow[] {
+  const rows = t.rent_ledger
+  if (!rows || !Array.isArray(rows)) return []
+  return rows as RentLedgerRow[]
+}
+
 // --- Hook ---
 
 interface UseTicketDetailResult {
@@ -407,7 +541,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const [outboundLog, setOutboundLog] = useState<OutboundLogEntry[]>([])
   const [complianceCert, setComplianceCert] = useState<ComplianceCertData | null>(null)
   const [rentLedger, setRentLedger] = useState<RentLedgerRow[]>([])
-  const [categoryDataLoading, setCategoryDataLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -422,7 +555,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setOutboundLog([])
     setComplianceCert(null)
     setRentLedger([])
-    setCategoryDataLoading(false)
     setError(null)
   }, [])
 
@@ -431,27 +563,9 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setError(null)
 
     try {
-      // All independent queries in one parallel batch
-      const [contextRes, basicRes, messagesRes, completionRes, outboundRes] = await Promise.all([
-        supabase.rpc('c1_ticket_context', { ticket_uuid: id }),
-        supabase
-          .from('c1_tickets')
-          .select(`
-            id, issue_title, issue_description, status, category, priority,
-            date_logged, scheduled_date, contractor_quote, final_amount,
-            availability, access, handoff, is_manual, verified_by,
-            property_id, tenant_id, contractor_id, conversation_id, room_id, compliance_certificate_id,
-            archived, images, next_action, next_action_reason, on_hold, sla_due_at, resolved_at,
-            ooh_dispatched, ooh_outcome, ooh_notes, ooh_cost, ooh_dispatched_at, ooh_outcome_at, ooh_submissions,
-            landlord_allocated, landlord_allocated_at, landlord_outcome, landlord_notes, landlord_cost, landlord_outcome_at, landlord_submissions,
-            reschedule_requested, reschedule_date, reschedule_reason, reschedule_status, reschedule_decided_at,
-            c1_properties(address),
-            c1_tenants(full_name),
-            c1_contractors(contractor_name),
-            c1_rooms(room_number)
-          `)
-          .eq('id', id)
-          .single(),
+      // 1 RPC + 3 parallel queries (was 1 RPC + 7 queries)
+      const [detailRes, messagesRes, completionRes, outboundRes] = await Promise.all([
+        supabase.rpc('c1_ticket_detail', { p_ticket_id: id }),
         supabase
           .from('c1_messages')
           .select('*')
@@ -459,10 +573,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
           .maybeSingle(),
         supabase
           .from('c1_job_completions')
-          .select(`
-            *,
-            c1_contractors(contractor_name)
-          `)
+          .select(`*, c1_contractors(contractor_name)`)
           .eq('id', id)
           .maybeSingle(),
         supabase
@@ -472,21 +583,16 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
           .order('sent_at', { ascending: true }),
       ])
 
-      if (contextRes.error) throw new Error(contextRes.error.message)
-      if (basicRes.error) throw new Error(basicRes.error.message)
+      if (detailRes.error) throw new Error(detailRes.error.message)
 
-      // Process context + basic
-      const ctx = contextRes.data?.[0] || null
-      const basicData = basicRes.data ? {
-        ...basicRes.data,
-        address: (basicRes.data.c1_properties as unknown as { address: string } | null)?.address,
-        tenant_name: (basicRes.data.c1_tenants as unknown as { full_name: string } | null)?.full_name,
-        contractor_name: (basicRes.data.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name,
-        room_number: (basicRes.data.c1_rooms as unknown as { room_number: string } | null)?.room_number,
-      } : null
+      const t = detailRes.data as RpcTicket | null
+      if (!t) throw new Error('Ticket not found')
 
-      setContext(ctx)
-      setBasic(basicData as TicketBasic | null)
+      // Map RPC response to legacy shapes
+      setContext(rpcToContext(t))
+      setBasic(rpcToBasic(t))
+      setComplianceCert(rpcToComplianceCert(t))
+      setRentLedger(rpcToRentLedger(t))
 
       // Process messages
       if (messagesRes.error) console.error('Messages fetch error:', messagesRes.error)
@@ -508,46 +614,17 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       if (outboundRes.error) console.error('Outbound log fetch error:', outboundRes.error)
       setOutboundLog((outboundRes.data as OutboundLogEntry[]) || [])
 
-      // Conversation needs batch result (conversation_id from context or basic)
-      const conversationId = ctx?.conversation_id || basicData?.conversation_id
-      if (conversationId) {
+      // Conversation (only if ticket has one)
+      if (t.conversation_id) {
         const { data, error } = await supabase
           .from('c1_conversations')
           .select('id, phone, status, stage, caller_name, caller_role, handoff, last_updated, log')
-          .eq('id', conversationId)
+          .eq('id', t.conversation_id)
           .maybeSingle()
         if (error) console.error('Conversation fetch error:', error)
         setConversation(data || null)
       } else {
         setConversation(null)
-      }
-
-      // Category-specific secondary fetches (check both basic and context for category)
-      const ticketCategory = basicData?.category || ctx?.category
-      if (ticketCategory === 'compliance_renewal' && basicData?.compliance_certificate_id) {
-        setCategoryDataLoading(true)
-        const { data: certData } = await supabase
-          .from('c1_compliance_certificates')
-          .select('id, certificate_type, expiry_date, issued_date, certificate_number, issued_by, document_url, status, notes, contractor_id, c1_contractors(contractor_name)')
-          .eq('id', basicData.compliance_certificate_id)
-          .maybeSingle()
-        if (certData) {
-          setComplianceCert({
-            ...certData,
-            contractor_name: (certData.c1_contractors as unknown as { contractor_name: string } | null)?.contractor_name ?? null,
-          } as ComplianceCertData)
-        }
-        setCategoryDataLoading(false)
-      } else if (ticketCategory === 'rent_arrears' && basicData?.tenant_id) {
-        setCategoryDataLoading(true)
-        const { data: ledgerData } = await supabase
-          .from('c1_rent_ledger')
-          .select('id, due_date, amount_due, amount_paid, status, room_id, paid_at, payment_method, notes')
-          .eq('tenant_id', basicData.tenant_id)
-          .order('due_date', { ascending: false })
-          .limit(12)
-        if (ledgerData) setRentLedger(ledgerData as RentLedgerRow[])
-        setCategoryDataLoading(false)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ticket details')
@@ -578,7 +655,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const hasCompletion = !!completion
   const hasOutboundLog = outboundLog.length > 0
 
-  // Check for previously approved contractor — only relevant during awaiting_manager with multiple quotes
   const previouslyApprovedContractor = messages?.contractors
     ? (() => {
         const msgStage = (messages.stage || '').toLowerCase()
@@ -586,45 +662,18 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         const contractors = getContractors(messages.contractors)
         const approved = contractors.find(c => c.manager_decision === 'approved')
         if (!approved) return null
-        // Only warn if multiple contractors have sent quotes
         const quotedCount = contractors.filter(c => c.replied_at || c.quote_amount).length
         if (quotedCount < 2) return null
         return approved.name
       })()
     : null
 
-  // Display stage from next_action_reason (single source of truth, computed by DB trigger)
+  // Display stage from REASON_DISPLAY (single source of truth)
   const displayStage = (() => {
     if (!basic) return null
-    const reasonMap: Record<string, string> = {
-      on_hold: 'On Hold',
-      pending_review: 'Needs Review',
-      handoff_review: 'Handoff',
-      ooh_dispatched: 'OOH Dispatched',
-      ooh_resolved: 'OOH Resolved',
-      ooh_unresolved: 'OOH Unresolved',
-      manager_approval: 'Awaiting Manager',
-      no_contractors: 'No Contractors',
-      landlord_declined: 'Landlord Declined',
-      allocated_to_landlord: 'Landlord Managing',
-      landlord_resolved: 'Landlord Resolved',
-      landlord_needs_help: 'Landlord Needs Help',
-      job_not_completed: 'Not Completed',
-      awaiting_contractor: 'Awaiting Contractor',
-      awaiting_landlord: 'Awaiting Landlord',
-      awaiting_booking: 'Awaiting Booking',
-      scheduled: 'Scheduled',
-      completed: 'Completed',
-      dismissed: 'Dismissed',
-      new: 'Created',
-      cert_renewed: 'Cert Renewed',
-      compliance_needs_dispatch: 'Compliance — Dispatch',
-      rent_cleared: 'Rent Cleared',
-      rent_partial_payment: 'Partial Payment',
-      rent_overdue: 'Rent Overdue',
-    }
     if (basic.on_hold) return 'On Hold'
-    return reasonMap[basic.next_action_reason || ''] || reasonMap[basic.next_action || ''] || 'Created'
+    const { label } = getReasonDisplay(basic.next_action_reason, false)
+    return label
   })()
 
   return {
@@ -636,7 +685,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     outboundLog,
     complianceCert,
     rentLedger,
-    categoryDataLoading,
+    categoryDataLoading: false,
     loading,
     error,
     refetch,
