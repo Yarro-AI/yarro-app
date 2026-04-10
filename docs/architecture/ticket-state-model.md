@@ -540,9 +540,33 @@ Eliminates the `c1_messages` join that the current RPC uses to compute `COALESCE
 | Medium priority | 72h | Industry standard |
 | Low priority | 7 days | Industry standard |
 
-**SLA resets on state change.** When `next_action_reason` changes, the trigger computes a fresh `sla_due_at` for the new state. The old SLA is recorded in the audit trail (`STATE_CHANGED` event metadata).
+**SLA resets on state change.** When `next_action_reason` changes, the trigger computes a fresh `sla_due_at` for the new state. The old SLA is recorded in the `STATE_CHANGED` audit event metadata (including whether it was met or breached at the time of transition).
 
-**SLA only applies to `needs_action` states.** When a ticket is in `waiting`/`scheduled`, the SLA clock is paused — the PM isn't the actor. When it returns to `needs_action`, a new SLA starts.
+**SLA only applies to `needs_action` states.** The trigger sets `sla_due_at` based on the bucket:
+- **Entering `needs_action`** → `sla_due_at` set from defaults table (4h for handoff, 24h for approval, etc.)
+- **Entering `waiting` or `scheduled`** → `sla_due_at = NULL` (PM is not the actor, no SLA applies)
+- **Returning to `needs_action`** → fresh `sla_due_at` set for the new reason
+
+`sla_due_at = NULL` is important — it prevents stale SLA values from appearing in queries like "all tickets with breached SLAs." If the PM met their SLA and dispatched, the old SLA value shouldn't linger on the row. The row holds CURRENT state only. History lives in the audit trail.
+
+The trigger CASE for `sla_due_at`:
+```sql
+sla_due_at = CASE
+  -- needs_action states get an SLA
+  WHEN v_result.next_action = 'needs_action' THEN
+    CASE
+      WHEN priority = 'Emergency' THEN now() + interval '24 hours'
+      WHEN v_result.next_action_reason IN ('handoff_review', 'pending_review', 'no_contractors') THEN now() + interval '4 hours'
+      WHEN v_result.next_action_reason = 'manager_approval' THEN now() + interval '24 hours'
+      WHEN priority = 'Urgent' THEN now() + interval '48 hours'
+      WHEN priority = 'High' THEN now() + interval '48 hours'
+      WHEN priority = 'Medium' THEN now() + interval '72 hours'
+      ELSE now() + interval '7 days'
+    END
+  -- waiting/scheduled/terminal states: NULL (no SLA)
+  ELSE NULL
+END
+```
 
 ### SLA vs Timeout — different systems, different purposes
 
@@ -565,7 +589,12 @@ UPDATE c1_tickets SET
   next_action = v_result.next_action,
   next_action_reason = v_result.next_action_reason,
   waiting_since = now(),
-  sla_due_at = CASE ... (based on new reason + priority) ... END
+  sla_due_at = CASE
+    WHEN v_result.next_action = 'needs_action' THEN
+      -- SLA set from defaults (see SLA table above)
+      CASE ... END
+    ELSE NULL  -- waiting/scheduled/terminal: no SLA, NULL out any stale value
+  END
 WHERE id = v_ticket_id
   AND (next_action IS DISTINCT FROM v_result.next_action
     OR next_action_reason IS DISTINCT FROM v_result.next_action_reason);
