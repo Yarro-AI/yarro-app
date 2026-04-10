@@ -12,6 +12,14 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-04-10] UX: Compliance drawer dispatch — wire compliance_needs_dispatch CTA to inline_dispatch (dispatch from drawer, no page hop). Add "View certificate" link in cert details section for full cert page access. Part of next UI/UX session. [priority: high]
+- [2026-04-10] UX: Manual ticket form — no title field, every manual ticket gets "New maintenance ticket" title. Needs title input or auto-generation from description. Part of next UI/UX session. [priority: medium]
+- [2026-04-10] UX: Assign contractor CTA intermittent — StageDispatchAction sometimes doesn't respond. Investigate. [priority: medium]
+- [2026-04-11] BUG: WhatsApp PM notification says "No contractors available — all contacted contractors declined" when the real reason is no contractors mapped to the property/trade at all. Edge function doesn't distinguish between "no contractors on file" vs "all contractors declined/unresponsive". Should acknowledge the actual reason. [priority: high]
+- [2026-04-11] UX: SLA timer ring starts nearly empty on freshly created tickets. The ring maps remaining time against a fixed 24h window, so a 4h SLA immediately looks almost breached. Fix: each SLA duration should start full and count down proportionally to its own total. Drawer should also show the timer with a live countdown and explanation of what it means. [priority: high]
+- [2026-04-11] UX: Inline actions (assign contractor, approve quote, allocate landlord) render at bottom of scrollable content instead of inside the sticky action bar. Should expand within/above the sticky bar so PM doesn't have to scroll to find them. [priority: high]
+- [2026-04-11] UX: Properties page compliance certs list items not clickable — should link to compliance profile page. [priority: medium]
+- [2026-04-10] UX: Rent arrears label says "1 month(s) overdue" when only 2 days overdue. Counts ledger rows instead of actual duration. Fix RentSection to show days overdue from due_date (e.g. "2 days overdue", "60 days overdue"). [priority: high]
 - [2026-04-08] BUG: Ticket drawer title falls back to "Maintenance Request" — issue_title is null for some tickets. Trace why it wasn't set during creation (manual vs AI). Harden: generate short title from issue_description if issue_title is null (e.g. first 3-4 words or AI-generated summary). Should never need the fallback. [priority: high]
 - [2026-04-02] FEATURE: Tenancy history table (`c1_tenancies`) — immutable record per tenancy like tickets. Store property, room, tenant, start/end dates, status. End tenancy clears `room_id` AND `property_id` but history preserved. Tenant detail page gets "Tenancy History" button. Every move/end logged to audit trail. [priority: high]
 - [2026-04-02] UX: End tenancy dialog padding/layout polish [priority: low]
