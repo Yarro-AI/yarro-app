@@ -1392,6 +1392,64 @@ Rollback script reverses all changes:
 
 The rollback is safe because the old router still works with the existing data. The only risk is if new reasons (`cert_incomplete`, `awaiting_tenant`, `reschedule_pending`) were written to tickets during the migration window — the old CHECK constraint doesn't include them. The rollback script handles this by clearing those values before restoring the constraint.
 
+### Deployment strategy — frontend/backend lockstep
+
+The migration changes every `next_action` value simultaneously. If the backend deploys (values change to `needs_action`, `waiting`, `scheduled`) while the frontend still filters for old values (`needs_attention`, `in_progress`), the dashboard shows nothing.
+
+**Fix: frontend handles both old and new values during the transition window.**
+
+The `REASON_DISPLAY` mapping and bucket grouping include fallbacks for old values:
+```typescript
+// During transition — accept both old and new bucket values
+const isNeedsAction = (bucket: string) =>
+  bucket === 'needs_action' || bucket === 'needs_attention' || 
+  bucket === 'assign_contractor' || bucket === 'follow_up' || bucket === 'new'
+```
+
+**Deploy order:**
+1. Deploy frontend with dual-value support (handles old AND new)
+2. Deploy backend migration (values change on all tickets)
+3. Verify dashboard works with new values
+4. Remove old-value fallbacks from frontend (cleanup commit)
+
+The transition window is ~5 minutes (migration + backfill). The dual-value frontend ensures zero downtime.
+
+---
+
+## `waiting_since` reset semantics
+
+`waiting_since` means "when did the CURRENT state start" — not "how old is this ticket."
+
+A 2-week-old ticket that transitions `waiting` → `needs_action` → `waiting` gets a fresh `waiting_since`. The age boost resets because the context changed — the PM acted, something happened, the ticket entered a new phase. The new wait just started.
+
+**Total ticket age is NOT lost.** `date_logged` (ticket creation timestamp) is preserved permanently. The priority scoring's time_pressure component uses `deadline_date` (cert expiry, rent due date) which never resets. Only the age_boost component (capped at 48h) resets — because it measures current-state staleness, not total ticket age.
+
+**This is intentional.** If a contractor responds after 2 weeks and the PM must approve a quote, the "approve quote" item should start at the bottom of the PM's needs_action list (fresh, low age boost) and rise over hours as the PM doesn't act. It shouldn't start at the top just because the ticket is old — the PM has a fresh action to take.
+
+---
+
+## Adding a new `next_action_reason` — checklist
+
+When adding a new reason value, update ALL of the following:
+
+| # | Location | What to update |
+|---|---|---|
+| 1 | **Router sub-routine** | Add the RETURN QUERY that outputs the new reason + bucket |
+| 2 | **CHECK constraint** | Add the value to `chk_next_action_reason` |
+| 3 | **`sla_due_at` CASE in trigger** | Add SLA default for the new reason (if `needs_action`) |
+| 4 | **Frontend `REASON_DISPLAY`** | Add `{ label, stuckLabel, context }` entry |
+| 5 | **Frontend CTA mapping** | Add CTA button config (if `needs_action`) |
+| 6 | **`CAUSAL_ORDER` in `audit-utils.ts`** | Add if there's a corresponding event type |
+| 7 | **`status-badge.tsx`** | Add badge styling for the new reason |
+| 8 | **Architecture doc values reference** | Add to the reason list with bucket annotation |
+| 9 | **`supabase gen types`** | Regenerate TypeScript types |
+
+**If the reason is in `waiting` bucket, also update:**
+| 10 | **Dashboard RPC timeout CTE** | Add timeout threshold check |
+| 11 | **Timing column** | Add dedicated timestamp column if needed (or use `waiting_since`) |
+
+**Test:** After adding, verify the router returns the correct bucket + reason, the trigger writes it, the dashboard groups it correctly, and the drawer displays it.
+
 ---
 
 ## `job_stage` — removed
@@ -1760,3 +1818,26 @@ With all events logged, a ticket's audit trail reads:
 ```
 
 Every gap explained. Every decision timestamped. Every delay recorded.
+
+---
+
+## Build-Time Considerations
+
+Items to address during implementation, not architecture decisions:
+
+**Dashboard pagination (future):** The RPC currently returns ALL open tickets per PM. At 1000+ tickets this becomes a large payload. The bucket architecture supports splitting into `c1_get_dashboard_bucket(p_pm_id, p_bucket)` — one call per bucket, paginated. Not needed at current scale (~94 tickets). Monitor response size as ticket count grows.
+
+**Index strategy for new columns:** The migration adds `deadline_date`, `waiting_since`, `contractor_sent_at`, `tenant_contacted_at`, `awaiting_tenant`, `reschedule_initiated_by`, `handoff_reason`. Indexes needed:
+- `idx_c1_tickets_deadline_date` on `deadline_date` WHERE `deadline_date IS NOT NULL` — for time_pressure scoring
+- `idx_c1_tickets_awaiting_tenant` on `awaiting_tenant` WHERE `awaiting_tenant = true` — same pattern as `on_hold` index
+- Other new columns are read per-ticket (not filtered across tables) — no index needed
+
+**Cron failure alerting:** Timeout crons and compliance auto-ticket cron run on `pg_cron`. Failures go to `cron.job_run_details` — but nobody monitors this. Add a daily health check that queries `cron.job_run_details` for failures and alerts via Telegram if any are found. Silent cron failure = missed compliance tickets = legal risk.
+
+**`c1_messages.stage` drift detection (future):** A weekly health check cron that re-runs the router on a sample of open tickets and compares the result to the stored `next_action_reason`. If they disagree, alert. Catches drift from disabled triggers or superuser operations.
+
+**Bulk actions (future):** At scale, a PM with 50 resolved tickets shouldn't click "close" 50 times. Bulk select + action pattern. The architecture supports this — each action calls the same RPC, just in a loop or batch.
+
+**Optimistic updates:** After PM clicks a CTA (dispatch, approve, close), the frontend should optimistically update the ticket's bucket/reason before the RPC response arrives (300-800ms gap). Revert if RPC fails. Standard React pattern — implement during the frontend build.
+
+**`c1_ledger` deletion — protected protocol:** The ledger triggers (`c1_ledger_on_ticket_insert`, `c1_ledger_on_ticket_update`) may be in the protected RPC list. Follow safe modification protocol: check `supabase/core-rpcs/README.md`, backup current definitions before dropping.
