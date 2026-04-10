@@ -35,7 +35,6 @@ interface TicketRow {
   id: string
   issue_description: string | null
   status: string
-  job_stage: string | null
   category: string | null
   priority: string | null
   date_logged: string
@@ -148,7 +147,6 @@ export default function TicketsPage() {
         id,
         issue_description,
         status,
-        job_stage,
         category,
         maintenance_trade,
         priority,

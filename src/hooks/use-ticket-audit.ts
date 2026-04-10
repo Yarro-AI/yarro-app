@@ -83,7 +83,7 @@ export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
         supabase
           .from('c1_tickets')
           .select(`
-            id, issue_description, status, job_stage, category, priority,
+            id, issue_description, status, category, priority,
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
             property_id, tenant_id, contractor_id, conversation_id, room_id,

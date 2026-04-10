@@ -13,7 +13,6 @@ export interface TicketContext {
   issue_description: string
   category: string
   priority: string
-  job_stage: string
   access: string
   access_granted: boolean
   availability: string
@@ -63,7 +62,6 @@ export interface TicketBasic {
   issue_title: string | null
   issue_description: string | null
   status: string
-  job_stage: string | null
   category: string | null
   priority: string | null
   date_logged: string
@@ -451,7 +449,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
         supabase
           .from('c1_tickets')
           .select(`
-            id, issue_title, issue_description, status, job_stage, category, priority,
+            id, issue_title, issue_description, status, category, priority,
             date_logged, scheduled_date, contractor_quote, final_amount,
             availability, access, handoff, is_manual, verified_by,
             property_id, tenant_id, contractor_id, conversation_id, room_id, compliance_certificate_id,

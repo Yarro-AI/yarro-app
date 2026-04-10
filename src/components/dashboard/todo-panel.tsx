@@ -31,7 +31,6 @@ export interface TicketSummary {
   id: string
   issue_description: string | null
   status: string
-  job_stage: string | null
   display_stage: string | null
   message_stage?: string | null
   category: string | null

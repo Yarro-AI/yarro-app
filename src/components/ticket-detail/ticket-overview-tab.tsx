@@ -34,10 +34,10 @@ interface TimelineStep { label: string; complete: boolean; active: boolean }
 function deriveTimeline(basic: TicketBasic): TimelineStep[] {
   const reason = basic.next_action_reason || ''
   const isCompleted = reason === 'completed' || reason === 'cert_renewed' || reason === 'rent_cleared'
-  const isScheduled = !!basic.scheduled_date || basic.job_stage === 'booked' || basic.job_stage === 'scheduled'
+  const isScheduled = !!basic.scheduled_date || ['scheduled', 'awaiting_completion'].includes(reason)
   const isApproved = isScheduled || isCompleted || ['awaiting_booking', 'scheduled', 'job_not_completed'].includes(reason)
   const isQuoted = !!basic.contractor_quote || isApproved
-  const isDispatched = !!basic.job_stage || isQuoted || ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking', 'no_contractors', 'manager_approval'].includes(reason)
+  const isDispatched = isQuoted || ['awaiting_contractor', 'awaiting_landlord', 'awaiting_booking', 'no_contractors', 'manager_approval'].includes(reason)
 
   const steps: TimelineStep[] = [
     { label: 'Reported', complete: true, active: false },

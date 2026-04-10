@@ -14,7 +14,6 @@ const tenantPortalBase: TenantPortalData = {
   category: 'Plumbing / heating',
   priority: 'urgent',
   date_logged: '2026-03-28T09:14:00Z',
-  job_stage: 'reported',
   scheduled_date: null,
   scheduled_window: null,
   availability: 'Available mornings before 11am, or any time on Fridays.',
@@ -35,7 +34,6 @@ export const tenantPortalMocks = {
 
   contractorFound: {
     ...tenantPortalBase,
-    job_stage: 'sent',
     contractor_name: 'Dave Wilson',
     contractor_phone: '+447911234567',
     contractor_trade: 'Plumber / heating engineer',
@@ -47,7 +45,6 @@ export const tenantPortalMocks = {
 
   booked: {
     ...tenantPortalBase,
-    job_stage: 'booked',
     scheduled_date: '2026-04-03T09:00:00Z',
     scheduled_window: '9am \u2013 12pm',
     contractor_name: 'Dave Wilson',
@@ -62,7 +59,6 @@ export const tenantPortalMocks = {
 
   completed: {
     ...tenantPortalBase,
-    job_stage: 'completed',
     scheduled_date: '2026-04-03T09:00:00Z',
     scheduled_window: '9am \u2013 12pm',
     contractor_name: 'Dave Wilson',
@@ -90,7 +86,6 @@ const landlordPortalBase: LandlordPortalData = {
   priority: 'medium',
   images: ['https://placehold.co/400x300/e2e8f0/64748b?text=Damp+patch', 'https://placehold.co/400x300/e2e8f0/64748b?text=Close+up'],
   date_logged: '2026-03-27T16:40:00Z',
-  job_stage: 'sent',
   tenant_name: 'Sarah Chen',
   tenant_phone: '+447700123456',
   agency_name: 'Northgate Property Management',
@@ -125,7 +120,6 @@ export const landlordPortalMocks = {
 
   resolved: {
     ...landlordPortalBase,
-    job_stage: 'completed',
     contractor_name: 'Mike Reynolds Damp Proofing',
     contractor_phone: '+447800111222',
     contractor_trade: 'Damp specialist',
@@ -154,7 +148,6 @@ const oohPortalBase: OOHPortalData = {
   priority: 'emergency',
   images: [],
   date_logged: '2026-03-31T21:45:00Z',
-  job_stage: 'sent',
   tenant_name: 'James Okafor',
   tenant_phone: '+447812345678',
   agency_name: 'Northgate Property Management',
@@ -183,7 +176,6 @@ export const oohPortalMocks = {
 
   resolved: {
     ...oohPortalBase,
-    job_stage: 'completed',
     resolved_at: '2026-03-31T23:45:00Z',
     submissions: [
       { outcome: 'in_progress', notes: 'On site, isolating the water supply now', cost: null, submitted_at: '2026-03-31T22:30:00Z' },
@@ -209,7 +201,6 @@ const contractorPortalBase: ContractorPortalData = {
   priority: 'urgent',
   images: ['https://placehold.co/400x300/e2e8f0/64748b?text=Boiler+front', 'https://placehold.co/400x300/e2e8f0/64748b?text=Pressure+gauge'],
   date_logged: '2026-03-28T09:14:00Z',
-  job_stage: 'sent',
   scheduled_date: null,
   scheduled_window: null,
   min_booking_lead_hours: 24,
@@ -235,7 +226,6 @@ export const contractorPortalMocks = {
 
   booked: {
     ...contractorPortalBase,
-    job_stage: 'booked',
     scheduled_date: '2026-04-03T09:00:00Z',
     scheduled_window: '9am \u2013 12pm',
     activity: [
@@ -246,7 +236,6 @@ export const contractorPortalMocks = {
 
   completed: {
     ...contractorPortalBase,
-    job_stage: 'completed',
     scheduled_date: '2026-04-03T09:00:00Z',
     scheduled_window: '9am \u2013 12pm',
     resolved_at: '2026-04-03T11:30:00Z',
@@ -308,7 +297,6 @@ const tenantBase: TenantTicket = {
   availability: 'Available mornings before 11am, or any time on Fridays.',
   date_logged: '2026-03-28T09:15:00Z',
   status: 'open',
-  job_stage: 'reported',
   scheduled_date: null,
   contractor_name: null,
   contractor_phone: null,
@@ -327,13 +315,11 @@ export const tenantMocks = {
 
   contractorFound: {
     ...tenantBase,
-    job_stage: 'sent',
     contractor_name: 'Dave Wilson Plumbing',
   },
 
   booked: {
     ...tenantBase,
-    job_stage: 'booked',
     scheduled_date: '2026-04-03T09:00:00Z',
     contractor_name: 'Dave Wilson Plumbing',
     contractor_phone: '+447911234567',
@@ -341,7 +327,6 @@ export const tenantMocks = {
 
   bookedWithReschedule: {
     ...tenantBase,
-    job_stage: 'booked',
     scheduled_date: '2026-04-03T09:00:00Z',
     contractor_name: 'Dave Wilson Plumbing',
     contractor_phone: '+447911234567',
@@ -353,7 +338,6 @@ export const tenantMocks = {
 
   completedAwaitingConfirmation: {
     ...tenantBase,
-    job_stage: 'completed',
     scheduled_date: '2026-04-03T09:00:00Z',
     contractor_name: 'Dave Wilson Plumbing',
     contractor_phone: '+447911234567',
@@ -362,7 +346,6 @@ export const tenantMocks = {
 
   confirmed: {
     ...tenantBase,
-    job_stage: 'completed',
     scheduled_date: '2026-04-03T09:00:00Z',
     contractor_name: 'Dave Wilson Plumbing',
     contractor_phone: '+447911234567',
@@ -475,7 +458,6 @@ const contractorBase: ContractorTicket = {
   availability: 'Available mornings before 11am, or any time on Fridays.',
   date_logged: '2026-03-28T09:15:00Z',
   status: 'open',
-  job_stage: 'sent',
   contractor_quote: null,
   final_amount: null,
   scheduled_date: null,
@@ -500,13 +482,11 @@ export const contractorMocks = {
 
   booked: {
     ...contractorBase,
-    job_stage: 'booked',
     scheduled_date: '2026-04-03T09:00:00Z',
   },
 
   completed: {
     ...contractorBase,
-    job_stage: 'completed',
     scheduled_date: '2026-04-03T09:00:00Z',
     resolved_at: '2026-04-03T11:30:00Z',
     final_amount: 245,

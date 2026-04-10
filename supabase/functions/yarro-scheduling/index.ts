@@ -166,7 +166,6 @@ async function handleFinalizeJob(
         contractor_quote: quoteNum,
         final_amount: totalNum,
         landlord_approved_on: landlord.replied_at || new Date().toISOString(),
-        job_stage: "Sent",
       })
       .eq("id", ticketId);
 
@@ -369,7 +368,6 @@ async function handleFilloutScheduling(
     .update({
       status: "open",
       scheduled_date: scheduledIso,
-      job_stage: "Booked",
     })
     .eq("id", ticketId);
 

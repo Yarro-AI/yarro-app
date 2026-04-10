@@ -31,7 +31,6 @@ function mapTicketToPortalData(ticket: ContractorTicket): ContractorPortalData {
     priority: ticket.priority,
     images: ticket.images,
     date_logged: ticket.date_logged,
-    job_stage: ticket.job_stage,
     scheduled_date: ticket.scheduled_date,
     scheduled_window: null,
     min_booking_lead_hours: ticket.min_booking_lead_hours,

@@ -50,10 +50,9 @@ const STAGE_CONFIG: Record<StageKey, {
 }
 
 function getActiveStageIdx(data: TenantPortalData): number {
-  const stage = (data.job_stage || '').toLowerCase()
-  if (stage === 'completed' || data.resolved_at) return 3
-  if (stage === 'booked' || data.scheduled_date) return 2
-  if (['awaiting quote', 'awaiting manager review', 'awaiting landlord approval', 'sent'].includes(stage)) return 1
+  if (data.resolved_at) return 3
+  if (data.scheduled_date) return 2
+  if (data.contractor_name) return 1
   return 0
 }
 

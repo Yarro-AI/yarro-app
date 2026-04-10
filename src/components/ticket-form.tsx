@@ -529,7 +529,6 @@ export function TicketForm({
           availability: formatted.availability || null,
           access: formatted.access || null,
           status: 'OPEN',
-          job_stage: 'logged',
           handoff: false,  // No longer a handoff once we create the ticket
           conversation_id: conversationId || null,
           property_manager_id: propertyManager!.id,

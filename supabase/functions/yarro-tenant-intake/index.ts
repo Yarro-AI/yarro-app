@@ -527,6 +527,11 @@ Deno.serve(async (req: Request) => {
         // Route + trade split: AI outputs trade (e.g. "Plumber"), we set the route
         issueData.maintenance_trade = issueData.category;
         issueData.category = "maintenance";
+
+        // Ensure handoff_reason is set for AI-detected handoffs
+        if (issueAIContext.handoff && !issueData.handoff_reason) {
+          issueData.handoff_reason = "ai_handoff";
+        }
       } catch (e) {
         aiFallback = true;
         const msg = e instanceof Error ? e.message : String(e);
@@ -556,6 +561,7 @@ Deno.serve(async (req: Request) => {
           label: issueAIContext.label,
           close_type: issueAIContext.close_type,
           handoff: issueAIContext.handoff,
+          handoff_reason: issueAIContext.handoff ? "ai_handoff" : undefined,
           is_new_contact: issueAIContext.is_new_contact,
         };
       }

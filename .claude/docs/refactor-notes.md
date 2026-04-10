@@ -72,6 +72,26 @@ supabase/seed-test-messages 2.sql
 
 ---
 
+## Sprint B Notes
+
+### Step 2: Compliance auto-ticketing
+- New RPC `c1_compliance_auto_ticket()` creates tickets for incomplete, expiring (≤30d), and expired certs.
+- `compliance_dispatch_renewal` made idempotent — handles auto-created tickets by inserting a message row + dispatching.
+- Cron scheduled at 08:05 UTC (after escalation 07:55, reminder 08:00).
+- BEFORE INSERT trigger can't read the new row, so auto-ticket does INSERT + UPDATE to force recompute.
+
+### Step 3: Rent ticket augment
+- `create_rent_arrears_ticket` (protected) now auto-computes `deadline_date` from `c1_rent_ledger` when not passed.
+- `AUTO_TICKET_RENT` audit event logged for new tickets.
+
+### Step 4: job_stage removal
+- Edge functions deployed first (removed `job_stage` writes from yarro-scheduling, added `handoff_reason` to yarro-tenant-intake).
+- Column drop required handling 2 dependencies: `trg_same_day_reminder` trigger (dead code — dropped) and `v_properties_hub` view (recreated with `next_action_reason` replacing `job_stage`).
+- `c1_ticket_context` (protected RPC) also returned `job_stage` — fixed in follow-up migration 04b.
+- All frontend `job_stage` references cleaned from ~16 source files.
+
+---
+
 ## Decision Log
 
 _Record decisions made during the refactor that aren't in the architecture spec or plans._
@@ -84,6 +104,9 @@ _Record decisions made during the refactor that aren't in the architecture spec 
 
 ### 1. Sprint A backfill referenced non-existent `updated_at` column
 The plan's backfill SQL used `COALESCE(updated_at, date_logged)` for `waiting_since`, but `c1_tickets` has no `updated_at` column. Fixed to use `date_logged` directly. Migration had to be repaired and re-pushed.
+
+### 2. Sprint B job_stage DROP had undiscovered dependencies
+Plan didn't account for `trg_same_day_reminder` (trigger on `job_stage` column) or `v_properties_hub` (view selecting `job_stage`). Migration failed on first push, required repair + updated migration. Also discovered `c1_ticket_context` (protected RPC) returned `job_stage` — required additional migration.
 
 ---
 

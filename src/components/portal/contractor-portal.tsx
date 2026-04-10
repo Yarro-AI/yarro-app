@@ -22,9 +22,8 @@ type TicketStage = 'schedule' | 'complete' | 'done'
 type QuoteStage = 'quote' | 'quote_submitted'
 
 function getTicketStage(ticket: ContractorTicket): TicketStage {
-  const stage = (ticket.job_stage || '').toLowerCase()
-  if (stage === 'completed' || ticket.resolved_at) return 'done'
-  if (stage === 'booked' && ticket.scheduled_date) return 'complete'
+  if (ticket.resolved_at) return 'done'
+  if (ticket.scheduled_date) return 'complete'
   return 'schedule'
 }
 

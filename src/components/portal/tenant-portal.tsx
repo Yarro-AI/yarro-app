@@ -30,10 +30,9 @@ const STAGE_ICONS: Record<Stage, React.ReactNode> = {
 }
 
 function getActiveStage(ticket: TenantTicket): Stage {
-  const stage = (ticket.job_stage || '').toLowerCase()
-  if (stage === 'completed' || ticket.resolved_at) return 'completed'
-  if (stage === 'booked' || ticket.scheduled_date) return 'booked'
-  if (['awaiting quote', 'awaiting manager review', 'awaiting landlord approval', 'sent'].includes(stage)) return 'contractor_found'
+  if (ticket.resolved_at) return 'completed'
+  if (ticket.scheduled_date) return 'booked'
+  if (ticket.contractor_name) return 'contractor_found'
   return 'reported'
 }
 

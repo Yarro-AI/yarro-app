@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       c1_compliance_certificates: {
@@ -1447,7 +1472,6 @@ export type Database = {
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
-          job_stage: string | null
           landlord_allocated: boolean | null
           landlord_allocated_at: string | null
           landlord_approved_on: string | null
@@ -1528,7 +1552,6 @@ export type Database = {
           is_manual?: boolean | null
           issue_description?: string | null
           issue_title?: string | null
-          job_stage?: string | null
           landlord_allocated?: boolean | null
           landlord_allocated_at?: string | null
           landlord_approved_on?: string | null
@@ -1609,7 +1632,6 @@ export type Database = {
           is_manual?: boolean | null
           issue_description?: string | null
           issue_title?: string | null
-          job_stage?: string | null
           landlord_allocated?: boolean | null
           landlord_allocated_at?: string | null
           landlord_approved_on?: string | null
@@ -1865,6 +1887,7 @@ export type Database = {
         Returns: string
       }
       c1_completion_followup_check: { Args: never; Returns: number }
+      c1_compliance_auto_ticket: { Args: never; Returns: number }
       c1_compliance_escalate: { Args: never; Returns: undefined }
       c1_compute_next_action: {
         Args: { p_ticket_id: string }
@@ -2013,7 +2036,6 @@ export type Database = {
           is_manual: boolean | null
           issue_description: string | null
           issue_title: string | null
-          job_stage: string | null
           landlord_allocated: boolean | null
           landlord_allocated_at: string | null
           landlord_approved_on: string | null
@@ -2310,7 +2332,6 @@ export type Database = {
           has_images: boolean
           is_matched_tenant: boolean
           issue_description: string
-          job_stage: string
           label: string
           landlord_email: string
           landlord_id: string
@@ -2958,6 +2979,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       certificate_type: [

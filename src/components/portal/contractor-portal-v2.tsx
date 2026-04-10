@@ -49,9 +49,8 @@ const STAGE_CONFIG: Record<StageKey, { label: string; icon: React.ReactNode }> =
 }
 
 function getActiveStageIdx(data: ContractorPortalData): number {
-  const stage = (data.job_stage || '').toLowerCase()
-  if (stage === 'completed' || data.resolved_at) return 2
-  if (stage === 'booked' || data.scheduled_date) return 1
+  if (data.resolved_at) return 2
+  if (data.scheduled_date) return 1
   return 0
 }
 

@@ -96,7 +96,7 @@ export default function CertificateDetailPage() {
         .single(),
       supabase
         .from('c1_tickets')
-        .select('id, job_stage, next_action_reason')
+        .select('id, next_action_reason')
         .eq('compliance_certificate_id', certId)
         .eq('status', 'open')
         .eq('archived', false)
@@ -122,7 +122,6 @@ export default function CertificateDetailPage() {
       else if (reason === 'awaiting_contractor') status = 'awaiting_contractor'
       else if (reason === 'awaiting_booking') status = 'awaiting_booking'
       else if (reason === 'scheduled' || reason === 'awaiting_completion') status = 'renewal_scheduled'
-      else if (['booked', 'scheduled'].includes(activeTicket.job_stage ?? '')) status = 'renewal_scheduled'
       else if (reason === 'no_contractors') status = 'no_contractors'
       else if (reason === 'manager_approval') status = 'awaiting_approval'
       else status = 'renewal_requested'

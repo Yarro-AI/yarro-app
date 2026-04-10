@@ -91,7 +91,6 @@ interface TicketSummary {
   id: string
   issue_description: string
   status: string
-  job_stage: string
   date_logged: string
 }
 
@@ -799,7 +798,6 @@ export default function PropertiesPage() {
                             {ticket.issue_description || 'No description'}
                           </span>
                         </div>
-                        <StatusBadge status={ticket.job_stage} />
                       </button>
                     ))}
                   </div>

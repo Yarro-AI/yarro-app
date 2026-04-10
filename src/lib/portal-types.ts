@@ -17,7 +17,6 @@ export type TenantPortalData = {
   category: string | null
   priority: string
   date_logged: string
-  job_stage: string
 
   // Scheduling
   scheduled_date: string | null
@@ -55,7 +54,6 @@ export type LandlordPortalData = {
   priority: string
   images: string[]
   date_logged: string
-  job_stage: string
 
   // Tenant
   tenant_name: string | null
@@ -97,7 +95,6 @@ export type OOHPortalData = {
   priority: string
   images: string[]
   date_logged: string
-  job_stage: string
 
   // Tenant
   tenant_name: string | null
@@ -159,7 +156,6 @@ export type ContractorPortalData = {
   priority: string
   images: string[]
   date_logged: string
-  job_stage: string
 
   // Scheduling
   scheduled_date: string | null
@@ -205,7 +201,6 @@ export type TenantTicket = {
   availability: string | null
   date_logged: string
   status: string
-  job_stage: string
   scheduled_date: string | null
   contractor_name: string | null
   contractor_phone: string | null
@@ -231,7 +226,6 @@ export type ContractorTicket = {
   availability: string | null
   date_logged: string
   status: string
-  job_stage: string
   contractor_quote: number | null
   final_amount: number | null
   scheduled_date: string | null
