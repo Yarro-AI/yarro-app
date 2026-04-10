@@ -38,7 +38,6 @@ export function TicketDetailModal({
     conversation,
     messages,
     completion,
-    ledger,
     outboundLog,
     complianceCert,
     rentLedger,
@@ -266,7 +265,7 @@ export function TicketDetailModal({
                           <span className={cn('text-sm font-medium transition-colors', activeTab === 'conversation' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Conversation</span>
                         </button>
                       )}
-                      {(hasDispatch || hasOutboundLog || ledger.length > 0) && (
+                      {(hasDispatch || hasOutboundLog) && (
                         <button onClick={() => setActiveTab('dispatch')} className="flex items-center py-2.5 -mb-px flex-shrink-0">
                           <span className={cn('text-sm font-medium transition-colors', activeTab === 'dispatch' ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>Activity</span>
                         </button>
@@ -289,7 +288,7 @@ export function TicketDetailModal({
                         <TicketConversationTab conversation={conversation || null} outboundLog={outboundLog} messages={messages} scheduledDate={basic?.scheduled_date} />
                       </div>
                     )}
-                    {activeTab === 'dispatch' && (hasDispatch || hasOutboundLog || ledger.length > 0) && (
+                    {activeTab === 'dispatch' && (hasDispatch || hasOutboundLog) && (
                       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
                         <TicketDispatchTab messages={messages} outboundLog={outboundLog} ticketId={ticketId || undefined} onRedispatched={onClose} nextActionReason={basic?.next_action_reason} onActionTaken={() => { refetch(); onTicketUpdated?.() }} oohSubmissions={basic?.ooh_submissions} landlordSubmissions={basic?.landlord_submissions} landlordAllocated={basic?.landlord_allocated} landlordName={context?.landlord_name} landlordPhone={context?.landlord_phone} />
                       </div>

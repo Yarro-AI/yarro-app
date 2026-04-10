@@ -741,41 +741,6 @@ export type Database = {
           },
         ]
       }
-      c1_ledger: {
-        Row: {
-          actor_role: string
-          created_at: string
-          data: Json | null
-          event_type: string
-          id: string
-          ticket_id: string
-        }
-        Insert: {
-          actor_role?: string
-          created_at?: string
-          data?: Json | null
-          event_type: string
-          id?: string
-          ticket_id: string
-        }
-        Update: {
-          actor_role?: string
-          created_at?: string
-          data?: Json | null
-          event_type?: string
-          id?: string
-          ticket_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "c1_ledger_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "c1_tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       c1_messages: {
         Row: {
           archived: boolean | null

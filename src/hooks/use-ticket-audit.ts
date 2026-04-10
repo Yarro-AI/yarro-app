@@ -10,7 +10,6 @@ import type {
   ConversationData,
   MessageData,
   CompletionData,
-  LedgerEntry,
   OutboundLogEntry,
 } from './use-ticket-detail'
 import { getLogEntries } from './use-ticket-detail'
@@ -22,7 +21,6 @@ export type {
   ConversationData,
   MessageData,
   CompletionData,
-  LedgerEntry,
   OutboundLogEntry,
 }
 
@@ -38,7 +36,7 @@ export interface ComplianceCert {
 export interface UnifiedTimelineEntry {
   id: string
   timestamp: string
-  source: 'event' | 'ledger'
+  source: 'event'
   event_type: string
   actor: string | null
   actor_type: string | null
@@ -49,7 +47,6 @@ export interface UnifiedTimelineEntry {
 export interface UseTicketAuditResult {
   ticket: TicketBasic | null
   events: AuditEvent[]
-  ledger: LedgerEntry[]
   conversation: ConversationData | null
   messages: MessageData | null
   completion: CompletionData | null
@@ -63,7 +60,6 @@ export interface UseTicketAuditResult {
 export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
   const [ticket, setTicket] = useState<TicketBasic | null>(null)
   const [events, setEvents] = useState<AuditEvent[]>([])
-  const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [conversation, setConversation] = useState<ConversationData | null>(null)
   const [messages, setMessages] = useState<MessageData | null>(null)
   const [completion, setCompletion] = useState<CompletionData | null>(null)
@@ -79,7 +75,7 @@ export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
     setError(null)
 
     try {
-      const [ticketRes, eventsRes, ledgerRes, messagesRes, completionRes, outboundRes] = await Promise.all([
+      const [ticketRes, eventsRes, messagesRes, completionRes, outboundRes] = await Promise.all([
         supabase
           .from('c1_tickets')
           .select(`
@@ -104,11 +100,6 @@ export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
           .select('id, event_type, actor_type, actor_name, property_label, occurred_at, metadata, ticket_id')
           .eq('ticket_id', id)
           .order('occurred_at', { ascending: true }),
-        supabase
-          .from('c1_ledger')
-          .select('*')
-          .eq('ticket_id', id)
-          .order('created_at', { ascending: true }),
         supabase
           .from('c1_messages')
           .select('*')
@@ -140,9 +131,6 @@ export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
 
       if (eventsRes.error) console.error('Events fetch error:', eventsRes.error)
       setEvents((eventsRes.data as AuditEvent[]) || [])
-
-      if (ledgerRes.error) console.error('Ledger fetch error:', ledgerRes.error)
-      setLedger((ledgerRes.data as LedgerEntry[]) || [])
 
       if (messagesRes.error) console.error('Messages fetch error:', messagesRes.error)
       setMessages(messagesRes.data || null)
@@ -201,48 +189,28 @@ export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
     }
   }, [ticketId, fetchData])
 
-  // Merge events + ledger into a single sorted timeline
+  // Build timeline from c1_events (sole source after c1_ledger drop)
   const unifiedTimeline = useMemo((): UnifiedTimelineEntry[] => {
-    const entries: UnifiedTimelineEntry[] = []
-
-    for (const e of events) {
+    const entries: UnifiedTimelineEntry[] = events.map(e => {
       const meta = e.metadata
       let detail: string | null = null
       if (meta) {
         if (meta.summary && typeof meta.summary === 'string') detail = meta.summary
+        else if (meta.from_reason && meta.to_reason) detail = `${meta.from_reason} → ${meta.to_reason}`
         else if (meta.old_status && meta.new_status) detail = `${meta.old_status} → ${meta.new_status}`
         else if (meta.message && typeof meta.message === 'string') detail = meta.message as string
       }
-      entries.push({
+      return {
         id: e.id,
         timestamp: e.occurred_at,
-        source: 'event',
+        source: 'event' as const,
         event_type: e.event_type,
         actor: e.actor_name,
         actor_type: e.actor_type,
         detail,
         data: meta,
-      })
-    }
-
-    for (const l of ledger) {
-      let detail: string | null = null
-      if (l.data) {
-        const d = l.data
-        if (d.from && d.to) detail = `${d.from} → ${d.to}`
-        else if (d.priority) detail = `Priority: ${d.priority}`
       }
-      entries.push({
-        id: l.id,
-        timestamp: l.created_at,
-        source: 'ledger',
-        event_type: l.event_type,
-        actor: l.actor_role,
-        actor_type: l.actor_role,
-        detail,
-        data: l.data,
-      })
-    }
+    })
 
     // Sort ascending (oldest first) with causal ordering for same-second events
     entries.sort((a, b) => {
@@ -255,27 +223,12 @@ export function useTicketAudit(ticketId: string | null): UseTicketAuditResult {
       return timeDiff
     })
 
-    // Deduplicate: if an event and ledger entry have the same event_type within 2s, keep only the event (richer data)
-    const deduped: UnifiedTimelineEntry[] = []
-    for (const entry of entries) {
-      if (entry.source === 'ledger') {
-        const hasDuplicateEvent = deduped.some(
-          e => e.source === 'event' &&
-            e.event_type === entry.event_type &&
-            Math.abs(new Date(e.timestamp).getTime() - new Date(entry.timestamp).getTime()) < 2000
-        )
-        if (hasDuplicateEvent) continue
-      }
-      deduped.push(entry)
-    }
-
-    return deduped
-  }, [events, ledger])
+    return entries
+  }, [events])
 
   return {
     ticket,
     events,
-    ledger,
     conversation,
     messages,
     completion,

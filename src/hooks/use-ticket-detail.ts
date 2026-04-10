@@ -219,15 +219,6 @@ export interface LandlordSubmission {
   submitted_at: string
 }
 
-export interface LedgerEntry {
-  id: string
-  ticket_id: string
-  event_type: string
-  actor_role: string
-  data: Record<string, unknown> | null
-  created_at: string
-}
-
 export interface OutboundLogEntry {
   id: string
   ticket_id: string
@@ -392,7 +383,6 @@ interface UseTicketDetailResult {
   conversation: ConversationData | null
   messages: MessageData | null
   completion: CompletionData | null
-  ledger: LedgerEntry[]
   outboundLog: OutboundLogEntry[]
   complianceCert: ComplianceCertData | null
   rentLedger: RentLedgerRow[]
@@ -414,7 +404,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   const [conversation, setConversation] = useState<ConversationData | null>(null)
   const [messages, setMessages] = useState<MessageData | null>(null)
   const [completion, setCompletion] = useState<CompletionData | null>(null)
-  const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [outboundLog, setOutboundLog] = useState<OutboundLogEntry[]>([])
   const [complianceCert, setComplianceCert] = useState<ComplianceCertData | null>(null)
   const [rentLedger, setRentLedger] = useState<RentLedgerRow[]>([])
@@ -430,7 +419,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setConversation(null)
     setMessages(null)
     setCompletion(null)
-    setLedger([])
     setOutboundLog([])
     setComplianceCert(null)
     setRentLedger([])
@@ -444,7 +432,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
 
     try {
       // All independent queries in one parallel batch
-      const [contextRes, basicRes, messagesRes, completionRes, ledgerRes, outboundRes] = await Promise.all([
+      const [contextRes, basicRes, messagesRes, completionRes, outboundRes] = await Promise.all([
         supabase.rpc('c1_ticket_context', { ticket_uuid: id }),
         supabase
           .from('c1_tickets')
@@ -477,11 +465,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
           `)
           .eq('id', id)
           .maybeSingle(),
-        supabase
-          .from('c1_ledger')
-          .select('*')
-          .eq('ticket_id', id)
-          .order('created_at', { ascending: true }),
         supabase
           .from('c1_outbound_log')
           .select('*')
@@ -520,10 +503,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
       } else {
         setCompletion(null)
       }
-
-      // Process ledger
-      if (ledgerRes.error) console.error('Ledger fetch error:', ledgerRes.error)
-      setLedger((ledgerRes.data as LedgerEntry[]) || [])
 
       // Process outbound log
       if (outboundRes.error) console.error('Outbound log fetch error:', outboundRes.error)
@@ -657,7 +636,6 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     conversation,
     messages,
     completion,
-    ledger,
     outboundLog,
     complianceCert,
     rentLedger,

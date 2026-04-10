@@ -21,19 +21,35 @@ function groupByDate(entries: UnifiedTimelineEntry[]): Map<string, UnifiedTimeli
 
 const eventColors: Record<string, string> = {
   ISSUE_CREATED: 'bg-primary',
+  AUTO_TICKET_COMPLIANCE: 'bg-primary',
+  AUTO_TICKET_RENT: 'bg-primary',
   PRIORITY_CLASSIFIED: 'bg-warning',
   PRIORITY_CHANGED: 'bg-warning',
+  PM_PRIORITY_CHANGED: 'bg-warning',
+  STATE_CHANGED: 'bg-blue-500',
+  PM_TRIAGED: 'bg-blue-500',
+  PM_AWAITING_TENANT: 'bg-blue-500',
+  TENANT_RESPONDED: 'bg-blue-500',
   CONTRACTOR_ASSIGNED: 'bg-blue-500',
+  CONTRACTOR_WITHDRAWN: 'bg-warning',
+  PM_REASSIGNED: 'bg-blue-500',
   QUOTE_RECEIVED: 'bg-blue-500',
   QUOTE_APPROVED: 'bg-success',
   QUOTE_DECLINED: 'bg-danger',
+  PM_BYPASSED_APPROVAL: 'bg-warning',
+  TIMEOUT_TRIGGERED: 'bg-danger',
+  TIMEOUT_RESOLVED: 'bg-success',
   JOB_SCHEDULED: 'bg-primary',
+  RESCHEDULE_REQUESTED: 'bg-warning',
+  RESCHEDULE_DECIDED: 'bg-blue-500',
   JOB_COMPLETED: 'bg-success',
   TICKET_CLOSED: 'bg-muted-foreground',
   TICKET_ARCHIVED: 'bg-muted-foreground',
   LANDLORD_APPROVED: 'bg-success',
   LANDLORD_DECLINED: 'bg-danger',
+  LANDLORD_ACCEPTED: 'bg-success',
   OOH_DISPATCHED: 'bg-warning',
+  OOH_ACCEPTED: 'bg-success',
   EMERGENCY_DETECTED: 'bg-danger',
   STATUS_CHANGED: 'bg-muted-foreground',
   HANDOFF_CHANGED: 'bg-warning',
@@ -103,11 +119,6 @@ export function AuditTimeline({ timeline }: AuditTimelineProps) {
                       {entry.actor_type && entry.actor_type !== entry.actor && (
                         <span className="text-[10px] text-muted-foreground/40 uppercase">
                           {entry.actor_type}
-                        </span>
-                      )}
-                      {entry.source === 'ledger' && (
-                        <span className="text-[10px] text-muted-foreground/30 uppercase">
-                          ledger
                         </span>
                       )}
                     </div>
