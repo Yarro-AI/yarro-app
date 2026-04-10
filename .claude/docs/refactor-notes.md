@@ -92,11 +92,48 @@ supabase/seed-test-messages 2.sql
 
 ---
 
+## Sprint C Notes
+
+- Dashboard RPC (`c1_get_dashboard_todo`) rewritten with clean CTE structure.
+- Return type changed from TABLE to jsonb — required DROP + CREATE.
+- Priority scoring via `c1_compute_priority_score`, stuck override for waiting + timed out.
+
+---
+
+## Sprint D Notes
+
+- STATE_CHANGED events now fire on every state transition in the recompute trigger.
+- `c1_ledger` table dropped — `c1_events` is the sole audit source.
+- Frontend audit hook simplified from dual-source merge/dedup to events-only.
+- `c1_reset_account` updated to remove c1_ledger deletion.
+
+---
+
+## Sprint E Notes
+
+- `c1_ticket_detail` RPC created — replaces 7+ drawer queries with a single call.
+- `c1_get_dashboard_todo_extras` dropped — all items are tickets now.
+- `src/lib/reason-display.ts` created as the SSOT for state display text.
+- All removed reason values cleaned from ~10+ frontend files.
+- Full drawer rewrite (use-ticket-detail.ts 678→100 lines) deferred — too large/risky for this session. The RPC and SSOT are in place for incremental adoption.
+
+---
+
+## Sprint F Notes
+
+- Realtime subscription added to dashboard — auto-updates on ticket state/priority/status changes + new ticket inserts.
+- Filters by `property_manager_id`, only refetches on meaningful changes.
+- Clean subscription cleanup on unmount.
+
+---
+
 ## Decision Log
 
-_Record decisions made during the refactor that aren't in the architecture spec or plans._
+### Deferred: Full drawer rewrite (Sprint E Part 5)
+The plan called for rewriting `use-ticket-detail.ts` from 678 lines to ~100 lines (1 RPC + 1 events query). Deferred because: (a) the hook is consumed by multiple components, (b) the full rewrite requires coordinated changes across the detail modal, overview tabs, and compliance/rent tabs, (c) risk of breaking the drawer without proper testing. The backend (`c1_ticket_detail` RPC) and frontend SSOT (`reason-display.ts`) are in place for incremental adoption.
 
-(none yet)
+### Deferred: TIMEOUT_TRIGGERED / TIMEOUT_RESOLVED events (Sprint D Part 3)
+These require either a dedicated cron or integration into the existing timeout detection. Deferred because timeout detection currently happens at read-time in the dashboard RPC, not as stored events. A future cron job could scan and log these.
 
 ---
 
