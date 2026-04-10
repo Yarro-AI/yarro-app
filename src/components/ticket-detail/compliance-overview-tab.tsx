@@ -90,6 +90,38 @@ function getComplianceStage(basic: TicketBasic, cert: ComplianceCertData | null,
     }
   }
 
+  if (reason === 'no_contractors') {
+    return {
+      icon: AlertTriangle, iconBg: 'bg-danger/10', iconColor: 'text-danger',
+      title: 'No contractor available',
+      description: isExpired
+        ? `This certificate expired${daysUntil !== null ? ` ${Math.abs(daysUntil)} days ago` : ''} and there's no contractor assigned. Add one to get the renewal dispatched.`
+        : 'No contractor is available for this renewal. Assign one to get it dispatched.',
+      cta: basic.compliance_certificate_id
+        ? { label: 'View Certificate', href: `/compliance/${basic.compliance_certificate_id}` }
+        : undefined,
+    }
+  }
+
+  if (reason === 'cert_incomplete') {
+    return {
+      icon: AlertTriangle, iconBg: 'bg-warning/10', iconColor: 'text-warning',
+      title: 'Certificate incomplete',
+      description: 'This certificate is missing its document or expiry date. Complete the record before dispatching a renewal.',
+      cta: basic.compliance_certificate_id
+        ? { label: 'View Certificate', href: `/compliance/${basic.compliance_certificate_id}` }
+        : undefined,
+    }
+  }
+
+  if (reason === 'manager_approval') {
+    return {
+      icon: Crown, iconBg: 'bg-warning/10', iconColor: 'text-warning',
+      title: 'Awaiting approval',
+      description: 'A contractor quote has come in for this renewal. Review and approve to proceed.',
+    }
+  }
+
   // compliance_needs_dispatch: ticket exists but no contractor dispatched yet
   if (reason === 'compliance_needs_dispatch') {
     const certId = basic.compliance_certificate_id
