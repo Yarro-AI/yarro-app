@@ -21,16 +21,34 @@ All business logic lives in Supabase RPCs, not the frontend.
 - Never compute derived state (status, counts, summaries) in the frontend
 - Every new feature starts with the RPC, then UI consumes it
 - Direct `.from().select()` only for simple reads with no logic
-- **Polymorphic Dispatch Pattern — THE LAW** for all ticket state logic:
-  - `c1_compute_next_action` is a pure dispatch router — ZERO business logic
-  - 3 explicit routes: `maintenance` → `compliance_renewal` → `rent_arrears` → else error
-  - Each route owns its FULL lifecycle (maintenance includes landlord, OOH, handoff, pending review)
-  - Never add IF/ELSE branches to the router — add logic to the appropriate sub-routine
-  - `c1_tickets.category` = route (`maintenance`/`compliance_renewal`/`rent_arrears`), NOT NULL
-  - `c1_tickets.maintenance_trade` = contractor trade type (`Plumber`, `Electrician`) for maintenance only
-  - `next_action_reason` has a CHECK constraint — new reasons require a migration
-  - New categories = new explicit route + new sub-routine + CHECK constraint update
-  - Reference: `docs/POLYMORPHIC-DISPATCH-PLAN.md`
+
+### Three-Layer State Model — THE LAW
+Every open ticket's state is described by three layers:
+- **Bucket** (`next_action`) — Where: `needs_action` | `waiting` | `scheduled` | `stuck` (display-only)
+- **State** (`next_action_reason`) — Why: confirmed fact (e.g. `awaiting_contractor`, `handoff_review`)
+- **Timeout** (`is_past_timeout`) — How long: computed at display time, never stored as a state
+
+**The pipeline:** Router computes bucket + reason → Trigger writes 4 fields (`next_action`, `next_action_reason`, `waiting_since`, `sla_due_at`) → Dashboard RPC adds timeout overlay + priority score → Frontend displays via `REASON_DISPLAY` mapping.
+
+**Non-negotiable rules:**
+- Timeouts are metadata, never states — don't add `_no_response` reasons
+- `sla_due_at` is NULL when PM isn't the actor — don't set SLA on waiting tickets
+- `waiting_since` resets on every state change — don't manually set it
+- Frontend never computes bucket, priority, timeout, or SLA — those come from the RPC/trigger
+- One `REASON_DISPLAY` mapping (`src/lib/reason-display.ts`) — both dashboard and drawer use it, never duplicate label logic
+- Audit events are non-negotiable — if `c1_log_event()` fails, the operation rolls back
+- Full spec: `docs/architecture/ticket-state-model.md`
+
+### Polymorphic Dispatch — Router Rules
+- `c1_compute_next_action` is a pure dispatch router — ZERO business logic
+- 3 explicit routes: `maintenance` → `compliance_renewal` → `rent_arrears` → else error
+- Each route owns its FULL lifecycle (maintenance includes landlord, OOH, handoff, pending review)
+- Never add IF/ELSE branches to the router — add logic to the appropriate sub-routine
+- `c1_tickets.category` = route (`maintenance`/`compliance_renewal`/`rent_arrears`), NOT NULL
+- `c1_tickets.maintenance_trade` = contractor trade type (`Plumber`, `Electrician`) for maintenance only
+- `next_action_reason` has a CHECK constraint — new reasons require a migration
+- New categories = new explicit route + new sub-routine + CHECK constraint update
+- Reference: `docs/POLYMORPHIC-DISPATCH-PLAN.md`
 
 RPC development workflow: `.claude/docs/architecture.md#rpc-development-workflow`
 
@@ -61,7 +79,7 @@ Before modifying sensitive files, read: `.claude/docs/safe-zones.md` (GREEN/YELL
 Key files with non-obvious behavior:
 - `pm-context.tsx` — auth race-condition fixes, two-layer pattern is intentional
 - `prompts.ts` — 1,550 lines, backend parses exact emoji + phrases
-- `use-ticket-detail.ts` — 600+ line hook, tightly coupled to DB schema
+- `use-ticket-detail.ts` — after refactor: 1 RPC + 1 events query (was 600+ lines, 7+ queries)
 - `src/lib/supabase/` — `getSession()` vs `getUser()` choice is deliberate
 
 ---
@@ -94,6 +112,7 @@ Specs: `docs/PRD.md` · `docs/BUILD-ORDER.md` · `docs/modules/01–04*.md` · `
 ## Reference Index
 | File | When to Read |
 |------|-------------|
+| `docs/architecture/ticket-state-model.md` | **PRIMARY** — Three-layer state model, bucket assignment, priority scoring, SLA, timeouts, error recovery |
 | `.claude/docs/decision-principles.md` | Before choosing between approaches, during scoping & plan review |
 | `.claude/docs/product-vision.md` | ICP, positioning, competitive landscape |
 | `docs/PRD.md` | Product requirements, core loop |

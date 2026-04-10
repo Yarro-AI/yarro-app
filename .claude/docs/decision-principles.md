@@ -10,6 +10,26 @@ How to choose between approaches when building Yarro. Every scoping decision, pl
 
 ---
 
+## SSOT Principle
+
+Every piece of state has ONE authoritative source. If you're writing the same value in two places, one of them is wrong.
+
+| State | Source | Writer |
+|-------|--------|--------|
+| Ticket bucket + reason | Router | Trigger (3 write sites) |
+| Display text (labels, context) | `REASON_DISPLAY` mapping | Frontend (one object, both views) |
+| Priority | `c1_tickets.priority` column | Escalation crons |
+| Timeline | `c1_events` table | RPC transactions |
+| Timeout | Dashboard RPC (computed) | Never stored as a column value |
+
+**Before writing code, ask:**
+- "Does this introduce a second source of truth for any piece of state?" — if yes, restructure.
+- "Does this put business logic in the frontend?" — if yes, it belongs in an RPC.
+- "Does this compute something the trigger/RPC already provides?" — if yes, read from the provided field.
+- "Am I about to add a CASE/IF/switch mapping `next_action_reason` to display text?" — check `REASON_DISPLAY` first.
+
+---
+
 ## When to Present Trade-offs
 
 Not every decision needs a formal comparison. Use this threshold:

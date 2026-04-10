@@ -106,6 +106,24 @@ record_rent_payment
 | [infrastructure.md](infrastructure.md) | Triggers, cron jobs, logging, RLS/auth utilities (28 functions) |
 | [portals.md](portals.md) | Token-based portal authentication (5 functions) |
 
+## New Protected RPCs (Ticket State Model Refactor)
+
+```
+c1_ticket_detail — Single RPC for drawer, returns universal + category-specific data
+c1_compute_priority_score — Shared scoring function, called by dashboard + drawer RPCs
+c1_set_awaiting_tenant — Sets/clears awaiting_tenant flag + audit event
+c1_mark_contractor_withdrawn — Marks contractor withdrawn, cycles to next or sets no_contractors
+c1_submit_contractor_reschedule_request — Contractor-initiated reschedule via portal
+c1_compliance_auto_ticket — Daily cron, scans certs, creates tickets with dedup
+```
+
+## Dropped RPCs (Ticket State Model Refactor)
+
+```
+DROPPED: c1_get_dashboard_todo_extras — replaced by c1_get_dashboard_todo (all items are tickets)
+DROPPED: c1_set_sla_due_at — SLA logic consolidated into c1_trigger_recompute_next_action
+```
+
 ## NOT Protected (still iterating)
 
 These RPCs are newer and actively being developed:

@@ -12,16 +12,14 @@ Yarro is a WhatsApp-first property maintenance automation platform. Tenants repo
 Tenant messages WhatsApp
   -> AI conversation (OpenAI via Edge Function)
   -> Ticket created in database
+  -> Router computes bucket + reason
+  -> Trigger writes 4 fields (next_action, next_action_reason, waiting_since, sla_due_at)
   -> PM + Landlord notified (WhatsApp)
   -> Contractor dispatched (WhatsApp with portal link)
-  -> Contractor submits quote (via web portal)
-  -> Landlord approves/declines (WhatsApp reply or auto-approve)
-  -> Job scheduled (contractor picks date/slot via portal)
-  -> Tenant + PM + Landlord notified of booking
-  -> Job reminder sent day-of
-  -> Contractor marks complete (via portal)
-  -> Tenant confirms resolution (via portal)
-  -> Ticket closed
+  -> Dashboard RPC adds timeout overlay + priority score
+  -> Frontend displays via REASON_DISPLAY mapping
+  -> Lifecycle continues: quotes, approvals, scheduling, completion
+  -> State changes trigger router recompute at every step
 ```
 
 ### Ticket State Machine — Polymorphic Dispatch
@@ -64,6 +62,51 @@ Full spec: `docs/POLYMORPHIC-DISPATCH-PLAN.md`.
 
 ---
 
+## Three-Layer State Model
+
+Every open ticket's state is described by three layers. Full spec: `docs/architecture/ticket-state-model.md`.
+
+```
+BUCKET  (next_action)         → Where is this ticket? (needs_action / waiting / scheduled)
+STATE   (next_action_reason)  → Why is it there? (confirmed fact)
+TIMEOUT (is_past_timeout)     → Has the wait gone too long? (display-time computation, never a state)
+```
+
+### How state gets written
+
+**Three write sites — all write 4 fields, all call the router:**
+1. `c1_trigger_recompute_next_action` — fires on ticket/message/completion changes (~90% of writes)
+2. `c1_auto_close_completed_tickets` — reconciles completed tickets (inside the trigger)
+3. `c1_toggle_hold` — hold/unhold toggle
+
+**Every write sets:** `next_action`, `next_action_reason`, `waiting_since = now()`, `sla_due_at = CASE ... END`
+
+No other code path may write `next_action` or `next_action_reason` directly.
+
+### Dashboard data flow
+
+One RPC → one Realtime subscription → one frontend mapping:
+- `c1_get_dashboard_todo` returns all items with bucket, reason, priority_score, timeout flags
+- Supabase Realtime subscription on `c1_tickets` triggers refetch on state changes
+- Frontend `REASON_DISPLAY` mapping (`src/lib/reason-display.ts`) provides labels for both dashboard and drawer
+
+### Drawer data flow
+
+One RPC + one events query:
+- `c1_ticket_detail(ticket_id)` returns universal + category-specific data
+- `c1_events` query returns timeline (replaces frontend `deriveTimeline()`)
+- No category-specific secondary fetches. No frontend stage derivation.
+
+### Priority scoring
+
+`c1_compute_priority_score()` — one shared SQL function, called by both RPCs:
+```
+priority_score = consequence_weight + time_pressure + sla_proximity + age_boost
+```
+Consequence-driven: severity base + deadline pressure + SLA proximity + age. No reason-specific boosts.
+
+---
+
 ## Tech Stack
 
 | Layer | Tech | Purpose |
@@ -91,8 +134,8 @@ Full spec: `docs/POLYMORPHIC-DISPATCH-PLAN.md`.
 | `yarro-job-reminder` | Day-of job reminders to contractors |
 | `yarro-inbound` | Inbound WhatsApp message processing |
 | `yarro-ai` | AI conversation handler (OpenAI) |
-| `yarro-compliance-reminder` | Daily compliance expiry check → PM notification + renewal ticket creation |
-| `yarro-rent-reminder` | Daily rent reminders + escalation → rent arrears ticket creation |
+| `yarro-compliance-reminder` | Daily compliance expiry check → PM notification + auto-ticket creation |
+| `yarro-rent-reminder` | Daily rent reminders + escalation → rent arrears auto-ticket creation |
 
 ---
 
@@ -110,8 +153,10 @@ Full spec: `docs/POLYMORPHIC-DISPATCH-PLAN.md`.
 | `c1_messages` | Outbound message log + contractor JSONB entries |
 | `c1_profiles` | OOH emergency contacts |
 | `c1_job_completions` | Completion form submissions |
+| `c1_events` | Audit trail — legal defence record, sole source for timeline. |
 | `c1_rent_payments` | Payment audit trail — trigger auto-updates c1_rent_ledger totals |
-| `c1_rent_payments` | Payment audit trail — trigger auto-updates c1_rent_ledger totals |
+
+**Timing columns on `c1_tickets`:** `waiting_since`, `contractor_sent_at`, `tenant_contacted_at`, `deadline_date`, `sla_due_at` — written by trigger on state change, used for timeout detection and priority scoring.
 
 ---
 
@@ -159,7 +204,7 @@ src/
 2. **Dashboard pages** use Supabase client to query tables directly (`.from().select()`)
 3. **Some pages** use RPC functions for complex queries (`.rpc('function_name', params)`)
 4. **Portal pages** (contractor/tenant/landlord) use token-based auth via RPC functions
-5. **Real-time** is not currently used; pages refresh on navigation or manual reload
+5. **Real-time** — Supabase Realtime subscription on `c1_tickets` for dashboard auto-refresh on state changes
 
 ---
 
@@ -203,3 +248,5 @@ Every new feature that involves business logic starts here:
 - Sub-routines are SECURITY DEFINER and protected
 - See `docs/POLYMORPHIC-DISPATCH-PLAN.md` for the dispatch pattern and all 3 sub-routines
 - Landlord/OOH/pending_review/handoff logic lives INSIDE `compute_maintenance_next_action`, not in the router
+- Every RPC that changes ticket state must log an audit event in the same transaction. If `c1_log_event()` fails, the operation rolls back. No exception swallowing.
+- Edge functions don't write state — they call RPCs which trigger the router.

@@ -152,30 +152,86 @@ All three call the router and write the 4 fields. All `c1_log_event()` calls inc
 
 ---
 
+## Sprint 0: Documentation Foundation (before any code)
+
+The guiding docs (`CLAUDE.md`, `architecture.md`, `patterns.md`, `safe-zones.md`, `decision-principles.md`, `session-procedures.md`) are what Claude Code reads at the start of every session. If these still describe the OLD system while the code reflects the NEW system, every future build starts with a stale mental model. The ticket state model is the new SSOT — the docs must encode it BEFORE implementation begins.
+
+**Sprint 0 produces zero code changes. It ships before Sprint A begins.**
+
+### `CLAUDE.md` — Root guidance file
+- **Architecture section:** Replace the polymorphic dispatch bullet list with the three-layer state model as the primary architecture. Router is still THE LAW, but context is now: router writes bucket + reason → trigger writes 4 fields → dashboard computes timeout → frontend displays via REASON_DISPLAY.
+- **Add "State Model — Non-Negotiable" rules:**
+  - Timeouts are metadata, never states — don't add `_no_response` reasons
+  - `sla_due_at` is NULL when PM isn't the actor — don't set SLA on waiting tickets
+  - `waiting_since` resets on every state change — don't manually set it
+  - Frontend never computes bucket, priority, timeout, or SLA
+  - One `REASON_DISPLAY` mapping — both dashboard and drawer use it
+  - Audit events are non-negotiable — if `c1_log_event()` fails, the operation rolls back
+- **Reference Index:** Add `docs/architecture/ticket-state-model.md` as PRIMARY architecture reference (above `docs/POLYMORPHIC-DISPATCH-PLAN.md`)
+- **Caution Zones:** Update `use-ticket-detail.ts` — after refactor it moves from YELLOW to GREEN (1 RPC + 1 query, no longer 600+ lines)
+
+### `.claude/docs/architecture.md` — System architecture
+- **Three-Layer State Model section** (new, after The Flow): Bucket / State / Timeout. What writes each layer, rule that timeout is display-time only.
+- **Update The Flow:** Ticket created → Router computes bucket + reason → Trigger writes 4 fields → Dashboard RPC adds timeout + priority score → Frontend displays via REASON_DISPLAY.
+- **State write sites:** 3 sites (trigger, auto-close, toggle-hold), ALL write 4 fields. No other code path may write next_action directly.
+- **Dashboard data flow:** One RPC, one Realtime subscription, one frontend mapping. Remove "Real-time is not currently used."
+- **Drawer data flow:** One RPC + one events query. No category-specific secondary fetches. No frontend stage derivation.
+- **Key Database Tables:** Add `c1_events`. Remove `c1_ledger`. Note timing columns (waiting_since, contractor_sent_at, tenant_contacted_at, deadline_date, sla_due_at).
+- **Priority Scoring:** Document `c1_compute_priority_score()` — one shared SQL function, consequence-driven.
+- **RPC Development Workflow — add rule:** "Every RPC that changes ticket state must log an audit event in the same transaction."
+
+### `.claude/docs/patterns.md` — Component patterns
+- **Add "Dashboard Patterns":** Bucket grouping, `REASON_DISPLAY` mapping (one object, `src/lib/reason-display.ts`), CTA mapping, priority badge reads `ticket.priority` directly.
+- **Add "Ticket Drawer Patterns":** Universal header + stage card + CTA for all categories. Timeline from `c1_events`. Category section is the only per-category difference.
+- **Update Data Fetching Pattern:** Dashboard = one RPC. Drawer = one RPC + one events query. Add Realtime subscription pattern.
+- **Add "State Display — Anti-Patterns":** NEVER derive stage from ticket fields in frontend. NEVER create per-category stage configs. NEVER duplicate label logic between dashboard and drawer.
+
+### `.claude/docs/safe-zones.md` — Modification zones
+- **Move to GREEN after refactor:** `use-ticket-detail.ts` (simple 1-RPC hook), `src/lib/reason-display.ts` (pure display text)
+- **Add to RED:** `c1_trigger_recompute_next_action` (writes 4 fields on every state change), `c1_compute_priority_score` (shared scoring function)
+- **Remove stale entries:** `c1_ledger` trigger references
+
+### `.claude/docs/decision-principles.md` — Decision framework
+- **Add "SSOT Principle":** Every piece of state has ONE authoritative source. Ticket state = router. Display text = REASON_DISPLAY. Priority = `c1_tickets.priority` column. Timeline = `c1_events` table.
+- **Add to Decision Test:** "Does this introduce a second source of truth?" and "Does this put business logic in the frontend?"
+
+### `.claude/docs/session-procedures.md` — Session workflow
+- **Add to Done Checklist:** "State changes produce audit events", "Dashboard and drawer show identical state for same ticket", "No new frontend stage derivation outside REASON_DISPLAY"
+
+### `supabase/core-rpcs/README.md` — Protected RPC list
+- Add new RPCs: `c1_ticket_detail`, `c1_compute_priority_score`, `c1_set_awaiting_tenant`, `c1_mark_contractor_withdrawn`, `c1_submit_contractor_reschedule_request`, `c1_compliance_auto_ticket`
+- Note dropped: `c1_get_dashboard_todo_extras`, `c1_set_sla_due_at`
+
+---
+
 ## Deployment Strategy
 
 App goes offline during deployment. No zero-downtime requirement.
 
+**⚠️ CRITICAL: Edge functions must deploy BEFORE the migration that drops `job_stage`.** If SQL drops the column first, edge functions still writing `job_stage: "Sent"` / `job_stage: "Booked"` will error.
+
 **Order:**
 1. Take app offline
-2. Push all backend migrations (`supabase db push`)
-3. Deploy edge function changes (`supabase functions deploy`)
+2. Deploy edge function changes FIRST (`supabase functions deploy`) — removes `job_stage` writes
+3. Push all backend migrations (`supabase db push`) — now safe to drop `job_stage` column
 4. Run `supabase gen types` → regenerate TypeScript types
 5. `npm run build` → verify frontend compiles with new types
 6. Deploy frontend
-7. Verify: dashboard loads, buckets render, drawer opens
+7. Verify: dashboard loads, buckets render, drawer opens, audit events fire
 8. App back online
 
-If anything breaks: rollback script restores previous state before bringing app back up. See architecture doc § "Rollback".
+If anything breaks: rollback script restores previous state before bringing app back up. See architecture doc § "Rollback". Since all data is seed data, rollback can be a clean slate if needed.
 
 ---
 
 ## Migration Steps
 
 ### Prerequisites
+- **Sprint 0 complete:** All guiding docs updated to reflect the new state model BEFORE any code changes.
 - **Edge function changes:** Steps 3 and 4 modify `yarro-rent-reminder`, `yarro-tenant-intake`, and `yarro-scheduling`. Adam approves scoped changes before building.
-- **Protected RPCs:** All follow safe modification protocol (new migration, backup current def).
+- **Protected RPCs:** All follow safe modification protocol (new migration, backup current def). **Portal RPCs (`c1_get_contractor_ticket`, `c1_get_tenant_ticket`, `c1_get_landlord_ticket`) are protected — require explicit approval per `supabase/core-rpcs/README.md`.**
 - **`c1_messages` — known debt, not this sprint.** Router continues reading `c1_messages.stage`. Edge functions continue writing to it. The trigger guarantees sync. `contractor_sent_at` column replaces the JSONB parse for timing. Full refactor (move dispatch state to ticket row, kill JSONB) is a future sprint after client acquisition. See architecture doc § `c1_messages — known debt` for full analysis.
+- **Verification after router changes:** After Step 1, run the router against all existing open tickets and compare old vs new bucket assignments. Log any tickets that changed unexpectedly. This confirms `c1_messages.stage` behavior is preserved through the refactor.
 - **Error handling rules (apply to ALL steps):**
   - Audit events are non-negotiable: if `c1_log_event()` fails, the operation rolls back. No exception swallowing.
   - RPC operations + their audit events = same transaction (PL/pgSQL guarantees this).
@@ -184,8 +240,23 @@ If anything breaks: rollback script restores previous state before bringing app 
   - Do NOT introduce new `getSession()`/`getUser()` calls outside `pm-context.tsx` (Supabase Auth hang bug).
   - See architecture doc § "Error Recovery and Failure Modes" for full analysis.
 
+### Recommended sprint boundaries
+
+This plan can be split into independently deployable sprints. Each sprint boundary is a safe rollback point:
+
+| Sprint | Steps | Verifiable outcome |
+|--------|-------|--------------------|
+| **A — Backend foundation** | 1a–1h | All tickets have correct bucket values, router returns new values, trigger writes 4 fields |
+| **B — Auto-creation + edge functions** | 2, 3, 4 | Crons create tickets, edge functions don't write job_stage |
+| **C — Dashboard RPC** | 5 | Single RPC returns all items, stuck override works, priority scoring works |
+| **D — Audit trail** | 6 | STATE_CHANGED events fire, c1_ledger gone, audit page works |
+| **E — Drawer + frontend** | 7, 8 | Drawer uses 1 RPC, STAGE_CONFIG gone, REASON_DISPLAY works |
+| **F — Realtime + verification** | 9, 10 | Dashboard auto-updates, full E2E verification |
+
 ### Step 1: Router bucket values + schema + compliance sub-routine
-**Single migration — logically grouped:**
+**⚠️ This step is large. Recommend splitting into sub-migrations (1a–1h) for safer incremental deployment. Each sub-migration can be tested independently. See sprint boundaries above.**
+
+**Sub-step 1a — New columns (pure additive, zero risk):**
 - **New columns on `c1_tickets`:**
   - `contractor_sent_at TIMESTAMPTZ DEFAULT NULL` — when first contractor was notified. Replaces JSONB parse.
   - `tenant_contacted_at TIMESTAMPTZ DEFAULT NULL` — when tenant was contacted. Written when `awaiting_tenant` is set.
@@ -194,10 +265,14 @@ If anything breaks: rollback script restores previous state before bringing app 
   - `waiting_since TIMESTAMPTZ DEFAULT NULL` — when current state was entered. Written by trigger on state change. Eliminates `c1_messages` join for timing.
   - `reschedule_initiated_by TEXT DEFAULT NULL` — 'tenant' or 'contractor'.
   - `handoff_reason TEXT DEFAULT NULL` — why AI handed off ('property_not_matched', 'category_unclear', 'no_contractor_mapped', 'low_confidence', 'tenant_requested'). Set by `c1_create_ticket` when `handoff = true`.
+**Sub-step 1b — New scoring function + SLA trigger consolidation:**
 - **New SQL function: `c1_compute_priority_score(p_priority, p_deadline_date, p_sla_due_at, p_waiting_since)`** — shared scoring function. Called by dashboard RPC and ticket detail RPC. One function, identical scores everywhere. See architecture doc § "Priority Scoring".
+- **⚠️ Drop existing SLA trigger:** `DROP TRIGGER trg_c1_set_sla ON c1_tickets` + `DROP FUNCTION c1_set_sla_due_at()`. The existing trigger writes `sla_due_at` independently — it will conflict with the recompute trigger which now owns this field. SLA logic is consolidated into the recompute trigger.
+
+**Sub-step 1c — Trigger update:**
 - **Trigger update:** recompute trigger now writes 4 fields in single UPDATE: `next_action`, `next_action_reason`, `waiting_since = now()`, `sla_due_at = CASE ... END`. `sla_due_at` set from legally grounded defaults for `needs_action` states, **NULL for `waiting`/`scheduled`/terminal** (no SLA when PM isn't the actor — prevents stale values in breach queries). Only fires when reason actually changes.
 - **All `c1_log_event()` calls must pass `v_property_label`** — resolve from ticket's property join, same pattern as existing event triggers. Enables audit queries filtered by property.
-- **Update recompute trigger column watch list:** add `awaiting_tenant`, `reschedule_requested`, `reschedule_status`; remove `job_stage`. (Full list: status, handoff, archived, pending_review, on_hold, ooh_dispatched, ooh_outcome, landlord_allocated, landlord_outcome, awaiting_tenant, reschedule_requested, reschedule_status).
+- **Update recompute trigger column watch list:** add `awaiting_tenant`, `reschedule_requested`, `reschedule_status`, **`priority`**; remove `job_stage`. (Full list: status, handoff, archived, pending_review, on_hold, ooh_dispatched, ooh_outcome, landlord_allocated, landlord_outcome, awaiting_tenant, reschedule_requested, reschedule_status, priority). **Why `priority`:** escalation crons bump priority directly. Without `priority` in the watch list, the trigger doesn't fire on priority changes → SLA doesn't recompute → stale `sla_due_at` until the next unrelated state change.
 - **Router universal section:** add `awaiting_tenant` check after `on_hold`, before category dispatch. Returns `waiting` / `awaiting_tenant`.
 - **New RPC: `c1_set_awaiting_tenant(p_ticket_id, p_awaiting, p_reason)`** — sets/clears the boolean + timestamp, logs PM_AWAITING_TENANT audit event in same transaction.
 - **New column: `reschedule_initiated_by TEXT`** — `'tenant'` or `'contractor'`. Written by reschedule request RPCs.
@@ -208,21 +283,31 @@ If anything breaks: rollback script restores previous state before bringing app 
 - Each sub-routine returns `(next_action, next_action_reason)` with new bucket values
 - Update `compute_compliance_next_action`: add `cert_incomplete` check at top
 - Update CHECK constraint: add `cert_incomplete`, `awaiting_tenant`, `compliance_needs_dispatch`, `reschedule_pending`; remove `landlord_no_response`, `landlord_in_progress`, `ooh_in_progress`, `compliance_pending`
-- **Remove `job_stage` entirely:**
+- **Update creation RPCs to write new columns:**
+  - `c1_create_ticket`: add `handoff_reason` (from `_issue` JSONB when `handoff = true`), `waiting_since = now()`. Trigger handles `sla_due_at` on INSERT.
+  - `c1_create_manual_ticket`: add `waiting_since = now()`, `deadline_date` (from cert expiry for compliance, rent due date for rent, NULL for maintenance).
+  - Both: remove `job_stage = 'created'` from INSERT.
+- **Remove `job_stage` entirely (sub-step 1f — AFTER edge function changes in Step 4):**
+  - ⚠️ Edge functions must be deployed first (removing `job_stage: "Sent"` and `job_stage: "Booked"` writes). Then the column can be safely dropped.
   - Router: remove all 3 `job_stage` checks. `scheduled_date IS NOT NULL` handles booked. `c1_messages.stage` handles dispatch flow. `landlord_no_response` check removed (timeout replaces it).
-  - RPCs: remove `job_stage` from INSERT in `c1_create_ticket`, `c1_create_manual_ticket`. Remove from UPDATE in `c1_book_contractor_slot`.
-  - Portal RPCs: `c1_get_contractor_ticket`, `c1_get_tenant_ticket`, `c1_get_landlord_ticket` — replace `'job_stage', t.job_stage` with `'next_action_reason', t.next_action_reason` in JSONB output. All three are protected.
+  - RPCs: remove `job_stage` from INSERT in `c1_create_ticket`, `c1_create_manual_ticket`. (`c1_book_contractor_slot` does not exist — scheduling goes through `yarro-scheduling` edge function which updates `c1_tickets` directly.)
+  - Portal RPCs: `c1_get_contractor_ticket`, `c1_get_tenant_ticket`, `c1_get_landlord_ticket` — replace `'job_stage', t.job_stage` with `'next_action_reason', t.next_action_reason` in JSONB output. **All three are protected — require Adam's approval per `supabase/core-rpcs/README.md`.**
   - Trigger watch list: remove `job_stage` from `trg_tickets_recompute_next_action`.
   - Column: `ALTER TABLE c1_tickets DROP COLUMN job_stage`.
   - See architecture doc § "`job_stage` — removed" for full reasoning.
 - Update `c1_trigger_recompute_next_action`: no structural change (same 2-col write), new values flow through
 - Update `c1_auto_close_completed_tickets`: handles new return values
 - Update `c1_toggle_hold`: same pattern
-- **Data backfill (order matters):**
+- **Data backfill (sub-step 1g — order matters):**
   1. Deploy router + sub-routines first (CREATE OR REPLACE)
   2. Backfill open tickets: `UPDATE c1_tickets SET (next_action, next_action_reason) = (SELECT next_action, next_action_reason FROM c1_compute_next_action(id))` for all WHERE status != 'closed' AND archived = false
   3. Backfill terminal tickets (simple value map): `SET next_action = 'needs_action' WHERE next_action IN ('needs_attention', 'assign_contractor', 'follow_up', 'new')`, `SET next_action = 'waiting' WHERE next_action = 'in_progress' AND next_action_reason != 'scheduled'`, `SET next_action = 'scheduled' WHERE next_action = 'in_progress' AND next_action_reason = 'scheduled'`
   4. Rename `compliance_pending` on ALL tickets (open and closed): `UPDATE c1_tickets SET next_action_reason = 'compliance_needs_dispatch' WHERE next_action_reason = 'compliance_pending'`
+  5. **Backfill `waiting_since`:** `UPDATE c1_tickets SET waiting_since = COALESCE(updated_at, date_logged) WHERE status != 'closed' AND waiting_since IS NULL` — existing open tickets need this for age_boost in priority scoring
+  6. **Backfill `deadline_date` (compliance):** `UPDATE c1_tickets t SET deadline_date = cc.expiry_date FROM c1_compliance_certificates cc WHERE t.compliance_certificate_id = cc.id AND t.category = 'compliance_renewal'` — existing compliance tickets need this for time_pressure in priority scoring
+  7. **Backfill `deadline_date` (rent):** Set from linked `c1_rent_ledger.due_date` for existing rent tickets
+  8. **Recompute `sla_due_at`:** For existing `needs_action` tickets, trigger a recompute so SLA is set from the new defaults table. For `waiting`/`scheduled` tickets, ensure `sla_due_at = NULL`.
+  9. **Verify:** Run router against all open tickets, compare old vs new bucket assignments. Log any unexpected changes to confirm `c1_messages.stage` behavior is preserved.
 - `supabase gen types` after push
 - **Rollback:** `supabase/rollbacks/` contains rollback script. Reverses: column additions (DROP), router to old values, CHECK constraint to old values, backfill old `next_action` values. Test rollback on local before pushing to remote.
 
@@ -233,10 +318,12 @@ If anything breaks: rollback script restores previous state before bringing app 
 - Modify `compliance_dispatch_renewal`: idempotent — update existing ticket if one exists instead of raising exception
 - **First run is a backfill** — run manually, review created tickets before enabling cron
 
-### Step 3: Rent day-1 ticketing (⚠️ edge function)
-- Modify `yarro-rent-reminder/index.ts`: add `create_rent_arrears_ticket` call on first overdue
+### Step 3: Rent day-1 ticketing — verify + augment (⚠️ edge function)
+- **`yarro-rent-reminder` already calls `create_rent_arrears_ticket()`** (line 298) with priority escalation and dedup. No new RPC call needed.
+- **Verify existing RPC sets new columns:** `deadline_date` (from rent due date), `waiting_since` (now()), `issue_title`/`issue_description` (generated from tenant + property context). Update RPC if any are missing.
+- **Add `AUTO_TICKET_RENT` audit event** to `create_rent_arrears_ticket()` if not already logging
 - **Title generation:** RPC generates `issue_title` (e.g., "Rent arrears — John Smith") and `issue_description` (e.g., "£850 overdue since 1 Apr 2026, Room 3"). See architecture doc § "Ticket titles".
-- **Scoped change:** one RPC call added in existing overdue block
+- **Scoped change:** RPC updates only, edge function likely unchanged
 
 ### Step 4: Handoff always creates ticket + remove `job_stage` writes (⚠️ edge functions)
 - Audit `yarro-tenant-intake/index.ts`: ensure `c1_create_ticket` always called on handoff
@@ -327,7 +414,15 @@ Both the dashboard and drawer need the same labels/context. If computed in backe
 - Add `CONTRACTOR_WITHDRAWN` event to `c1_mark_contractor_withdrawn` RPC (metadata: contractor_name, reason, remaining_contractors). If last contractor: log BOTH `CONTRACTOR_WITHDRAWN` AND the `STATE_CHANGED` to `no_contractors`.
 - Update `CAUSAL_ORDER` in `src/lib/audit-utils.ts` with new event types
 - Update audit timeline component for new event display
-- **Delete `c1_ledger`:** drop table, drop both triggers (`c1_ledger_on_ticket_insert`, `c1_ledger_on_ticket_update`). All test data — no migration needed to preserve.
+- **Delete `c1_ledger` (⚠️ order matters):** The triggers `trg_c1_ledger_insert` and `trg_c1_ledger_update` fire on `c1_tickets` (not on `c1_ledger`), so `DROP TABLE c1_ledger CASCADE` will NOT remove them. They must be dropped explicitly BEFORE the table:
+  ```
+  DROP TRIGGER trg_c1_ledger_insert ON c1_tickets;
+  DROP TRIGGER trg_c1_ledger_update ON c1_tickets;
+  DROP FUNCTION c1_ledger_on_ticket_insert();
+  DROP FUNCTION c1_ledger_on_ticket_update();
+  DROP TABLE c1_ledger;
+  ```
+  All test data — no migration needed to preserve.
 - Remove `c1_ledger` from `use-ticket-detail.ts` (ledger fetch + LedgerEntry type)
 - Remove `c1_ledger` from `use-ticket-audit.ts` (ledger fetch + merge + dedup logic)
 - `c1_events` is now the sole audit data source. No dedup needed.
@@ -361,11 +456,16 @@ Both the dashboard and drawer need the same labels/context. If computed in backe
 - `no_contractors` → "Assign contractor"
 - Any `waiting`/`scheduled` reason → no CTA (PM is not the actor)
 
+**`c1_ticket_context` RPC:** Currently the first query in `use-ticket-detail.ts`. Replaced by `c1_ticket_detail`. Audit all callers — if only used by the drawer hook, drop it. If used by audit page or other callers, leave it for now and document.
+
 **What dies in frontend:**
 - `STAGE_CONFIG` (200 lines, maintenance-only)
 - `getComplianceStage()` (compliance-only)
 - `deriveTimeline()` (frontend timeline computation)
 - Conversation tab in drawer (full tab removed — transcript inline for handoff only)
+- Activity tab merges into the main view as the events timeline
+- Completion tab data absorbed into the universal drawer (job completion details shown inline)
+- The tab bar itself is simplified: maintenance tickets may keep Overview + Completion as sections, not tabs. All categories use the same scrollable layout: stage card → CTA → timeline → category data → people.
 - 7 separate queries in `use-ticket-detail.ts`
 - Category-specific secondary fetches (absorbed into RPC)
 - `use-ticket-detail.ts` hook rewritten to call 1 RPC + 1 events query + conditional transcript query
@@ -471,9 +571,9 @@ Both the dashboard and drawer need the same labels/context. If computed in backe
 
 | Function | Change | Scope |
 |----------|--------|-------|
-| `yarro-rent-reminder` | Add `create_rent_arrears_ticket` call on day-1 overdue | One RPC call added |
-| `yarro-tenant-intake` | Ensure `c1_create_ticket` always called on handoff | Guard existing code path |
-| `yarro-scheduling` | Remove `job_stage` writes (lines 169, 372) | 2 lines removed from `.update()` objects |
+| `yarro-rent-reminder` | Already calls `create_rent_arrears_ticket`. Verify RPC sets new columns (`deadline_date`, `waiting_since`, audit event). | RPC updates only, edge function likely unchanged |
+| `yarro-tenant-intake` | Ensure `c1_create_ticket` always called on handoff + passes `handoff_reason` | Guard existing code path + add parameter |
+| `yarro-scheduling` | Remove `job_stage` writes (lines 169, 372) — **MUST deploy before SQL drops `job_stage` column** | 2 lines removed from `.update()` objects |
 
 ## Files Affected
 
@@ -524,10 +624,34 @@ Both the dashboard and drawer need the same labels/context. If computed in backe
 - `src/hooks/use-ticket-detail.ts` — remove c1_ledger fetch
 
 ### Type Generation
-- `supabase gen types` after migrations 1, 3, 4
+- `supabase gen types` after migrations 1, 3, 4, 5 (ledger drop changes types too)
+- **Expect 30+ type errors** after first gen — all `next_action` string comparisons will fail. This is expected; fix in the frontend steps.
+
+---
+
+---
+
+## Risks
+
+### RISK 1: Router + trigger ordering within migration
+The new trigger writes 4 fields using values from the router. The migration must `CREATE OR REPLACE FUNCTION` the router and all sub-routines BEFORE updating the trigger function. SQL migrations execute sequentially — ordering within the file matters.
+
+### RISK 2: Edge function deployment timing
+Edge functions deploy independently from SQL migrations. If the SQL migration drops `job_stage` before edge functions are updated, writes to `job_stage` will error. **Deployment strategy addresses this: edge functions deploy FIRST.**
+
+### RISK 3: `c1_messages.stage` dependency
+The router still reads `c1_messages.stage` for dispatch flow. If router changes break assumptions about stage values, dispatch flow produces wrong bucket assignments. **Mitigated by post-backfill verification step (1g.9).**
+
+### RISK 4: TypeScript type blast radius
+When `next_action` values change from `needs_attention`/`assign_contractor`/`follow_up`/`new`/`in_progress` to `needs_action`/`waiting`/`scheduled`, generated types change. Every frontend file with string comparisons against these values will get type errors. Expect 30+ errors after `supabase gen types`. This is normal — caught by `npm run build`.
+
+### RISK 5: `prompts.ts` — verify no `landlord_no_response` reference
+Investigation confirms `landlord_no_response` does NOT appear in `prompts.ts`. Safe. But if future sessions add AI prompt changes that reference removed reason values, they'll silently fail to match. The audit step (Step 10) should verify no references to removed values remain anywhere.
 
 ---
 
 ## Key Principle
 
 **The ticket is the atom.** Three layers describe its state: bucket (where), reason (why), timeout (how long). The router writes the first two. The dashboard computes the third. The frontend displays all three. Nothing else computes state.
+
+**SSOT everywhere.** Every piece of state has one authoritative source. Ticket state = router. Display text = REASON_DISPLAY. Priority = `c1_tickets.priority`. Timeline = `c1_events`. If you're writing the same value in two places, one of them is wrong.

@@ -16,6 +16,8 @@ These files can be changed without risk of breaking core system flows.
 | `src/lib/validate.ts` | Input validation | Pure utility functions |
 | `src/lib/postcode.ts` | UK postcode utilities | Pure utility functions |
 | `src/lib/export.ts` | CSV export logic | Pure utility functions |
+| `src/lib/reason-display.ts` | REASON_DISPLAY mapping | Pure display text — safe to modify labels. Adding/removing keys must match CHECK constraint. |
+| `src/hooks/use-ticket-detail.ts` | Ticket detail hook | After refactor: 1 RPC + 1 events query. Simple data fetching. |
 | `docs/`, `.claude/docs/` | Documentation | No code impact |
 | `public/` | Static assets | Images, icons, favicon |
 | `.github/workflows/ci.yml` | CI lint+test+build checks | Safe to modify — only runs on PRs |
@@ -47,6 +49,8 @@ A bad change here takes down WhatsApp intake, breaks tenant conversations, or co
 
 | Path | What It Is | Why It's Dangerous |
 |------|-----------|-------------------|
+| `c1_trigger_recompute_next_action` | State recompute trigger | Writes 4 fields on every state change. Breaking it breaks every ticket. |
+| `c1_compute_priority_score` | Shared scoring function | Used by both RPCs. Changing scoring affects every ticket's sort order. |
 | **69 Protected RPCs** | Listed in `supabase/core-rpcs/README.md` | `CREATE OR REPLACE` silently overwrites. No undo. `get_pm_id` used by 33+ RLS policies. |
 | **3 Sub-routines + rent RPCs** | `compute_maintenance/compliance/rent_arrears_next_action`, `create_rent_arrears_ticket`, `record_rent_payment` | Protected. `compute_landlord/ooh_next_action` were DROPPED — logic moved into `compute_maintenance_next_action`. |
 | `supabase/migrations/20260327041845_remote_schema.sql` | Core schema (72 functions) | Original production definitions of all RPCs, triggers, RLS. |
