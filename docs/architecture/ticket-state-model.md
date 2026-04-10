@@ -57,7 +57,7 @@ Plus terminal states: `completed`, `archived`, `dismissed`, `on_hold`, `error`.
 - `landlord_declined` — landlord said no
 - `scheduled` — job booked for a date
 - `handoff_review` — AI couldn't handle it, PM must review
-- `compliance_pending` — cert needs contractor dispatched
+- `compliance_needs_dispatch` — cert needs contractor dispatched
 - `cert_incomplete` — cert missing doc or expiry date
 - `rent_overdue` — rent past due date
 - etc..
