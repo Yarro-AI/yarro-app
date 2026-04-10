@@ -1392,27 +1392,19 @@ Rollback script reverses all changes:
 
 The rollback is safe because the old router still works with the existing data. The only risk is if new reasons (`cert_incomplete`, `awaiting_tenant`, `reschedule_pending`) were written to tickets during the migration window — the old CHECK constraint doesn't include them. The rollback script handles this by clearing those values before restoring the constraint.
 
-### Deployment strategy — frontend/backend lockstep
+### Deployment strategy
 
-The migration changes every `next_action` value simultaneously. If the backend deploys (values change to `needs_action`, `waiting`, `scheduled`) while the frontend still filters for old values (`needs_attention`, `in_progress`), the dashboard shows nothing.
-
-**Fix: frontend handles both old and new values during the transition window.**
-
-The `REASON_DISPLAY` mapping and bucket grouping include fallbacks for old values:
-```typescript
-// During transition — accept both old and new bucket values
-const isNeedsAction = (bucket: string) =>
-  bucket === 'needs_action' || bucket === 'needs_attention' || 
-  bucket === 'assign_contractor' || bucket === 'follow_up' || bucket === 'new'
-```
+The app can be taken down during this refactor. No zero-downtime requirement.
 
 **Deploy order:**
-1. Deploy frontend with dual-value support (handles old AND new)
-2. Deploy backend migration (values change on all tickets)
-3. Verify dashboard works with new values
-4. Remove old-value fallbacks from frontend (cleanup commit)
+1. Take app offline (maintenance mode or just accept brief downtime)
+2. Push backend migration (`supabase db push`) — router, columns, CHECK constraint, backfill
+3. Run `supabase gen types` — regenerate TypeScript types
+4. Deploy frontend (new bucket values, new components)
+5. Verify: dashboard loads, buckets render, drawer opens
+6. App back online
 
-The transition window is ~5 minutes (migration + backfill). The dual-value frontend ensures zero downtime.
+No dual-value frontend needed. No transition window. Backend and frontend deploy sequentially with the app down. If something breaks, rollback script restores previous state before bringing the app back up.
 
 ---
 
@@ -1834,7 +1826,7 @@ Items to address during implementation, not architecture decisions:
 
 **Cron failure alerting:** Timeout crons and compliance auto-ticket cron run on `pg_cron`. Failures go to `cron.job_run_details` — but nobody monitors this. Add a daily health check that queries `cron.job_run_details` for failures and alerts via Telegram if any are found. Silent cron failure = missed compliance tickets = legal risk.
 
-**`c1_messages.stage` drift detection (future):** A weekly health check cron that re-runs the router on a sample of open tickets and compares the result to the stored `next_action_reason`. If they disagree, alert. Catches drift from disabled triggers or superuser operations.
+**`c1_messages.stage` drift detection:** Not needed. Drift can only occur if the recompute trigger is deliberately disabled or a superuser bypasses it. As a solo developer with sole database access, the trigger IS the prevention. If a second developer gains database access in the future, revisit with a health check cron.
 
 **Bulk actions (future):** At scale, a PM with 50 resolved tickets shouldn't click "close" 50 times. Bulk select + action pattern. The architecture supports this — each action calls the same RPC, just in a loop or batch.
 
