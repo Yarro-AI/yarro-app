@@ -25,13 +25,10 @@ export function TicketDetailModal({
   onTicketUpdated,
 }: TicketDetailModalProps) {
   const {
-    context,
-    basic,
+    ticket,
     conversation,
     messages,
     completion,
-    complianceCert,
-    rentLedger,
     isStuck,
     loading,
     error,
@@ -40,7 +37,7 @@ export function TicketDetailModal({
 
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
 
-  const isOnHold = basic?.on_hold === true
+  const isOnHold = ticket?.on_hold === true
 
   const handleCloseTicket = async () => {
     if (!ticketId) return
@@ -62,25 +59,25 @@ export function TicketDetailModal({
   }
 
   const handleArchive = async () => {
-    if (!basic?.id) return
+    if (!ticket?.id) return
     const now = new Date().toISOString()
     const supabase = createClient()
 
     await supabase
       .from('c1_tickets')
       .update({ archived: true, archived_at: now, status: 'closed' })
-      .eq('id', basic.id)
+      .eq('id', ticket.id)
 
     await supabase
       .from('c1_messages')
       .update({ archived: true, archived_at: now })
-      .eq('ticket_id', basic.id)
+      .eq('ticket_id', ticket.id)
 
-    if (basic.conversation_id) {
+    if (ticket.conversation_id) {
       await supabase
         .from('c1_conversations')
         .update({ archived: true, archived_at: now })
-        .eq('id', basic.conversation_id)
+        .eq('id', ticket.conversation_id)
     }
 
     toast.success('Ticket archived')
@@ -95,7 +92,7 @@ export function TicketDetailModal({
       <SheetContent
         side="right"
         hideCloseButton={true}
-        title={context?.property_address || 'Ticket Details'}
+        title={ticket?.property_address || 'Ticket Details'}
         className="w-[50vw] min-w-[600px] max-w-none p-0 !gap-0 flex flex-col overflow-x-hidden"
       >
         {/* Header — back arrow */}
@@ -121,22 +118,18 @@ export function TicketDetailModal({
             <div className="text-center flex-1 flex items-center justify-center">
               <p className="text-sm text-destructive">{error}</p>
             </div>
-          ) : context && basic ? (
+          ) : ticket ? (
             <div className="flex-1 min-h-0 flex flex-col animate-in fade-in-0 duration-200">
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <TicketOverview
-                  basic={basic}
-                  context={context}
+                  ticket={ticket}
                   conversation={conversation}
                   messages={messages}
                   completion={completion}
-                  complianceCert={complianceCert}
-                  rentLedger={rentLedger}
                   isStuck={isStuck}
                 />
                 <ActionBar
-                  basic={basic}
-                  context={context}
+                  ticket={ticket}
                   messages={messages}
                   isStuck={isStuck}
                   onToggleHold={handleToggleHold}

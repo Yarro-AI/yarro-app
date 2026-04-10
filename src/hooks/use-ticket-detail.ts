@@ -7,55 +7,136 @@ import { getReasonDisplay } from '@/lib/reason-display'
 
 // --- Types ---
 
-// RPC response shape (c1_ticket_detail returns flat JSONB)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RpcTicket = Record<string, any>
-
-export interface TicketContext {
-  ticket_id: string
-  ticket_status: string
-  date_logged: string
-  issue_description: string
-  category: string
-  priority: string
-  access: string
-  access_granted: boolean
-  availability: string
-  reporter_role: string
-  updates_recipient: string
-  handoff: boolean
-  is_matched_tenant: boolean
-  has_images: boolean
-  tenant_name: string
-  tenant_phone: string
-  tenant_email: string
-  tenant_role_tag: string
-  tenant_verified_by: string
-  property_id: string
-  property_address: string
-  property_manager_id: string
-  manager_name: string
-  manager_phone: string
-  manager_email: string
-  business_name: string
-  landlord_id: string | null
-  landlord_name: string
-  landlord_email: string
-  landlord_phone: string
-  access_instructions: string
-  emergency_access_contact: string
-  auto_approve_limit: number
-  contractor_mapping: Json
-  caller_name: string
-  caller_phone: string
-  caller_role: string
-  caller_tag: string
-  recipient: Json
-  update_contact: Json
-  tenant_contact: Json
-  conversation_id: string | null
-  label: string | null
+/** Nested person object from the RPC */
+interface PersonData {
+  id?: string
+  name?: string
+  phone?: string
+  email?: string
+  business_name?: string
 }
+
+/** Compliance cert data nested in RPC response */
+export interface ComplianceCertRpc {
+  cert_id: string
+  cert_type: string
+  expiry_date: string | null
+  issued_date: string | null
+  certificate_number: string | null
+  issued_by: string | null
+  document_url: string | null
+  status: string
+}
+
+/** Rent ledger row from RPC response */
+export interface RentLedgerRow {
+  id: string
+  due_date: string
+  amount_due: number
+  amount_paid: number | null
+  status: string
+  room_id: string
+  paid_at: string | null
+  payment_method: string | null
+  notes: string | null
+}
+
+/** OOH submission */
+export interface OOHSubmission {
+  outcome: string
+  notes: string | null
+  cost: number | null
+  submitted_at: string
+}
+
+/** Landlord submission */
+export interface LandlordSubmission {
+  outcome: string
+  notes: string | null
+  cost: number | null
+  submitted_at: string
+}
+
+/** TicketDetail — matches c1_ticket_detail RPC response directly. No mapping needed. */
+export interface TicketDetail {
+  // Core
+  id: string
+  issue_title: string | null
+  issue_description: string | null
+  status: string
+  category: string | null
+  maintenance_trade: string | null
+  priority: string | null
+  date_logged: string
+  scheduled_date: string | null
+  contractor_quote: number | null
+  final_amount: number | null
+  availability: string | null
+  access: string | null
+  access_granted: boolean | null
+  handoff: boolean | null
+  handoff_reason: string | null
+  is_manual: boolean | null
+  verified_by: string | null
+  property_id: string | null
+  property_address: string | null
+  tenant_id: string | null
+  contractor_id: string | null
+  conversation_id: string | null
+  archived: boolean | null
+  images: string[] | null
+  label: string | null
+  auto_approve_limit: number | null
+  room_id: string | null
+  compliance_certificate_id: string | null
+
+  // State
+  next_action: string | null
+  next_action_reason: string | null
+  on_hold: boolean | null
+  sla_due_at: string | null
+  resolved_at: string | null
+  is_past_timeout: boolean | null
+
+  // OOH
+  ooh_dispatched: boolean | null
+  ooh_outcome: string | null
+  ooh_notes: string | null
+  ooh_cost: number | null
+  ooh_dispatched_at: string | null
+  ooh_outcome_at: string | null
+  ooh_submissions: OOHSubmission[] | null
+
+  // Landlord allocation
+  landlord_allocated: boolean | null
+  landlord_allocated_at: string | null
+  landlord_outcome: string | null
+  landlord_notes: string | null
+  landlord_cost: number | null
+  landlord_outcome_at: string | null
+  landlord_submissions: LandlordSubmission[] | null
+
+  // Reschedule
+  reschedule_requested: boolean | null
+  reschedule_date: string | null
+  reschedule_reason: string | null
+  reschedule_status: string | null
+  reschedule_decided_at: string | null
+
+  // Timestamps for stuck context
+  contractor_sent_at: string | null
+  tenant_contacted_at: string | null
+
+  // Nested objects from RPC joins
+  tenant: PersonData | null
+  landlord: PersonData | null
+  manager: PersonData | null
+  contractor: PersonData | null
+  compliance: ComplianceCertRpc | null
+  rent_ledger: RentLedgerRow[] | null
+}
+
+// --- Legacy types (kept for audit components that import them) ---
 
 export interface TicketBasic {
   id: string
@@ -111,6 +192,19 @@ export interface TicketBasic {
   room_number?: string
 }
 
+export interface TicketContext {
+  ticket_id: string
+  ticket_status: string
+  property_address: string
+  landlord_name: string
+  landlord_phone: string
+  landlord_id: string | null
+  tenant_name: string
+  auto_approve_limit: number
+  label: string | null
+  [key: string]: unknown
+}
+
 export interface ComplianceCertData {
   id: string
   certificate_type: string
@@ -123,18 +217,6 @@ export interface ComplianceCertData {
   notes: string | null
   contractor_id: string | null
   contractor_name: string | null
-}
-
-export interface RentLedgerRow {
-  id: string
-  due_date: string
-  amount_due: number
-  amount_paid: number | null
-  status: string
-  room_id: string
-  paid_at: string | null
-  payment_method: string | null
-  notes: string | null
 }
 
 export interface ConversationData {
@@ -203,20 +285,6 @@ export interface CompletionData {
   tenant_id: string | null
   contractor_id: string | null
   contractor_name?: string
-}
-
-export interface OOHSubmission {
-  outcome: string
-  notes: string | null
-  cost: number | null
-  submitted_at: string
-}
-
-export interface LandlordSubmission {
-  outcome: string
-  notes: string | null
-  cost: number | null
-  submitted_at: string
 }
 
 export interface OutboundLogEntry {
@@ -375,153 +443,15 @@ export function getRecipientMessages(entry: RecipientEntry | null, title: string
   return messages
 }
 
-// --- Map RPC response to legacy shapes (backward compat for modal) ---
-
-function rpcToContext(t: RpcTicket): TicketContext {
-  const tenant = t.tenant as Record<string, string> | null
-  const landlord = t.landlord as Record<string, string> | null
-  const manager = t.manager as Record<string, string> | null
-  return {
-    ticket_id: t.id,
-    ticket_status: t.status,
-    date_logged: t.date_logged,
-    issue_description: t.issue_description || '',
-    category: t.category || '',
-    priority: t.priority || '',
-    access: t.access || '',
-    access_granted: t.access_granted ?? false,
-    availability: t.availability || '',
-    reporter_role: '',
-    updates_recipient: '',
-    handoff: t.handoff ?? false,
-    is_matched_tenant: !!tenant,
-    has_images: Array.isArray(t.images) && t.images.length > 0,
-    tenant_name: tenant?.name || '',
-    tenant_phone: tenant?.phone || '',
-    tenant_email: tenant?.email || '',
-    tenant_role_tag: '',
-    tenant_verified_by: '',
-    property_id: t.property_id || '',
-    property_address: t.property_address || '',
-    property_manager_id: manager?.id || '',
-    manager_name: manager?.name || '',
-    manager_phone: manager?.phone || '',
-    manager_email: manager?.email || '',
-    business_name: manager?.business_name || '',
-    landlord_id: landlord?.id || null,
-    landlord_name: landlord?.name || '',
-    landlord_email: landlord?.email || '',
-    landlord_phone: landlord?.phone || '',
-    access_instructions: '',
-    emergency_access_contact: '',
-    auto_approve_limit: t.auto_approve_limit ?? 0,
-    contractor_mapping: null,
-    caller_name: '',
-    caller_phone: '',
-    caller_role: '',
-    caller_tag: '',
-    recipient: null,
-    update_contact: null,
-    tenant_contact: null,
-    conversation_id: t.conversation_id,
-    label: t.label || null,
-  }
-}
-
-function rpcToBasic(t: RpcTicket): TicketBasic {
-  const tenant = t.tenant as Record<string, string> | null
-  const contractor = t.contractor as Record<string, string> | null
-  return {
-    id: t.id,
-    issue_title: t.issue_title,
-    issue_description: t.issue_description,
-    status: t.status,
-    category: t.category,
-    priority: t.priority,
-    date_logged: t.date_logged,
-    scheduled_date: t.scheduled_date,
-    contractor_quote: t.contractor_quote,
-    final_amount: t.final_amount,
-    availability: t.availability,
-    access: t.access,
-    handoff: t.handoff,
-    is_manual: t.is_manual,
-    verified_by: t.verified_by,
-    property_id: t.property_id,
-    tenant_id: t.tenant_id,
-    contractor_id: t.contractor_id,
-    conversation_id: t.conversation_id,
-    archived: t.archived,
-    images: t.images,
-    next_action: t.next_action,
-    next_action_reason: t.next_action_reason,
-    on_hold: t.on_hold,
-    sla_due_at: t.sla_due_at,
-    resolved_at: t.resolved_at,
-    ooh_dispatched: t.ooh_dispatched,
-    ooh_outcome: t.ooh_outcome,
-    ooh_notes: t.ooh_notes,
-    ooh_cost: t.ooh_cost,
-    ooh_dispatched_at: t.ooh_dispatched_at,
-    ooh_outcome_at: t.ooh_outcome_at,
-    ooh_submissions: t.ooh_submissions,
-    landlord_allocated: t.landlord_allocated,
-    landlord_allocated_at: t.landlord_allocated_at,
-    landlord_outcome: t.landlord_outcome,
-    landlord_notes: t.landlord_notes,
-    landlord_cost: t.landlord_cost,
-    landlord_outcome_at: t.landlord_outcome_at,
-    landlord_submissions: t.landlord_submissions,
-    reschedule_requested: t.reschedule_requested,
-    reschedule_date: t.reschedule_date,
-    reschedule_reason: t.reschedule_reason,
-    reschedule_status: t.reschedule_status,
-    reschedule_decided_at: t.reschedule_decided_at,
-    room_id: t.room_id,
-    compliance_certificate_id: t.compliance_certificate_id,
-    address: t.property_address,
-    tenant_name: tenant?.name,
-    contractor_name: contractor?.name,
-  }
-}
-
-function rpcToComplianceCert(t: RpcTicket): ComplianceCertData | null {
-  const c = t.compliance as Record<string, string> | null
-  if (!c) return null
-  return {
-    id: c.cert_id,
-    certificate_type: c.cert_type,
-    expiry_date: c.expiry_date,
-    issued_date: c.issued_date,
-    certificate_number: c.certificate_number,
-    issued_by: c.issued_by,
-    document_url: c.document_url,
-    status: c.status,
-    notes: null,
-    contractor_id: c.contractor_id || null,
-    contractor_name: null,
-  }
-}
-
-function rpcToRentLedger(t: RpcTicket): RentLedgerRow[] {
-  const rows = t.rent_ledger
-  if (!rows || !Array.isArray(rows)) return []
-  return rows as RentLedgerRow[]
-}
-
 // --- Hook ---
 
 interface UseTicketDetailResult {
-  context: TicketContext | null
-  basic: TicketBasic | null
+  ticket: TicketDetail | null
   conversation: ConversationData | null
   messages: MessageData | null
   completion: CompletionData | null
   outboundLog: OutboundLogEntry[]
-  complianceCert: ComplianceCertData | null
-  rentLedger: RentLedgerRow[]
   isStuck: boolean
-  categoryDataLoading: boolean
   loading: boolean
   error: string | null
   refetch: () => void
@@ -534,30 +464,22 @@ interface UseTicketDetailResult {
 }
 
 export function useTicketDetail(ticketId: string | null): UseTicketDetailResult {
-  const [context, setContext] = useState<TicketContext | null>(null)
-  const [basic, setBasic] = useState<TicketBasic | null>(null)
+  const [ticket, setTicket] = useState<TicketDetail | null>(null)
   const [conversation, setConversation] = useState<ConversationData | null>(null)
   const [messages, setMessages] = useState<MessageData | null>(null)
   const [completion, setCompletion] = useState<CompletionData | null>(null)
   const [outboundLog, setOutboundLog] = useState<OutboundLogEntry[]>([])
-  const [complianceCert, setComplianceCert] = useState<ComplianceCertData | null>(null)
-  const [rentLedger, setRentLedger] = useState<RentLedgerRow[]>([])
-  const [isStuck, setIsStuck] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const supabase = createClient()
 
   const reset = useCallback(() => {
-    setContext(null)
-    setBasic(null)
+    setTicket(null)
     setConversation(null)
     setMessages(null)
     setCompletion(null)
     setOutboundLog([])
-    setComplianceCert(null)
-    setRentLedger([])
-    setIsStuck(false)
     setError(null)
   }, [])
 
@@ -566,7 +488,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
     setError(null)
 
     try {
-      // 1 RPC + 3 parallel queries (was 1 RPC + 7 queries)
+      // 1 RPC + 3 parallel queries
       const [detailRes, messagesRes, completionRes, outboundRes] = await Promise.all([
         supabase.rpc('c1_ticket_detail', { p_ticket_id: id }),
         supabase
@@ -588,15 +510,11 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
 
       if (detailRes.error) throw new Error(detailRes.error.message)
 
-      const t = detailRes.data as RpcTicket | null
+      const t = detailRes.data as TicketDetail | null
       if (!t) throw new Error('Ticket not found')
 
-      // Map RPC response to legacy shapes
-      setContext(rpcToContext(t))
-      setBasic(rpcToBasic(t))
-      setIsStuck(t.is_past_timeout === true)
-      setComplianceCert(rpcToComplianceCert(t))
-      setRentLedger(rpcToRentLedger(t))
+      // RPC response IS the shape — no mapping needed
+      setTicket(t)
 
       // Process messages
       if (messagesRes.error) console.error('Messages fetch error:', messagesRes.error)
@@ -650,6 +568,7 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
   }, [ticketId, fetchData, reset])
 
   // Derived state
+  const isStuck = ticket?.is_past_timeout === true
   const hasConversation = !!conversation
   const hasDispatch = !!messages && (
     getContractors(messages.contractors).length > 0 ||
@@ -674,23 +593,19 @@ export function useTicketDetail(ticketId: string | null): UseTicketDetailResult 
 
   // Display stage from REASON_DISPLAY (single source of truth)
   const displayStage = (() => {
-    if (!basic) return null
-    if (basic.on_hold) return 'On Hold'
-    const { label } = getReasonDisplay(basic.next_action_reason, false)
+    if (!ticket) return null
+    if (ticket.on_hold) return 'On Hold'
+    const { label } = getReasonDisplay(ticket.next_action_reason, false)
     return label
   })()
 
   return {
-    context,
-    basic,
+    ticket,
     conversation,
     messages,
     completion,
     outboundLog,
-    complianceCert,
-    rentLedger,
     isStuck,
-    categoryDataLoading: false,
     loading,
     error,
     refetch,

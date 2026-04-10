@@ -5,7 +5,7 @@ import { ExternalLink, Play, CheckCircle, XCircle, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/status-badge'
 import { formatCurrency, getMediaUrls } from '@/hooks/use-ticket-detail'
-import type { TicketBasic, ComplianceCertData, CompletionData, RentLedgerRow } from '@/hooks/use-ticket-detail'
+import type { TicketDetail, CompletionData } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
 
 // --- Shared sub-components ---
@@ -50,39 +50,37 @@ function LedgerStatusBadge({ status }: { status: string }) {
 
 interface CategoryDataProps {
   category: string
-  basic: TicketBasic
-  cert: ComplianceCertData | null
-  rentLedger: RentLedgerRow[]
+  ticket: TicketDetail
   completion: CompletionData | null
-  autoApproveLimit: number | null
 }
 
-export function CategoryData({ category, basic, cert, rentLedger, completion, autoApproveLimit }: CategoryDataProps) {
-  if (category === 'compliance_renewal') return <ComplianceSection basic={basic} cert={cert} />
-  if (category === 'rent_arrears') return <RentSection rentLedger={rentLedger} />
-  return <MaintenanceSection basic={basic} completion={completion} autoApproveLimit={autoApproveLimit} />
+export function CategoryData({ category, ticket, completion }: CategoryDataProps) {
+  if (category === 'compliance_renewal') return <ComplianceSection ticket={ticket} />
+  if (category === 'rent_arrears') return <RentSection ticket={ticket} />
+  return <MaintenanceSection ticket={ticket} completion={completion} />
 }
 
 // --- Maintenance ---
 
-function MaintenanceSection({ basic, completion, autoApproveLimit }: {
-  basic: TicketBasic; completion: CompletionData | null; autoApproveLimit: number | null
+function MaintenanceSection({ ticket, completion }: {
+  ticket: TicketDetail; completion: CompletionData | null
 }) {
-  const images = (basic.images || []) as string[]
-  const markup = basic.final_amount != null && basic.contractor_quote != null
-    ? basic.final_amount - basic.contractor_quote : null
+  const images = (ticket.images || []) as string[]
+  const markup = ticket.final_amount != null && ticket.contractor_quote != null
+    ? ticket.final_amount - ticket.contractor_quote : null
+  const autoApproveLimit = ticket.auto_approve_limit
 
   return (
     <>
       {/* Job Details */}
-      {(basic.contractor_quote != null || basic.scheduled_date) && (
+      {(ticket.contractor_quote != null || ticket.scheduled_date) && (
         <div className="bg-card rounded-xl border border-border p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Job Details</p>
           <div className="space-y-3">
-            {basic.contractor_quote != null && (
+            {ticket.contractor_quote != null && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Quote</span>
-                <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(basic.contractor_quote)}</span>
+                <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(ticket.contractor_quote)}</span>
               </div>
             )}
             {markup != null && (
@@ -91,29 +89,29 @@ function MaintenanceSection({ basic, completion, autoApproveLimit }: {
                 <span className="text-sm font-semibold text-card-foreground font-mono">{formatCurrency(markup)}</span>
               </div>
             )}
-            {basic.final_amount != null && (
+            {ticket.final_amount != null && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Final Amount</span>
-                <span className="text-base font-bold text-card-foreground font-mono">{formatCurrency(basic.final_amount)}</span>
+                <span className="text-base font-bold text-card-foreground font-mono">{formatCurrency(ticket.final_amount)}</span>
               </div>
             )}
-            {basic.contractor_quote && autoApproveLimit != null && (
+            {ticket.contractor_quote && autoApproveLimit != null && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Approval</span>
-                {basic.contractor_quote <= autoApproveLimit ? (
+                {ticket.contractor_quote <= autoApproveLimit ? (
                   <span className="text-sm text-success font-semibold">Within limit ({formatCurrency(autoApproveLimit)})</span>
                 ) : (
                   <span className="text-sm text-warning font-semibold">Requires landlord · limit {formatCurrency(autoApproveLimit)}</span>
                 )}
               </div>
             )}
-            {basic.scheduled_date && (
+            {ticket.scheduled_date && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Scheduled</span>
                 <span className="text-sm font-semibold text-card-foreground">
-                  {format(new Date(basic.scheduled_date), 'd MMM yyyy')}
+                  {format(new Date(ticket.scheduled_date), 'd MMM yyyy')}
                   {(() => {
-                    const h = new Date(basic.scheduled_date).getHours()
+                    const h = new Date(ticket.scheduled_date).getHours()
                     const slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
                     return <span className="text-muted-foreground font-normal ml-1.5">· {slot}</span>
                   })()}
@@ -208,7 +206,8 @@ function MaintenanceSection({ basic, completion, autoApproveLimit }: {
 
 // --- Compliance ---
 
-function ComplianceSection({ basic, cert }: { basic: TicketBasic; cert: ComplianceCertData | null }) {
+function ComplianceSection({ ticket }: { ticket: TicketDetail }) {
+  const cert = ticket.compliance
   if (!cert) return null
 
   return (
@@ -256,10 +255,10 @@ function ComplianceSection({ basic, cert }: { basic: TicketBasic; cert: Complian
             <span className="text-sm text-muted-foreground/60">Not uploaded</span>
           )}
         </div>
-        {basic.scheduled_date && (
+        {ticket.scheduled_date && (
           <div className="flex items-center justify-between pt-2 border-t border-border/40">
             <span className="text-sm text-muted-foreground">Renewal scheduled</span>
-            <span className="text-sm font-semibold text-card-foreground">{format(new Date(basic.scheduled_date), 'd MMM yyyy')}</span>
+            <span className="text-sm font-semibold text-card-foreground">{format(new Date(ticket.scheduled_date), 'd MMM yyyy')}</span>
           </div>
         )}
       </div>
@@ -269,7 +268,8 @@ function ComplianceSection({ basic, cert }: { basic: TicketBasic; cert: Complian
 
 // --- Rent ---
 
-function RentSection({ rentLedger }: { rentLedger: RentLedgerRow[] }) {
+function RentSection({ ticket }: { ticket: TicketDetail }) {
+  const rentLedger = ticket.rent_ledger || []
   const overdueRows = rentLedger.filter(r => r.status === 'overdue' || r.status === 'partial')
   const totalArrears = overdueRows.reduce((sum, r) => sum + r.amount_due - (r.amount_paid || 0), 0)
   const monthsOverdue = rentLedger.filter(r => r.status === 'overdue').length

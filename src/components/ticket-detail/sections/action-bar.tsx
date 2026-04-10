@@ -14,7 +14,7 @@ import { getReasonDisplay } from '@/lib/reason-display'
 import { StageApproveAction } from '@/components/ticket-detail/stage-approve-action'
 import { StageDispatchAction } from '@/components/ticket-detail/stage-dispatch-action'
 import { StageAllocateAction } from '@/components/ticket-detail/stage-allocate-action'
-import type { TicketBasic, TicketContext, MessageData } from '@/hooks/use-ticket-detail'
+import type { TicketDetail, MessageData } from '@/hooks/use-ticket-detail'
 
 // CTA mapping from architecture spec § "CTA buttons"
 type CTAType = 'navigate' | 'inline_approve' | 'inline_dispatch' | 'inline_allocate' | 'inline_close' | 'contact' | 'none'
@@ -26,7 +26,7 @@ interface CTA {
   phone?: string
 }
 
-function getCTA(reason: string | null, isStuck: boolean, basic: TicketBasic, context: TicketContext): CTA {
+function getCTA(reason: string | null, isStuck: boolean, ticket: TicketDetail): CTA {
   if (!reason) return { label: '', type: 'none' }
 
   // Stuck override: "Chase {role}"
@@ -34,9 +34,9 @@ function getCTA(reason: string | null, isStuck: boolean, basic: TicketBasic, con
     const { label } = getReasonDisplay(reason, true)
     // Determine who to chase
     if (reason === 'awaiting_contractor' || reason === 'awaiting_booking')
-      return { label, type: 'contact', phone: basic.contractor_name ? undefined : undefined }
+      return { label, type: 'contact' }
     if (reason === 'awaiting_landlord' || reason === 'allocated_to_landlord')
-      return { label, type: 'contact', phone: context.landlord_phone || undefined }
+      return { label, type: 'contact', phone: ticket.landlord?.phone || undefined }
     if (reason === 'ooh_dispatched')
       return { label, type: 'contact' }
     if (reason === 'awaiting_tenant')
@@ -56,10 +56,10 @@ function getCTA(reason: string | null, isStuck: boolean, basic: TicketBasic, con
   switch (reason) {
     case 'compliance_needs_dispatch':
       return { label: 'Dispatch contractor', type: 'navigate',
-        href: basic.compliance_certificate_id ? `/compliance/${basic.compliance_certificate_id}` : undefined }
+        href: ticket.compliance_certificate_id ? `/compliance/${ticket.compliance_certificate_id}` : undefined }
     case 'cert_incomplete':
       return { label: 'Complete certificate', type: 'navigate',
-        href: basic.compliance_certificate_id ? `/compliance/${basic.compliance_certificate_id}` : undefined }
+        href: ticket.compliance_certificate_id ? `/compliance/${ticket.compliance_certificate_id}` : undefined }
     case 'rent_overdue':
       return { label: 'Contact tenant', type: 'contact' }
     case 'rent_partial_payment':
@@ -76,7 +76,7 @@ function getCTA(reason: string | null, isStuck: boolean, basic: TicketBasic, con
       return { label: 'Dispatch', type: 'inline_dispatch' }
     case 'landlord_declined':
     case 'landlord_needs_help':
-      return { label: 'Contact landlord', type: 'contact', phone: context.landlord_phone || undefined }
+      return { label: 'Contact landlord', type: 'contact', phone: ticket.landlord?.phone || undefined }
     case 'landlord_resolved':
     case 'ooh_resolved':
       return { label: 'Verify & close', type: 'inline_close' }
@@ -90,8 +90,7 @@ function getCTA(reason: string | null, isStuck: boolean, basic: TicketBasic, con
 }
 
 interface ActionBarProps {
-  basic: TicketBasic
-  context: TicketContext
+  ticket: TicketDetail
   messages: MessageData | null
   isStuck: boolean
   onToggleHold: () => void
@@ -100,13 +99,13 @@ interface ActionBarProps {
   onActionTaken: () => void
 }
 
-export function ActionBar({ basic, context, messages, isStuck, onToggleHold, onArchive, onClose, onActionTaken }: ActionBarProps) {
+export function ActionBar({ ticket, messages, isStuck, onToggleHold, onArchive, onClose, onActionTaken }: ActionBarProps) {
   const router = useRouter()
   const [showInline, setShowInline] = useState<'approve' | 'dispatch' | 'allocate' | null>(null)
 
-  const isOpen = basic.status === 'open' && !basic.archived
-  const isOnHold = basic.on_hold === true
-  const cta = getCTA(basic.next_action_reason, isStuck, basic, context)
+  const isOpen = ticket.status === 'open' && !ticket.archived
+  const isOnHold = ticket.on_hold === true
+  const cta = getCTA(ticket.next_action_reason, isStuck, ticket)
 
   const handleCTA = () => {
     if (cta.type === 'navigate' && cta.href) {
@@ -130,21 +129,21 @@ export function ActionBar({ basic, context, messages, isStuck, onToggleHold, onA
       {showInline === 'approve' && (
         <div className="px-4 pb-3">
           <div className="bg-card rounded-xl border border-border p-4">
-            <StageApproveAction ticketId={basic.id} messages={messages} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
+            <StageApproveAction ticketId={ticket.id} messages={messages} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
           </div>
         </div>
       )}
       {showInline === 'dispatch' && (
         <div className="px-4 pb-3">
           <div className="bg-card rounded-xl border border-border p-4">
-            <StageDispatchAction ticketId={basic.id} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
+            <StageDispatchAction ticketId={ticket.id} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
           </div>
         </div>
       )}
       {showInline === 'allocate' && (
         <div className="px-4 pb-3">
           <div className="bg-card rounded-xl border border-border p-4">
-            <StageAllocateAction ticketId={basic.id} landlordName={context.landlord_name} landlordPhone={context.landlord_phone} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
+            <StageAllocateAction ticketId={ticket.id} landlordName={ticket.landlord?.name || ''} landlordPhone={ticket.landlord?.phone || ''} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
           </div>
         </div>
       )}

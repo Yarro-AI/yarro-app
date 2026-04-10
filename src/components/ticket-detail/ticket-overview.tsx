@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { StageCard } from './sections/stage-card'
 import { CategoryData } from './sections/category-data'
 import { AITranscript } from './sections/ai-transcript'
-import type { TicketBasic, TicketContext, ConversationData, MessageData, CompletionData, ComplianceCertData, RentLedgerRow } from '@/hooks/use-ticket-detail'
+import type { TicketDetail, ConversationData, MessageData, CompletionData } from '@/hooks/use-ticket-detail'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -23,37 +23,34 @@ const CATEGORY_BG: Record<string, string> = {
 }
 
 interface TicketOverviewProps {
-  basic: TicketBasic
-  context: TicketContext
+  ticket: TicketDetail
   conversation: ConversationData | null
   messages: MessageData | null
   completion: CompletionData | null
-  complianceCert: ComplianceCertData | null
-  rentLedger: RentLedgerRow[]
   isStuck: boolean
 }
 
 export function TicketOverview({
-  basic, context, conversation, messages, completion, complianceCert, rentLedger, isStuck,
+  ticket, conversation, messages, completion, isStuck,
 }: TicketOverviewProps) {
-  const category = basic.category || 'maintenance'
+  const category = ticket.category || 'maintenance'
   const CatIcon = CATEGORY_ICON[category] || Wrench
-  const title = basic.issue_title || context.label || 'Maintenance Request'
-  const description = (basic.issue_title || context.label) ? basic.issue_description : null
+  const title = ticket.issue_title || ticket.label || 'Maintenance Request'
+  const description = (ticket.issue_title || ticket.label) ? ticket.issue_description : null
 
   // Build ticket data for dynamic context in stage card
   const ticketData = {
-    compliance: complianceCert ? {
-      cert_type: complianceCert.certificate_type,
-      expiry_date: complianceCert.expiry_date,
-      document_url: complianceCert.document_url,
+    compliance: ticket.compliance ? {
+      cert_type: ticket.compliance.cert_type,
+      expiry_date: ticket.compliance.expiry_date,
+      document_url: ticket.compliance.document_url,
     } : null,
-    waiting_since: basic.sla_due_at, // fallback
-    contractor_sent_at: (basic as unknown as Record<string, unknown>).contractor_sent_at as string | null,
-    landlord_allocated_at: basic.landlord_allocated_at,
-    ooh_dispatched_at: basic.ooh_dispatched_at,
-    tenant_contacted_at: (basic as unknown as Record<string, unknown>).tenant_contacted_at as string | null,
-    scheduled_date: basic.scheduled_date,
+    waiting_since: ticket.sla_due_at, // fallback
+    contractor_sent_at: ticket.contractor_sent_at,
+    landlord_allocated_at: ticket.landlord_allocated_at,
+    ooh_dispatched_at: ticket.ooh_dispatched_at,
+    tenant_contacted_at: ticket.tenant_contacted_at,
+    scheduled_date: ticket.scheduled_date,
   }
 
   return (
@@ -66,7 +63,7 @@ export function TicketOverview({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold text-card-foreground truncate">{title}</p>
-            <p className="text-sm text-muted-foreground truncate">{context.property_address}</p>
+            <p className="text-sm text-muted-foreground truncate">{ticket.property_address}</p>
           </div>
         </div>
         {description && (
@@ -75,37 +72,34 @@ export function TicketOverview({
         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border/40">
           <div className="flex items-center gap-1.5 text-sm font-semibold text-card-foreground">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            Reported on {basic.date_logged
-              ? format(new Date(basic.date_logged), "d MMM yyyy 'at' HH:mm")
+            Reported on {ticket.date_logged
+              ? format(new Date(ticket.date_logged), "d MMM yyyy 'at' HH:mm")
               : '—'}
           </div>
-          {basic.priority && <StatusBadge status={basic.priority} size="md" />}
+          {ticket.priority && <StatusBadge status={ticket.priority} size="md" />}
         </div>
       </div>
 
       {/* ── Stage Card ── */}
       <StageCard
-        reason={basic.next_action_reason}
+        reason={ticket.next_action_reason}
         isStuck={isStuck}
-        isOnHold={basic.on_hold === true}
-        handoffReason={(basic as unknown as Record<string, unknown>).handoff_reason as string | null}
+        isOnHold={ticket.on_hold === true}
+        handoffReason={ticket.handoff_reason}
         ticketData={ticketData}
       />
 
       {/* ── Category Data ── */}
       <CategoryData
         category={category}
-        basic={basic}
-        cert={complianceCert}
-        rentLedger={rentLedger}
+        ticket={ticket}
         completion={completion}
-        autoApproveLimit={context.auto_approve_limit}
       />
 
       {/* ── AI Transcript ── */}
       <AITranscript
         conversation={conversation}
-        defaultOpen={basic.next_action_reason === 'handoff_review'}
+        defaultOpen={ticket.next_action_reason === 'handoff_review'}
       />
 
       {/* ── People ── */}
@@ -113,12 +107,12 @@ export function TicketOverview({
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">People</p>
         <div className="grid grid-cols-3 gap-2">
           {/* Tenant */}
-          {context.tenant_name ? (
-            basic.tenant_id ? (
-              <Link href={`/tenants/${basic.tenant_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
+          {ticket.tenant?.name ? (
+            ticket.tenant_id ? (
+              <Link href={`/tenants/${ticket.tenant_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Users className="h-4 w-4 text-primary" /></div>
                 <div className="text-center min-w-0 w-full">
-                  <p className="text-sm font-semibold text-card-foreground truncate">{context.tenant_name}</p>
+                  <p className="text-sm font-semibold text-card-foreground truncate">{ticket.tenant.name}</p>
                   <p className="text-[11px] text-muted-foreground">Tenant</p>
                 </div>
               </Link>
@@ -126,7 +120,7 @@ export function TicketOverview({
               <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Users className="h-4 w-4 text-primary" /></div>
                 <div className="text-center min-w-0 w-full">
-                  <p className="text-sm font-semibold text-card-foreground truncate">{context.tenant_name}</p>
+                  <p className="text-sm font-semibold text-card-foreground truncate">{ticket.tenant.name}</p>
                   <p className="text-[11px] text-muted-foreground">Tenant</p>
                 </div>
               </div>
@@ -142,12 +136,12 @@ export function TicketOverview({
           )}
 
           {/* Landlord */}
-          {context.landlord_name ? (
-            context.landlord_id ? (
-              <Link href={`/landlords/${context.landlord_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
+          {ticket.landlord?.name ? (
+            ticket.landlord.id ? (
+              <Link href={`/landlords/${ticket.landlord.id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
                 <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center"><Crown className="h-4 w-4 text-warning" /></div>
                 <div className="text-center min-w-0 w-full">
-                  <p className="text-sm font-semibold text-card-foreground truncate">{context.landlord_name}</p>
+                  <p className="text-sm font-semibold text-card-foreground truncate">{ticket.landlord.name}</p>
                   <p className="text-[11px] text-muted-foreground">Landlord</p>
                 </div>
               </Link>
@@ -155,7 +149,7 @@ export function TicketOverview({
               <div className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4">
                 <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center"><Crown className="h-4 w-4 text-warning" /></div>
                 <div className="text-center min-w-0 w-full">
-                  <p className="text-sm font-semibold text-card-foreground truncate">{context.landlord_name}</p>
+                  <p className="text-sm font-semibold text-card-foreground truncate">{ticket.landlord.name}</p>
                   <p className="text-[11px] text-muted-foreground">Landlord</p>
                 </div>
               </div>
@@ -171,11 +165,11 @@ export function TicketOverview({
           )}
 
           {/* Contractor */}
-          {basic.contractor_name && basic.contractor_id ? (
-            <Link href={`/contractors/${basic.contractor_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
+          {ticket.contractor?.name && ticket.contractor_id ? (
+            <Link href={`/contractors/${ticket.contractor_id}`} className="flex flex-col items-center gap-2 rounded-lg border border-border/60 px-2 py-4 hover:bg-muted/40 transition-colors">
               <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center"><Wrench className="h-4 w-4 text-success" /></div>
               <div className="text-center min-w-0 w-full">
-                <p className="text-sm font-semibold text-card-foreground truncate">{basic.contractor_name}</p>
+                <p className="text-sm font-semibold text-card-foreground truncate">{ticket.contractor.name}</p>
                 <p className="text-[11px] text-muted-foreground">Contractor</p>
               </div>
             </Link>
