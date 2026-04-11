@@ -176,7 +176,7 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs">Room</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs">Tenant</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs hidden sm:table-cell">Since</th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs hidden sm:table-cell">Until</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs hidden sm:table-cell">Term</th>
                 <th className="text-right px-3 py-2 font-medium text-muted-foreground text-xs">Rent</th>
                 <th className="w-8 px-1 py-2"></th>
               </tr>
@@ -203,7 +203,9 @@ export function PropertyRoomsSection({ propertyId, pmId }: PropertyRoomsSectionP
                     {formatDate(room.tenancy_start_date)}
                   </td>
                   <td className={`px-3 py-2.5 hidden sm:table-cell ${isEndingSoon(room.tenancy_end_date) ? 'text-orange-500 font-medium' : ''}`}>
-                    {formatDate(room.tenancy_end_date)}
+                    {room.current_tenant_id
+                      ? (room.tenancy_end_date ? formatDate(room.tenancy_end_date) : 'Rolling')
+                      : '—'}
                   </td>
                   <td className="px-3 py-2.5 text-right">
                     {formatRent(room)}

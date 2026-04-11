@@ -52,6 +52,7 @@ export function TenantAssignDialog({
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loadingTenants, setLoadingTenants] = useState(false)
   const [selectedTenantId, setSelectedTenantId] = useState('')
+  const [tenancyType, setTenancyType] = useState<'rolling' | 'fixed'>('rolling')
   const [tenancyStart, setTenancyStart] = useState('')
   const [tenancyEnd, setTenancyEnd] = useState('')
   const [saving, setSaving] = useState(false)
@@ -84,6 +85,7 @@ export function TenantAssignDialog({
 
   const resetForm = () => {
     setSelectedTenantId('')
+    setTenancyType('rolling')
     setTenancyStart('')
     setTenancyEnd('')
     setError(null)
@@ -103,8 +105,13 @@ export function TenantAssignDialog({
       setError('Tenancy start date is required')
       return
     }
-    if (tenancyEnd && new Date(tenancyEnd) <= new Date(tenancyStart)) {
+    const effectiveEnd = tenancyType === 'fixed' ? tenancyEnd : null
+    if (effectiveEnd && new Date(effectiveEnd) <= new Date(tenancyStart)) {
       setError('End date must be after start date')
+      return
+    }
+    if (tenancyType === 'fixed' && !effectiveEnd) {
+      setError('End date is required for fixed term tenancies')
       return
     }
 
@@ -116,7 +123,7 @@ export function TenantAssignDialog({
         p_tenant_id: selectedTenantId,
         p_pm_id: pmId,
         p_tenancy_start: tenancyStart,
-        p_tenancy_end: tenancyEnd || null,
+        p_tenancy_end: effectiveEnd,
       })
 
       if (rpcError) throw new Error(rpcError.message)
@@ -166,23 +173,46 @@ export function TenantAssignDialog({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1.5">Tenancy Type</p>
+            <div className="flex rounded-lg border border-input overflow-hidden w-fit">
+              <button
+                type="button"
+                onClick={() => { setTenancyType('rolling'); setTenancyEnd('') }}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${tenancyType === 'rolling' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}
+              >
+                Rolling Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setTenancyType('fixed')}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${tenancyType === 'fixed' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}
+              >
+                Fixed Term
+              </button>
+            </div>
+          </div>
+
+          <div className={tenancyType === 'fixed' ? 'grid grid-cols-2 gap-3' : ''}>
             <div>
-              <p className="text-sm text-muted-foreground mb-1.5">Tenancy Start *</p>
+              <p className="text-sm text-muted-foreground mb-1.5">Start Date *</p>
               <Input
                 type="date"
                 value={tenancyStart}
                 onChange={(e) => setTenancyStart(e.target.value)}
               />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1.5">Tenancy End</p>
-              <Input
-                type="date"
-                value={tenancyEnd}
-                onChange={(e) => setTenancyEnd(e.target.value)}
-              />
-            </div>
+            {tenancyType === 'fixed' && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1.5">End Date *</p>
+                <Input
+                  type="date"
+                  value={tenancyEnd}
+                  onChange={(e) => setTenancyEnd(e.target.value)}
+                  min={tenancyStart || undefined}
+                />
+              </div>
+            )}
           </div>
         </DialogBody>
         <DialogFooter>
