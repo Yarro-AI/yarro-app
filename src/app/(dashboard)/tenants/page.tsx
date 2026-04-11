@@ -45,6 +45,7 @@ interface Tenant {
   role_tag: string | null
   verified_by: string | null
   property_id: string | null
+  contact_method: string
   created_at: string
   address?: string
 }
@@ -56,6 +57,7 @@ interface TenantEditable {
   email: string | null
   role_tag: string
   property_id: string | null
+  contact_method: string
 }
 
 interface PropertyOption {
@@ -75,6 +77,7 @@ const defaultTenantData: TenantEditable = {
   email: null,
   role_tag: 'tenant',
   property_id: null,
+  contact_method: 'whatsapp',
 }
 
 export default function TenantsPage() {
@@ -119,6 +122,7 @@ export default function TenantsPage() {
       email: t.email,
       role_tag: t.role_tag || 'tenant',
       property_id: t.property_id,
+      contact_method: t.contact_method || 'whatsapp',
     }
   }
 
@@ -153,6 +157,7 @@ export default function TenantsPage() {
         ...normalized,
         role_tag: data.role_tag,
         property_id: data.property_id,
+        contact_method: data.contact_method,
         _audit_log: newLog,
       })
       .eq('id', data.id)
@@ -200,6 +205,7 @@ export default function TenantsPage() {
         ...normalized,
         role_tag: data.role_tag,
         property_id: data.property_id,
+        contact_method: data.contact_method,
         property_manager_id: propertyManager!.id,
       })
 
@@ -484,6 +490,13 @@ export default function TenantsPage() {
             )}
           </div>
         </DetailGrid>
+        <div className="space-y-1.5 mt-3">
+          <label className="text-xs text-muted-foreground">Preferred Contact</label>
+          <div className="flex rounded-lg border border-input overflow-hidden w-fit">
+            <button type="button" onClick={() => update('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${data.contact_method === 'whatsapp' ? 'bg-success text-success-foreground' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+            <button type="button" onClick={() => update('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${data.contact_method === 'email' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Email</button>
+          </div>
+        </div>
       </DetailSection>
 
       <DetailDivider />
@@ -690,6 +703,13 @@ export default function TenantsPage() {
                   {!selectedTenant.phone && !selectedTenant.email && (
                     <p className="text-xs text-muted-foreground">No contact info</p>
                   )}
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                    <Send className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Preferred Contact</p>
+                      <p className="text-sm">{selectedTenant.contact_method === 'email' ? 'Email' : 'WhatsApp'}</p>
+                    </div>
+                  </div>
                 </div>
               </DetailSection>
 

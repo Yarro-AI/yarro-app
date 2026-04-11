@@ -38,6 +38,7 @@ interface TenantDetail {
   verified_at: string | null
   property_id: string | null
   room_id: string | null
+  contact_method: string
   created_at: string
 }
 
@@ -48,6 +49,7 @@ interface TenantEditable {
   email: string | null
   role_tag: string
   property_id: string | null
+  contact_method: string
 }
 
 interface PropertyOption { id: string; address: string }
@@ -55,7 +57,7 @@ interface PropertyOption { id: string; address: string }
 // --- Helpers ---
 
 const toEditable = (t: TenantDetail): TenantEditable => ({
-  id: t.id, full_name: t.full_name || '', phone: t.phone || '', email: t.email, role_tag: t.role_tag || 'tenant', property_id: t.property_id,
+  id: t.id, full_name: t.full_name || '', phone: t.phone || '', email: t.email, role_tag: t.role_tag || 'tenant', property_id: t.property_id, contact_method: t.contact_method || 'whatsapp',
 })
 
 const ROLE_OPTIONS = TENANT_ROLES.map((r) => ({ value: r, label: r.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }))
@@ -125,7 +127,7 @@ export default function TenantDetailPage() {
     const { data: current } = await supabase.from('c1_tenants').select('_audit_log').eq('id', data.id).single()
     const newLog = [...(current?._audit_log as unknown[] || []), auditEntry]
     const normalized = normalizeRecord('tenants', { full_name: data.full_name, phone: data.phone, email: data.email })
-    const { error } = await supabase.from('c1_tenants').update({ ...normalized, role_tag: data.role_tag, property_id: data.property_id, _audit_log: newLog }).eq('id', data.id)
+    const { error } = await supabase.from('c1_tenants').update({ ...normalized, role_tag: data.role_tag, property_id: data.property_id, contact_method: data.contact_method, _audit_log: newLog }).eq('id', data.id)
     if (error) throw error
     toast.success('Tenant updated')
     await fetchTenant()
@@ -246,6 +248,13 @@ export default function TenantDetailPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Preferred Contact</label>
+                  <div className="flex rounded-lg border border-input overflow-hidden w-fit">
+                    <button type="button" onClick={() => updateField('contact_method', 'whatsapp')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${editedData.contact_method === 'whatsapp' ? 'bg-success text-success-foreground' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+                    <button type="button" onClick={() => updateField('contact_method', 'email')} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${editedData.contact_method === 'email' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Email</button>
+                  </div>
+                </div>
+                <div>
                   <label className="text-sm text-muted-foreground mb-1.5 block">Role</label>
                   <Select value={editedData.role_tag} onValueChange={(v) => updateField('role_tag', v)}>
                     <SelectTrigger className="max-w-xs"><SelectValue /></SelectTrigger>
@@ -260,6 +269,9 @@ export default function TenantDetailPage() {
                 </KeyValueRow>
                 <KeyValueRow label="Email">
                   {tenant.email || <span className="text-muted-foreground/50 font-normal italic">Not set</span>}
+                </KeyValueRow>
+                <KeyValueRow label="Preferred Contact">
+                  {tenant.contact_method === 'email' ? 'Email' : 'WhatsApp'}
                 </KeyValueRow>
                 <KeyValueRow label="Role">
                   <span className="capitalize">{(tenant.role_tag || 'tenant').replace(/_/g, ' ')}</span>

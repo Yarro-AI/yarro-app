@@ -193,18 +193,19 @@ export interface TicketBasic {
   room_number?: string
 }
 
-export interface TicketContext {
+export type TicketContext = {
   ticket_id: string
   ticket_status: string
   property_address: string
+  issue_description: string
+  date_logged: string
   landlord_name: string
   landlord_phone: string
   landlord_id: string | null
   tenant_name: string
   auto_approve_limit: number
   label: string | null
-  [key: string]: unknown
-}
+} & Record<string, unknown>
 
 export interface ComplianceCertData {
   id: string
