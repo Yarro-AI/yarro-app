@@ -160,10 +160,14 @@ export async function sendAndLog(
   let channel = params.channel || "whatsapp";
   let recipientEmail = params.recipientEmail;
 
-  if (!params.channel && (params.recipientRole === "contractor" || params.recipientRole === "landlord")) {
+  if (!params.channel && (params.recipientRole === "contractor" || params.recipientRole === "landlord" || params.recipientRole === "tenant")) {
     try {
-      const table = params.recipientRole === "contractor" ? "c1_contractors" : "c1_landlords";
-      const emailCol = params.recipientRole === "contractor" ? "contractor_email" : "email";
+      const TABLE_MAP: Record<string, string> = { contractor: "c1_contractors", landlord: "c1_landlords", tenant: "c1_tenants" };
+      const EMAIL_COL_MAP: Record<string, string> = { contractor: "contractor_email", landlord: "email", tenant: "email" };
+      const PHONE_COL_MAP: Record<string, string> = { contractor: "contractor_phone", landlord: "phone", tenant: "phone" };
+
+      const table = TABLE_MAP[params.recipientRole];
+      const emailCol = EMAIL_COL_MAP[params.recipientRole];
 
       let query = supabase
         .from(table)
@@ -175,7 +179,7 @@ export async function sendAndLog(
       if (params.recipientId) {
         query = query.eq("id", params.recipientId);
       } else {
-        const phoneCol = params.recipientRole === "contractor" ? "contractor_phone" : "phone";
+        const phoneCol = PHONE_COL_MAP[params.recipientRole];
         query = query.eq(phoneCol, params.recipientPhone);
       }
 
