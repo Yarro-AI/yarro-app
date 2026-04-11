@@ -63,6 +63,7 @@ interface Contractor {
 interface TicketFormData {
   property_id: string
   tenant_id: string
+  issue_title: string
   issue_description: string
   category: string
   priority: string
@@ -134,6 +135,7 @@ export function TicketForm({
   const [formData, setFormData] = useState<TicketFormData>({
     property_id: mergedPrefill?.property_id || '',
     tenant_id: mergedPrefill?.tenant_id || '',
+    issue_title: mergedPrefill?.issue_title || '',
     issue_description: mergedPrefill?.issue_description || '',
     category: mergedPrefill?.category || '',
     priority: mergedPrefill?.priority || 'Medium',
@@ -522,6 +524,7 @@ export function TicketForm({
         .insert({
           property_id: formatted.property_id,
           tenant_id: formatted.tenant_id || null,
+          issue_title: formatted.issue_title?.trim() || null,
           issue_description: formatted.issue_description,
           category: 'maintenance',
           maintenance_trade: formatted.category,
@@ -691,8 +694,18 @@ export function TicketForm({
           />
         </div>
 
-        {/* Row 1-2 right: Issue Description (tall, spans 2 rows) */}
-        <div className="space-y-1.5 row-span-2">
+        {/* Row 1 right: Issue Title */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Title</label>
+          <Input
+            value={formData.issue_title}
+            onChange={(e) => updateField('issue_title', e.target.value)}
+            placeholder="Short summary (auto-generated if empty)"
+          />
+        </div>
+
+        {/* Row 2 right: Issue Description */}
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">
             Issue Description <span className="text-destructive">*</span>
           </label>

@@ -221,6 +221,7 @@ export default function TicketsPage() {
   const handleCreateTicket = async (data: {
     property_id: string
     tenant_id: string
+    issue_title?: string
     issue_description: string
     category: string
     priority: string
@@ -267,7 +268,7 @@ export default function TicketsPage() {
         p_property_id: data.property_id,
         p_tenant_id: data.tenant_id || null,
         p_issue_description: data.issue_description,
-        p_issue_title: null,
+        p_issue_title: data.issue_title?.trim() || null,
         p_category: 'maintenance',
         p_maintenance_trade: data.category,
         p_priority: data.priority,
