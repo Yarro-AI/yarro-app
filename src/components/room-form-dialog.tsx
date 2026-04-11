@@ -44,7 +44,6 @@ export function RoomFormDialog({
 }: RoomFormDialogProps) {
   const [roomNumber, setRoomNumber] = useState('')
   const [roomName, setRoomName] = useState('')
-  const [floor, setFloor] = useState('')
   const [monthlyRent, setMonthlyRent] = useState('')
   const [rentFrequency, setRentFrequency] = useState('monthly')
   const [rentDueDay, setRentDueDay] = useState('')
@@ -58,7 +57,6 @@ export function RoomFormDialog({
     if (initialData) {
       setRoomNumber(initialData.room_number)
       setRoomName(initialData.room_name || '')
-      setFloor(initialData.floor || '')
       setMonthlyRent(initialData.monthly_rent != null ? String(initialData.monthly_rent) : '')
       setRentFrequency(initialData.rent_frequency)
       setRentDueDay(initialData.rent_due_day != null ? String(initialData.rent_due_day) : '')
@@ -68,7 +66,6 @@ export function RoomFormDialog({
   const resetForm = () => {
     setRoomNumber('')
     setRoomName('')
-    setFloor('')
     setMonthlyRent('')
     setRentFrequency('monthly')
     setRentDueDay('')
@@ -109,7 +106,7 @@ export function RoomFormDialog({
       await onSubmit({
         room_number: roomNumber.trim(),
         room_name: roomName.trim() || null,
-        floor: floor.trim() || null,
+        floor: null,
         monthly_rent: monthlyRent ? parseFloat(monthlyRent) : null,
         rent_frequency: rentFrequency,
         rent_due_day: rentDueDay ? parseInt(rentDueDay, 10) : null,
@@ -135,30 +132,23 @@ export function RoomFormDialog({
             </p>
           )}
 
-          <div>
-            <p className="text-sm text-muted-foreground mb-1.5">Room Number *</p>
-            <Input
-              value={roomNumber}
-              onChange={(e) => setRoomNumber(e.target.value)}
-              placeholder='e.g. "Room 1" or "Attic Room"'
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-sm text-muted-foreground mb-1.5">Room Name</p>
+              <p className="text-sm text-muted-foreground mb-1.5">Room Number *</p>
+              <Input
+                type="number"
+                min="1"
+                value={roomNumber}
+                onChange={(e) => setRoomNumber(e.target.value)}
+                placeholder="1"
+              />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1.5">Nickname</p>
               <Input
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
                 placeholder="e.g. Garden Room"
-              />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1.5">Floor</p>
-              <Input
-                value={floor}
-                onChange={(e) => setFloor(e.target.value)}
-                placeholder="e.g. Ground, First"
               />
             </div>
           </div>
