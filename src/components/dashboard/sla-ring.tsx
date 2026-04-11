@@ -28,7 +28,7 @@ export function SlaRing({ slaDueAt, slaTotalHours }: SlaRingProps) {
 
   return (
     <svg width="28" height="28" viewBox="0 0 28 28" aria-label={ariaLabel}>
-      <circle cx="14" cy="14" r={radius} fill="none" className="stroke-border" strokeWidth="2.5" />
+      <circle cx="14" cy="14" r={radius} fill="none" stroke="none" />
       <circle
         cx="14" cy="14" r={radius}
         fill="none"
