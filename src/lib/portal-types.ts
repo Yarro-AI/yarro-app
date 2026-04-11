@@ -181,6 +181,12 @@ export type ContractorPortalData = {
 
   resolved_at: string | null
 
+  // Reschedule
+  reschedule_requested: boolean
+  reschedule_date: string | null
+  reschedule_reason: string | null
+  reschedule_status: string | null
+
   // Compliance fields (null for maintenance tickets)
   compliance_certificate_id: string | null
   compliance_cert_type: string | null

@@ -295,13 +295,13 @@ Deno.serve(async (_req: Request) => {
           const title = `Rent arrears: ${tenant.tenant_name || "Unknown tenant"}`;
           const desc = `${tenant.months_overdue} month(s) overdue, £${Number(tenant.total_arrears).toFixed(2)} total arrears since ${tenant.earliest_overdue} (${tenant.days_overdue} days)`;
 
-          const { data: ticketResult, error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
+          const { data: ticketId, error: ticketError } = await supabase.rpc("create_rent_arrears_ticket", {
             p_property_manager_id: tenant.property_manager_id,
             p_property_id: tenant.property_id,
             p_tenant_id: tenant.tenant_id,
             p_issue_title: title,
             p_issue_description: desc,
-            p_priority: tenant.priority,
+            p_deadline_date: tenant.earliest_overdue,
           });
 
           if (ticketError) {
@@ -313,8 +313,8 @@ Deno.serve(async (_req: Request) => {
             continue;
           }
 
-          const row = Array.isArray(ticketResult) ? ticketResult[0] : ticketResult;
-          const isNew = row?.is_new === true;
+          // RPC returns uuid — dedup means it may return existing ticket
+          const isNew = ticketId != null;
 
           if (isNew) {
             ticketsCreated++;

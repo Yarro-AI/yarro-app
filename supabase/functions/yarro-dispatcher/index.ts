@@ -306,6 +306,18 @@ async function handleLandlordSms(
     }
   }
 
+  // Generate landlord token for portal link (used by email channel)
+  const landlordToken = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+  {
+    const { error: tokenErr } = await supabase.from("c1_tickets").update({
+      landlord_token: landlordToken,
+      landlord_token_at: new Date().toISOString(),
+    }).eq("id", ticket.id);
+    if (tokenErr) {
+      await alertTelegram(FN, "landlord-sms → set landlord_token", tokenErr.message, { Ticket: ticket.id });
+    }
+  }
+
   const result = await sendAndLog(supabase, FN, "landlord-sms → Twilio send", {
     ticketId: ticket.id,
     recipientPhone: prepData.landlord_phone,
@@ -321,6 +333,7 @@ async function handleLandlordSms(
       "3": prepData.issue || "Maintenance issue",
       "4": llMediaSummary,
       "5": prepData.total_cost || "N/A",
+      "6": landlordToken,
     },
   });
 

@@ -47,6 +47,10 @@ function mapTicketToPortalData(ticket: ContractorTicket): ContractorPortalData {
       timestamp: u.submitted_at,
     })),
     resolved_at: ticket.resolved_at,
+    reschedule_requested: ticket.reschedule_requested ?? false,
+    reschedule_date: ticket.reschedule_date ?? null,
+    reschedule_reason: ticket.reschedule_reason ?? null,
+    reschedule_status: ticket.reschedule_status ?? null,
     compliance_certificate_id: ticket.compliance_certificate_id,
     compliance_cert_type: ticket.compliance_cert_type,
     compliance_expiry_date: ticket.compliance_expiry_date,
@@ -139,6 +143,15 @@ export default function ContractorPortalPage() {
     await loadTicket()
   }
 
+  async function handleRescheduleDecision(approved: boolean) {
+    try {
+      await supabase.functions.invoke('yarro-scheduling', {
+        body: { source: 'portal-reschedule-decision', token, approved },
+      })
+    } catch { /* server action fires regardless */ }
+    await loadTicket()
+  }
+
   async function handleCompletion(resolved: boolean, notes: string | null, photos: File[]) {
     let photoUrls: string[] = []
     if (photos.length > 0) {
@@ -200,6 +213,7 @@ export default function ContractorPortalPage() {
     <ContractorPortalV2
       data={mapTicketToPortalData(ticket!)}
       onSchedule={handleSchedule}
+      onRescheduleDecision={handleRescheduleDecision}
       onCompletion={handleCompletion}
       onComplianceCompletion={handleComplianceCompletion}
     />

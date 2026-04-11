@@ -57,11 +57,12 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
 
   // ─── Landlord Messages ───
 
-  // landlord_quote: 1=contractor(+category), 2=address, 3=issue, 4=media, 5=total_cost
+  // landlord_quote: 1=contractor(+category), 2=address, 3=issue, 4=media, 5=total_cost, 6=token
   landlord_quote: (v) => ({
     subject: `Quote for Approval — ${v["2"] || "Property"}`,
     heading: "Quote for Approval",
-    body: `${v["1"] || "A contractor"} has submitted a quote of ${v["5"] || "N/A"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"}. Please reply APPROVE or DECLINE.`,
+    body: `${v["1"] || "A contractor"} has submitted a quote of ${v["5"] || "N/A"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"}. Please review and approve or decline.`,
+    cta: v["6"] ? { text: "Review & Approve", url: `https://app.yarro.ai/landlord/${v["6"]}` } : undefined,
   }),
 
   // landlord_allocate: 1=address, 2=issue, 3=tenant_name, 4=tenant_phone, 5=business_name, 6=token

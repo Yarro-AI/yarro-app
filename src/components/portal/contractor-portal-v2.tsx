@@ -88,13 +88,14 @@ function getMinBookableDate(leadHours: number): Date {
 export type ContractorPortalV2Props = {
   data: ContractorPortalData
   onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>
+  onRescheduleDecision?: (approved: boolean) => Promise<void>
   onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>
   onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void>
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianceCompletion }: ContractorPortalV2Props) {
+export function ContractorPortalV2({ data, onSchedule, onRescheduleDecision, onCompletion, onComplianceCompletion }: ContractorPortalV2Props) {
   const activeIdx = getActiveStageIdx(data)
   const needsScheduling = activeIdx === 0
   const isCompliance = !!data.compliance_certificate_id
@@ -155,7 +156,7 @@ export function ContractorPortalV2({ data, onSchedule, onCompletion, onComplianc
             )}
             {!needsScheduling && (
               <TabsContent value="action" className="p-5">
-                <ActionTab data={data} onSchedule={onSchedule} onCompletion={onCompletion} onComplianceCompletion={onComplianceCompletion} />
+                <ActionTab data={data} onSchedule={onSchedule} onRescheduleDecision={onRescheduleDecision} onCompletion={onCompletion} onComplianceCompletion={onComplianceCompletion} />
               </TabsContent>
             )}
             {!isCompliance && (
@@ -181,13 +182,61 @@ const tabTriggerClass = 'flex-1 rounded-none h-auto text-[13px] py-3 border-b-2 
 
 // ─── Action Tab ─────────────────────────────────────────────────────────
 
-function ActionTab({ data, onSchedule, onCompletion, onComplianceCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>; onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void> }) {
+function ActionTab({ data, onSchedule, onRescheduleDecision, onCompletion, onComplianceCompletion }: { data: ContractorPortalData; onSchedule: (date: string, slot: string, notes: string | null) => Promise<void>; onRescheduleDecision?: (approved: boolean) => Promise<void>; onCompletion: (resolved: boolean, notes: string | null, photos: File[]) => Promise<void>; onComplianceCompletion?: (data: { expiryDate: string; issuedBy: string; certNumber: string; file: File | null; notes: string }) => Promise<void> }) {
   const stageIdx = getActiveStageIdx(data)
   const isCompliance = !!data.compliance_certificate_id
   const certLabel = data.compliance_cert_type
     ? CERTIFICATE_LABELS[data.compliance_cert_type as CertificateType] || data.compliance_cert_type
     : 'Certificate'
   const [complianceSubmitted, setComplianceSubmitted] = useState(false)
+  const [rescheduleDeciding, setRescheduleDeciding] = useState(false)
+
+  // Show reschedule request banner when pending
+  if (data.reschedule_requested && data.reschedule_status === 'pending' && onRescheduleDecision) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+          <div className="flex items-start gap-3">
+            <CalendarClock className="size-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-amber-800">Reschedule Request</p>
+              <p className="text-sm text-amber-700">
+                The tenant has requested to reschedule this job.
+              </p>
+              {data.reschedule_date && (
+                <p className="text-sm text-amber-700">
+                  <span className="font-medium">Proposed date:</span> {fmtDate(data.reschedule_date)}
+                </p>
+              )}
+              {data.reschedule_reason && (
+                <p className="text-sm text-amber-700">
+                  <span className="font-medium">Reason:</span> {data.reschedule_reason}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            disabled={rescheduleDeciding}
+            onClick={async () => { setRescheduleDeciding(true); await onRescheduleDecision(true); setRescheduleDeciding(false) }}
+            className="rounded-lg border-2 border-green-500 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
+          >
+            {rescheduleDeciding ? <Loader2 className="size-4 mx-auto animate-spin" /> : 'Accept New Date'}
+          </button>
+          <button
+            type="button"
+            disabled={rescheduleDeciding}
+            onClick={async () => { setRescheduleDeciding(true); await onRescheduleDecision(false); setRescheduleDeciding(false) }}
+            className="rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            {rescheduleDeciding ? <Loader2 className="size-4 mx-auto animate-spin" /> : 'Decline'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Show success state — either from backend (stageIdx===2) or local submit
   if (stageIdx === 2 || complianceSubmitted) {
