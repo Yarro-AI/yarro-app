@@ -110,21 +110,10 @@ async function handleFinalizeJob(
 
   // ── Approved path (auto_approve or landlord_approved) ──
   if (flags.auto_approve === true || flags.landlord_approved === true) {
-    // 1. Generate contractor_token and build portal URL (replaces Fillout)
+    // 1. Generate contractor_token and build portal URL
     const contractorToken = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
-    {
-      const { error: tokenErr } = await supabase.from("c1_tickets").update({
-        contractor_token: contractorToken,
-        contractor_token_at: new Date().toISOString(),
-      }).eq("id", ticketId);
-      if (tokenErr) {
-        await alertTelegram(FN, "finalize-job \u2192 set contractor_token", tokenErr.message, { Ticket: ticketId });
-      }
-    }
-    const portalUrl = `https://app.yarro.ai/contractor/${contractorToken}`;
-    const availText = formatAvailability(ticket.date_logged, ticket.availability);
 
-    // Build access info for {{4}} — same dynamic pattern as contractor_quote
+    // Build access info for {{4}}
     let accessInfo = "Contact property manager for access details";
     if (ticket.access_granted) {
       const { data: propData } = await supabase
@@ -154,35 +143,20 @@ async function handleFinalizeJob(
       },
     });
 
-    // 2. PATCH ticket
+    // 2. SSOT: All state mutations through RPC — sets ticket fields, advances message stage, logs audit event
     const quoteNum = parseCurrency(contractor.quote);
     const totalNum = parseCurrency(contractor.total);
 
-    const { error: patchError } = await supabase
-      .from("c1_tickets")
-      .update({
-        status: "open",
-        contractor_id: contractor.id,
-        contractor_quote: quoteNum,
-        final_amount: totalNum,
-        landlord_approved_on: landlord.replied_at || new Date().toISOString(),
-      })
-      .eq("id", ticketId);
+    const { error: approveError } = await supabase.rpc("c1_finalize_approved", {
+      p_ticket_id: ticketId,
+      p_contractor_id: contractor.id,
+      p_contractor_quote: quoteNum,
+      p_final_amount: totalNum,
+      p_contractor_token: contractorToken,
+    });
 
-    if (patchError) {
-      await alertTelegram(FN, "finalize-job → ticket PATCH", patchError.message, {
-        Ticket: ticketId,
-      });
-    }
-
-    // 2b. Advance c1_messages stage past 'awaiting_landlord' so router recomputes correctly
-    const { error: msgError } = await supabase
-      .from("c1_messages")
-      .update({ stage: "sent" })
-      .eq("ticket_id", ticketId);
-
-    if (msgError) {
-      await alertTelegram(FN, "finalize-job → message stage advance", msgError.message, {
+    if (approveError) {
+      await alertTelegram(FN, "finalize-job → c1_finalize_approved", approveError.message, {
         Ticket: ticketId,
       });
     }
@@ -222,18 +196,13 @@ async function handleFinalizeJob(
 
   // ── Declined path (landlord_approved = false) ──
   if (flags.landlord_approved === false) {
-    // Update ticket state so dashboard shows 'needs_action' / 'landlord_declined'
-    const { error: declineErr } = await supabase
-      .from("c1_tickets")
-      .update({
-        next_action: "needs_action",
-        next_action_reason: "landlord_declined",
-        waiting_since: new Date().toISOString(),
-      })
-      .eq("id", ticketId);
+    // SSOT: All state mutations through RPC — sets next_action, logs audit event
+    const { error: declineErr } = await supabase.rpc("c1_finalize_declined", {
+      p_ticket_id: ticketId,
+    });
 
     if (declineErr) {
-      await alertTelegram(FN, "finalize-job → decline ticket update", declineErr.message, {
+      await alertTelegram(FN, "finalize-job → c1_finalize_declined", declineErr.message, {
         Ticket: ticketId,
       });
     }
