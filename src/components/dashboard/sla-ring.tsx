@@ -15,12 +15,12 @@ export function SlaRing({ slaDueAt, slaTotalHours }: SlaRingProps) {
     return <AlertTriangle className="w-6 h-6 text-red-500 fill-red-500/20" />
   }
 
-  // Countdown ring — fraction remaining out of this ticket's SLA window
-  const fraction = Math.min(1, Math.max(0, hoursLeft / totalHours))
-  const color = fraction <= 0.10 ? '#EF4444' : fraction <= 0.33 ? '#F97316' : '#EAB308'
+  // Filling ring — grows as time elapses, small yellow → full red circle
+  const elapsed = Math.min(1, Math.max(0, 1 - hoursLeft / totalHours))
+  const color = elapsed >= 0.90 ? '#EF4444' : elapsed >= 0.67 ? '#F97316' : '#EAB308'
   const radius = 10
   const circumference = 2 * Math.PI * radius
-  const dashOffset = circumference * (1 - fraction)
+  const dashOffset = circumference * (1 - elapsed)
 
   const ariaLabel = hoursLeft >= 48
     ? `SLA: ${Math.ceil(hoursLeft / 24)}d remaining`
