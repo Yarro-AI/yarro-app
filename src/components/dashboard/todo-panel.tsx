@@ -18,6 +18,7 @@ export interface TodoItem {
   priority_score: number | null
   is_past_timeout: boolean | null
   sla_due_at: string | null
+  sla_total_hours: number | null
   deadline_date: string | null
   waiting_since: string | null
   contractor_sent_at: string | null

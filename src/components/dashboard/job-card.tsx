@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { SlaRing } from './sla-ring'
 import { CategoryBadge } from './category-badge'
 import { getTodoHref, deriveUrgency, deriveCategory } from './todo-panel'
 import type { TodoItem } from './todo-panel'
@@ -11,40 +12,6 @@ interface JobCardProps {
   item: TodoItem
   onHandoffClick: (item: TodoItem) => void
   onTicketClick: (item: TodoItem) => void
-}
-
-/** Circular SLA countdown — only visible when <=24h remain */
-function SlaRing({ slaDueAt }: { slaDueAt: string }) {
-  const hoursLeft = (new Date(slaDueAt).getTime() - Date.now()) / 3_600_000
-  if (hoursLeft > 24) return null
-
-  // Breached — red warning triangle
-  if (hoursLeft <= 0) {
-    return <AlertTriangle className="w-6 h-6 text-red-500 fill-red-500/20" />
-  }
-
-  // Countdown ring — fraction remaining out of 24h
-  const fraction = Math.max(0, hoursLeft / 24)
-  const color = hoursLeft <= 2 ? '#EF4444' : hoursLeft <= 8 ? '#F97316' : '#EAB308'
-  const radius = 10
-  const circumference = 2 * Math.PI * radius
-  const dashOffset = circumference * (1 - fraction)
-
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-label={`SLA: ${Math.ceil(hoursLeft)}h remaining`}>
-      <circle cx="14" cy="14" r={radius} fill="none" className="stroke-border" strokeWidth="2.5" />
-      <circle
-        cx="14" cy="14" r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={dashOffset}
-        transform="rotate(-90 14 14)"
-      />
-    </svg>
-  )
 }
 
 export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
@@ -85,7 +52,7 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
       {/* Col 3: SLA ring */}
       <div className="flex items-center justify-center">
         {item.sla_due_at ? (
-          <SlaRing slaDueAt={item.sla_due_at} />
+          <SlaRing slaDueAt={item.sla_due_at} slaTotalHours={item.sla_total_hours} />
         ) : null}
       </div>
       {/* Col 4: Arrow (hover reveal) */}

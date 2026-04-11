@@ -95,6 +95,7 @@ export interface TicketDetail {
   next_action_reason: string | null
   on_hold: boolean | null
   sla_due_at: string | null
+  sla_total_hours: number | null
   resolved_at: string | null
   is_past_timeout: boolean | null
 

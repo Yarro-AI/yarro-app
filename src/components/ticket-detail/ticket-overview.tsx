@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { Calendar, Crown, Users, Wrench, ShieldCheck, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/status-badge'
+import { SlaRing, formatSlaRemaining } from '@/components/dashboard/sla-ring'
 import { StageCard } from './sections/stage-card'
 import { CategoryData } from './sections/category-data'
 import { AITranscript } from './sections/ai-transcript'
@@ -77,6 +78,15 @@ export function TicketOverview({
               : '—'}
           </div>
           {ticket.priority && <StatusBadge status={ticket.priority} size="md" />}
+          {ticket.sla_due_at && (() => {
+            const sla = formatSlaRemaining(ticket.sla_due_at)
+            return (
+              <div className="flex items-center gap-1.5 ml-auto">
+                <SlaRing slaDueAt={ticket.sla_due_at} slaTotalHours={ticket.sla_total_hours} />
+                <span className={cn('text-sm font-semibold', sla.color)}>{sla.text}</span>
+              </div>
+            )
+          })()}
         </div>
       </div>
 
