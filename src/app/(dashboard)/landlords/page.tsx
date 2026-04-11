@@ -71,7 +71,7 @@ export default function LandlordsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [blastDialogOpen, setBlastDialogOpen] = useState(false)
   const [blastSending, setBlastSending] = useState(false)
-  const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; verification_sent_at: string | null; verified_at: string | null }[]>([])
+  const [blastTargets, setBlastTargets] = useState<{ id: string; name: string | null; phone: string | null; email: string | null; contact_method: string; verification_sent_at: string | null; verified_at: string | null }[]>([])
   const [search, setSearch] = useState('')
   const filteredLandlords = useMemo(() => {
     if (!search) return landlords

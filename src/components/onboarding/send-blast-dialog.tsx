@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Send, AlertTriangle } from 'lucide-react'
+import { Send, AlertTriangle, MessageCircle, Mail } from 'lucide-react'
 import { formatPhoneDisplay } from '@/lib/normalize'
 
 type EntityType = 'tenant' | 'contractor' | 'landlord'
@@ -22,6 +22,8 @@ interface SendTarget {
   id: string
   name: string | null
   phone: string | null
+  email: string | null
+  contact_method: string
   verification_sent_at: string | null
   verified_at: string | null
 }
@@ -62,7 +64,11 @@ export function SendBlastDialog({
   const supabase = createClient()
 
   const labels = ENTITY_LABELS[entityType]
-  const eligibleTargets = targets.filter((t) => t.phone && !t.verified_at)
+  const eligibleTargets = targets.filter((t) => !t.verified_at && (
+    (t.contact_method === 'email' && t.email) || t.phone
+  ))
+  const emailCount = eligibleTargets.filter((t) => t.contact_method === 'email').length
+  const whatsappCount = eligibleTargets.length - emailCount
 
   const handleSend = async () => {
     if (!propertyManager?.id || eligibleTargets.length === 0) return
@@ -113,28 +119,43 @@ export function SendBlastDialog({
             Send Onboarding Messages
           </DialogTitle>
           <DialogDescription>
-            Send a WhatsApp onboarding message to {eligibleTargets.length}{' '}
-            {eligibleTargets.length === 1 ? labels.singular : labels.plural}.
+            Send onboarding message{eligibleTargets.length !== 1 ? 's' : ''} to {eligibleTargets.length}{' '}
+            {eligibleTargets.length === 1 ? labels.singular : labels.plural}
+            {whatsappCount > 0 && emailCount > 0
+              ? ` (${whatsappCount} via WhatsApp, ${emailCount} via email)`
+              : whatsappCount > 0
+                ? ' via WhatsApp'
+                : ' via email'
+            }.
           </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-64 overflow-y-auto space-y-1.5 py-2">
-          {eligibleTargets.map((target) => (
-            <div
-              key={target.id}
-              className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm"
-            >
-              <span className="font-medium truncate">{target.name || 'Unknown'}</span>
-              <span className="font-mono text-xs text-muted-foreground ml-2">
-                {formatPhoneDisplay(target.phone)}
-              </span>
-            </div>
-          ))}
+          {eligibleTargets.map((target) => {
+            const isEmail = target.contact_method === 'email'
+            return (
+              <div
+                key={target.id}
+                className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {isEmail
+                    ? <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                    : <MessageCircle className="h-3.5 w-3.5 text-success shrink-0" />
+                  }
+                  <span className="font-medium truncate">{target.name || 'Unknown'}</span>
+                </div>
+                <span className="font-mono text-xs text-muted-foreground ml-2 shrink-0">
+                  {isEmail ? target.email : formatPhoneDisplay(target.phone)}
+                </span>
+              </div>
+            )
+          })}
           {eligibleTargets.length === 0 && (
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                No eligible {labels.plural} to send to. They may already be verified or have no phone number.
+                No eligible {labels.plural} to send to. They may already be verified or have no contact details.
               </p>
             </div>
           )}

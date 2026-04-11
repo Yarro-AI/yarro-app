@@ -356,10 +356,12 @@ export default function TenantDetailPage() {
         open={blastDialogOpen}
         onOpenChange={setBlastDialogOpen}
         entityType="tenant"
-        targets={tenant.phone ? [{
+        targets={(tenant.phone || (tenant.contact_method === 'email' && tenant.email)) ? [{
           id: tenant.id,
           name: tenant.full_name,
           phone: tenant.phone,
+          email: tenant.email,
+          contact_method: tenant.contact_method || 'whatsapp',
           verification_sent_at: tenant.verification_sent_at,
           verified_at: tenant.verified_at,
         }] : []}
