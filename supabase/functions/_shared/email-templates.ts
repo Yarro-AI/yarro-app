@@ -166,36 +166,37 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
   }),
 
   // ─── PM Notifications ───
+  // Variable order matches WhatsApp call sites (source of truth)
 
-  // pm_ticket_created: 1=address, 2=issue, 3=priority, 4=reporter, 5=timestamp
+  // pm_ticket_created: 1=issue, 2=address, 3=reporter, 4=timestamp
   pm_ticket_created: (v) => ({
-    subject: `New Ticket — ${v["2"] || "Maintenance issue"}`,
+    subject: `New Ticket — ${v["1"] || "Maintenance issue"}`,
     heading: "New Ticket Created",
-    body: `A new ${v["3"] || "maintenance"} ticket has been created at ${v["1"] || "your property"}: ${v["2"] || "maintenance issue"}.`,
+    body: `A new ticket has been created at ${v["2"] || "your property"}: ${v["1"] || "maintenance issue"}. Reported by ${v["3"] || "tenant"} on ${v["4"] || "today"}.`,
     cta: { text: "View in Dashboard", url: "https://app.yarro.ai" },
   }),
 
-  // pm_ticket_review: 1=address, 2=issue, 3=reporter
+  // pm_ticket_review: 1=issue, 2=address, 3=reporter, 4=timestamp
   pm_ticket_review: (v) => ({
-    subject: `Review Required — ${v["1"] || "Property"}`,
+    subject: `Review Required — ${v["2"] || "Property"}`,
     heading: "Ticket Needs Review",
-    body: `A ticket at ${v["1"] || "your property"} needs your review: ${v["2"] || "maintenance issue"}.`,
+    body: `A ticket at ${v["2"] || "your property"} needs your review: ${v["1"] || "maintenance issue"}. Reported by ${v["3"] || "tenant"}.`,
     cta: { text: "Review in Dashboard", url: "https://app.yarro.ai" },
   }),
 
-  // pm_handoff: 1=address, 2=issue, 3=reason
+  // pm_handoff: 1=issue(+prefix), 2=address, 3=reporter, 4=timestamp
   pm_handoff: (v) => ({
-    subject: `Handoff Required — ${v["1"] || "Property"}`,
+    subject: `Handoff Required — ${v["2"] || "Property"}`,
     heading: "Manual Action Needed",
-    body: `A ticket at ${v["1"] || "your property"} requires your attention: ${v["2"] || "maintenance issue"}. Reason: ${v["3"] || "Requires manual handling"}.`,
+    body: `A ticket at ${v["2"] || "your property"} requires your attention: ${v["1"] || "maintenance issue"}.`,
     cta: { text: "View in Dashboard", url: "https://app.yarro.ai" },
   }),
 
-  // pm_quote: 1=contractor, 2=address, 3=issue, 4=amount, 5=notes
+  // pm_quote: 1=contractor(+category), 2=address, 3=issue, 4=amount, 5=notes, 6=media
   pm_quote: (v) => ({
     subject: `Quote Received — ${v["4"] || "N/A"} from ${v["1"] || "Contractor"}`,
     heading: "Quote Received",
-    body: `${v["1"] || "A contractor"} has quoted ${v["4"] || "N/A"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"}.`,
+    body: `${v["1"] || "A contractor"} has quoted ${v["4"] || "N/A"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"}.${v["5"] && v["5"] !== "N/A" ? " Notes: " + v["5"] : ""}`,
     cta: { text: "Review & Approve", url: "https://app.yarro.ai" },
   }),
 
@@ -203,7 +204,7 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
   pm_auto_approved: (v) => ({
     subject: `Auto-Approved — ${v["5"] || "N/A"} at ${v["2"] || "Property"}`,
     heading: "Quote Auto-Approved",
-    body: `The quote of ${v["5"] || "N/A"} from ${v["1"] || "the contractor"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"} has been auto-approved (within your limit). The contractor has been notified to schedule.`,
+    body: `The quote of ${v["6"] || "N/A"} from ${v["1"] || "the contractor"} for ${v["3"] || "maintenance"} at ${v["2"] || "your property"} has been auto-approved (total ${v["5"] || "N/A"} within your limit). The contractor has been notified to schedule.`,
   }),
 
   // pm_landlord_approved: 1=contractor, 2=address, 3=issue, 4=landlord, 5=total, 6=quote, 7=markup
@@ -221,18 +222,18 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     cta: { text: "View in Dashboard", url: "https://app.yarro.ai" },
   }),
 
-  // pm_job_booked: 1=contractor, 2=address, 3=formattedWindow, 4=issue
+  // pm_job_booked: 1=formattedWindow, 2=address, 3=issue, 4=contractor
   pm_job_booked: (v) => ({
     subject: `Job Scheduled — ${v["2"] || "Property"}`,
     heading: "Job Scheduled",
-    body: `${v["1"] || "The contractor"} has scheduled the job for ${v["4"] || "maintenance"} at ${v["2"] || "your property"} on ${v["3"] || "the scheduled date"}.`,
+    body: `${v["4"] || "The contractor"} has scheduled the ${v["3"] || "maintenance"} job at ${v["2"] || "your property"} for ${v["1"] || "the scheduled date"}.`,
   }),
 
-  // pm_job_completed: 1=address, 2=issue, 3=contractor, 4=notes
+  // pm_job_completed: 1=address, 2=issue, 3=contractor
   pm_job_completed: (v) => ({
     subject: `Job Completed — ${v["1"] || "Property"}`,
     heading: "Job Completed",
-    body: `${v["3"] || "The contractor"} has completed the ${v["2"] || "maintenance"} job at ${v["1"] || "your property"}.${v["4"] ? " Notes: " + v["4"] : ""}`,
+    body: `${v["3"] || "The contractor"} has completed the ${v["2"] || "maintenance"} job at ${v["1"] || "your property"}.`,
     cta: { text: "Verify & Close", url: "https://app.yarro.ai" },
   }),
 
@@ -244,86 +245,84 @@ const CONTENT: Record<string, (v: Vars) => EmailContent> = {
     cta: { text: "Review in Dashboard", url: "https://app.yarro.ai" },
   }),
 
-  // pm_reschedule_approved: 1=contractor, 2=address, 3=newDate, 4=issue
+  // pm_reschedule_approved: 1=contractor, 2=address, 3=issue, 4=newAppointment
   pm_reschedule_approved: (v) => ({
     subject: `Reschedule Approved — ${v["2"] || "Property"}`,
     heading: "Reschedule Approved",
-    body: `${v["1"] || "The contractor"} has approved the reschedule request for ${v["4"] || "the job"} at ${v["2"] || "your property"}. New date: ${v["3"] || "to be confirmed"}.`,
+    body: `${v["1"] || "The contractor"} has approved the reschedule request for ${v["3"] || "the job"} at ${v["2"] || "your property"}. New date: ${v["4"] || "to be confirmed"}.`,
   }),
 
-  // pm_landlord_timeout: 1=address, 2=issue, 3=hours
+  // pm_landlord_timeout: 1=address, 2=issue, 3=landlord, 4=landlordPhone, 5=contractor, 6=contractorPhone, 7=hoursElapsed
   pm_landlord_timeout: (v) => ({
     subject: `Landlord Not Responding — ${v["1"] || "Property"}`,
     heading: "Landlord Timeout",
-    body: `The landlord has not responded to the approval request for ${v["2"] || "maintenance"} at ${v["1"] || "your property"} after ${v["3"] || "48"} hours. Please take action.`,
+    body: `${v["3"] || "The landlord"} has not responded to the approval request for ${v["2"] || "maintenance"} at ${v["1"] || "your property"} after ${v["7"] || "48"} hours. Please take action.`,
     cta: { text: "View in Dashboard", url: "https://app.yarro.ai" },
   }),
 
-  // pm_completion_overdue: 1=address, 2=issue, 3=contractor, 4=scheduledDate
+  // pm_completion_overdue: 1=address, 2=issue, 3=contractor(+phone), 4=scheduledDate, 5=hoursOverdue
   pm_completion_overdue: (v) => ({
     subject: `Completion Overdue — ${v["1"] || "Property"}`,
     heading: "Job Completion Overdue",
-    body: `${v["3"] || "The contractor"} has not yet confirmed completion of the ${v["2"] || "maintenance"} job at ${v["1"] || "your property"} (scheduled ${v["4"] || "previously"}).`,
+    body: `${v["3"] || "The contractor"} has not yet confirmed completion of the ${v["2"] || "maintenance"} job at ${v["1"] || "your property"} (scheduled ${v["4"] || "previously"}, ${v["5"] || "?"} hours overdue).`,
     cta: { text: "View in Dashboard", url: "https://app.yarro.ai" },
   }),
 
   // ─── Tenant Notifications ───
 
-  // onboarding_tenant: 1=firstName, 2=businessName
+  // onboarding_tenant: 1=firstName, 2=businessName, 3=propertyAddress, 4=intakeNumber
   onboarding_tenant: (v) => ({
     subject: `Welcome to ${v["2"] || "Yarro"}`,
     heading: "Welcome",
-    body: `Hi ${v["1"] || "there"}, you've been registered by ${v["2"] || "your property manager"}. You'll receive maintenance updates and reminders through this channel.`,
+    body: `Hi ${v["1"] || "there"}, you've been registered by ${v["2"] || "your property manager"} for ${v["3"] || "your property"}. You'll receive maintenance updates and reminders through this channel.`,
   }),
 
-  // tenant_portal_link: 1=tenantName, 2=address, 3=issue, 4=businessName, 5=tenantToken
+  // tenant_portal_link: 1=firstName, 2=tenantToken
   tenant_portal_link: (v) => ({
-    subject: `Maintenance Update — ${v["2"] || "Property"}`,
+    subject: "Maintenance Update — Track Your Issue",
     heading: "Maintenance Update",
-    body: `Hi ${v["1"] || "there"}, a maintenance issue at ${v["2"] || "your property"} is being handled: ${v["3"] || "maintenance issue"}. You can track progress and updates below.`,
-    cta: v["5"] ? { text: "View Progress", url: `https://app.yarro.ai/tenant/${v["5"]}` } : undefined,
+    body: `Hi ${v["1"] || "there"}, a maintenance issue at your property is being handled. You can track progress and updates below.`,
+    cta: v["2"] ? { text: "View Progress", url: `https://app.yarro.ai/tenant/${v["2"]}` } : undefined,
   }),
 
-  // tenant_job_booked: 1=tenantName, 2=contractor, 3=formattedWindow, 4=issue, 5=address, 6=contractorPhone, 7=tenantToken
+  // tenant_job_booked: 1=firstName, 2=friendlyDate, 3=category, 4=contractor, 5=slot, 6=contractorPhone, 7=tenantToken
   tenant_job_booked: (v) => ({
-    subject: `Job Booked — ${v["5"] || "Property"}`,
+    subject: `Job Booked — ${v["2"] || "upcoming"}`,
     heading: "Maintenance Job Scheduled",
-    body: `Hi ${v["1"] || "there"}, ${v["2"] || "a contractor"} has been booked for ${v["4"] || "maintenance"} at ${v["5"] || "your property"} on ${v["3"] || "the scheduled date"}.${v["6"] ? " Contact: " + v["6"] : ""}`,
+    body: `Hi ${v["1"] || "there"}, ${v["4"] || "a contractor"} (${v["3"] || "maintenance"}) has been booked for ${v["2"] || "the scheduled date"}, ${v["5"] || ""} slot.${v["6"] ? " Contact: " + v["6"] : ""}`,
     cta: v["7"] ? { text: "View Booking", url: `https://app.yarro.ai/tenant/${v["7"]}` } : undefined,
   }),
 
-  // tenant_job_reminder: 1=tenantName, 2=contractor, 3=slot, 4=contractorPhone, 5=address, 6=tenantToken
+  // tenant_job_reminder: 1=firstName, 2=category, 3=contractor, 4=slot, 5=contractorPhone
   tenant_job_reminder: (v) => ({
-    subject: `Reminder: Job Today — ${v["5"] || "Property"}`,
+    subject: "Reminder: Job Today",
     heading: "Job Reminder",
-    body: `Hi ${v["1"] || "there"}, ${v["2"] || "the contractor"} is scheduled to visit ${v["5"] || "your property"} today (${v["3"] || "time TBC"}).${v["4"] ? " Contact: " + v["4"] : ""}`,
-    cta: v["6"] ? { text: "View Details", url: `https://app.yarro.ai/tenant/${v["6"]}` } : undefined,
+    body: `Hi ${v["1"] || "there"}, ${v["3"] || "the contractor"} (${v["2"] || "maintenance"}) is scheduled to visit today (${v["4"] || "time TBC"}).${v["5"] ? " Contact: " + v["5"] : ""}`,
   }),
 
-  // tenant_job_completed: 1=tenantName, 2=address, 3=issue, 4=contractor, 5=tenantToken
+  // tenant_job_completed: 1=firstName, 2=issue, 3=tenantToken
   tenant_job_completed: (v) => ({
-    subject: `Job Completed — ${v["2"] || "Property"}`,
+    subject: "Job Completed — Please Confirm",
     heading: "Job Completed",
-    body: `Hi ${v["1"] || "there"}, the ${v["3"] || "maintenance"} job at ${v["2"] || "your property"} has been completed by ${v["4"] || "the contractor"}. Please confirm if the issue has been resolved.`,
-    cta: v["5"] ? { text: "Confirm Resolution", url: `https://app.yarro.ai/tenant/${v["5"]}` } : undefined,
+    body: `Hi ${v["1"] || "there"}, the ${v["2"] || "maintenance"} job has been completed. Please confirm if the issue has been resolved.`,
+    cta: v["3"] ? { text: "Confirm Resolution", url: `https://app.yarro.ai/tenant/${v["3"]}` } : undefined,
   }),
 
-  // contractor_job_confirmed: same as contractor_job_schedule but for confirmation
+  // contractor_job_confirmed: cosmetic/audit — no real send
   contractor_job_confirmed: (v) => ({
-    subject: `Job Confirmed — ${v["1"] || "Property"}`,
+    subject: "Job Confirmed",
     heading: "Job Confirmed",
-    body: `Your job at ${v["1"] || "the property"} has been confirmed for ${v["3"] || "the scheduled date"}.`,
-    cta: v["5"] ? { text: "View Job", url: `https://app.yarro.ai/contractor/${v["5"]}` } : undefined,
+    body: "Your scheduled job has been confirmed.",
   }),
 
   // ─── OOH Emergency ───
 
-  // ooh_emergency_dispatch: 1=address, 2=issue, 3=priority, 4=access, 5=oohToken
+  // ooh_emergency_dispatch: 1=businessName, 2=address, 3=issue, 4=media, 5=tenant(+phone), 6=access, 7=oohToken
   ooh_emergency_dispatch: (v) => ({
-    subject: `EMERGENCY — ${v["2"] || "Urgent issue"} at ${v["1"] || "Property"}`,
+    subject: `EMERGENCY — ${v["3"] || "Urgent issue"} at ${v["2"] || "Property"}`,
     heading: "Emergency Callout",
-    body: `An emergency has been reported at ${v["1"] || "a property"}: ${v["2"] || "urgent issue"}. Priority: ${v["3"] || "Emergency"}.`,
-    cta: v["5"] ? { text: "View & Respond", url: `https://app.yarro.ai/ooh/${v["5"]}` } : undefined,
+    body: `An emergency has been reported at ${v["2"] || "a property"}: ${v["3"] || "urgent issue"}. Tenant: ${v["5"] || "N/A"}.`,
+    cta: v["7"] ? { text: "View & Respond", url: `https://app.yarro.ai/ooh/${v["7"]}` } : undefined,
   }),
 
   // ─── Rent Reminders ───
