@@ -175,6 +175,18 @@ async function handleFinalizeJob(
       });
     }
 
+    // 2b. Advance c1_messages stage past 'awaiting_landlord' so router recomputes correctly
+    const { error: msgError } = await supabase
+      .from("c1_messages")
+      .update({ stage: "sent" })
+      .eq("ticket_id", ticketId);
+
+    if (msgError) {
+      await alertTelegram(FN, "finalize-job → message stage advance", msgError.message, {
+        Ticket: ticketId,
+      });
+    }
+
     // 3. Send PM approval notification — correct template based on path
     if (manager.phone) {
       const isAutoApprove = flags.auto_approve === true;
@@ -210,6 +222,22 @@ async function handleFinalizeJob(
 
   // ── Declined path (landlord_approved = false) ──
   if (flags.landlord_approved === false) {
+    // Update ticket state so dashboard shows 'needs_action' / 'landlord_declined'
+    const { error: declineErr } = await supabase
+      .from("c1_tickets")
+      .update({
+        next_action: "needs_action",
+        next_action_reason: "landlord_declined",
+        waiting_since: new Date().toISOString(),
+      })
+      .eq("id", ticketId);
+
+    if (declineErr) {
+      await alertTelegram(FN, "finalize-job → decline ticket update", declineErr.message, {
+        Ticket: ticketId,
+      });
+    }
+
     if (manager.phone) {
       await sendAndLog(supabase, FN, "finalize-job → PM landlord declined SMS", {
         ticketId,

@@ -71,8 +71,8 @@ function buildVariables(cert: ExpiringCert): Record<string, string> {
   return {
     "1": `${urgency}${certLabel}`,
     "2": cert.property_address || "Unknown property",
-    "3": expiryFormatted,
-    "4": String(Math.abs(cert.days_remaining)),
+    "3": String(Math.abs(cert.days_remaining)),
+    "4": expiryFormatted,
     "5": actionText,
   };
 }
@@ -103,6 +103,7 @@ async function processCert(
         p_category: "compliance_renewal",
         p_priority: priority,
         p_compliance_certificate_id: cert.cert_id,
+        p_deadline_date: cert.expiry_date,
       },
     );
 

@@ -512,6 +512,19 @@ export function TicketForm({
       // If onSubmit provided, use external handler
       if (onSubmit) {
         await onSubmit(formatted)
+        setSubmitting(false)
+        setFormData({
+          property_id: '',
+          tenant_id: '',
+          issue_title: '',
+          issue_description: '',
+          category: '',
+          priority: 'Medium',
+          contractor_ids: [],
+          availability: '',
+          access: '',
+          images: [],
+        })
         return
       }
 
