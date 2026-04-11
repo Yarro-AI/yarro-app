@@ -45,25 +45,28 @@ export function StageDispatchAction({ ticketId, onActionTaken }: StageDispatchAc
   const handleDispatch = async () => {
     if (!selectedId) return
     setDispatching(true)
-    const { data, error } = await supabase.rpc('c1_redispatch_contractor' as never, {
-      p_ticket_id: ticketId,
-      p_contractor_id: selectedId,
-    } as never)
-    setDispatching(false)
+    try {
+      const { data, error } = await supabase.rpc('c1_redispatch_contractor' as never, {
+        p_ticket_id: ticketId,
+        p_contractor_id: selectedId,
+      } as never)
 
-    if (error) {
-      toast.error('Failed to dispatch', { description: error.message })
-      return
-    }
+      if (error) {
+        toast.error('Failed to dispatch', { description: error.message })
+        return
+      }
 
-    const result = data as unknown as { ok: boolean; contractor_name: string }
-    if (result?.ok) {
-      toast.success(`Dispatched to ${result.contractor_name}`)
-      setOpen(false)
-      setSelectedId('')
-      onActionTaken()
-    } else {
-      toast.error('Dispatch failed')
+      const result = data as unknown as { ok: boolean; contractor_name?: string; reason?: string }
+      if (result?.ok) {
+        toast.success(`Dispatched to ${result.contractor_name}`)
+        setOpen(false)
+        setSelectedId('')
+        onActionTaken()
+      } else {
+        toast.error('Dispatch failed', { description: result?.reason?.replace(/-/g, ' ') || 'Unknown error' })
+      }
+    } finally {
+      setDispatching(false)
     }
   }
 
