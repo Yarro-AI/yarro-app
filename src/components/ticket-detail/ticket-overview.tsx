@@ -36,7 +36,10 @@ export function TicketOverview({
 }: TicketOverviewProps) {
   const category = ticket.category || 'maintenance'
   const CatIcon = CATEGORY_ICON[category] || Wrench
-  const title = ticket.issue_title || ticket.label || 'Maintenance Request'
+  const title = ticket.issue_title || ticket.label
+    || (ticket.issue_description
+      ? ticket.issue_description.split(/\s+/).slice(0, 6).join(' ') + (ticket.issue_description.split(/\s+/).length > 6 ? '...' : '')
+      : 'Maintenance Request')
   const description = (ticket.issue_title || ticket.label) ? ticket.issue_description : null
 
   // Build ticket data for dynamic context in stage card
