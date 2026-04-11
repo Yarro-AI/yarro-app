@@ -295,7 +295,13 @@ function RentSection({ ticket }: { ticket: TicketDetail }) {
             </p>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            {monthsOverdue > 0 && <span className="text-danger">{monthsOverdue} month{monthsOverdue !== 1 ? 's' : ''} overdue</span>}
+            {overdueRows.length > 0 && (() => {
+              const earliestDue = overdueRows
+                .map(r => new Date(r.due_date))
+                .sort((a, b) => a.getTime() - b.getTime())[0]
+              const daysOverdue = differenceInDays(new Date(), earliestDue)
+              return <span className="text-danger">{daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue</span>
+            })()}
             {partialCount > 0 && <span className="text-warning">{partialCount} partial payment{partialCount !== 1 ? 's' : ''}</span>}
             {totalArrears === 0 && <span className="text-success">Arrears cleared</span>}
           </div>
