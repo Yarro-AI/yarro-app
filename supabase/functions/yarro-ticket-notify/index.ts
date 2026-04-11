@@ -4,6 +4,7 @@ import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, shortRef } from "../_shared/templates.ts";
 import { signedImageUrl } from "../_shared/image-url.ts";
+import { logEvent } from "../_shared/events.ts";
 
 const FN = "yarro-ticket-notify";
 
@@ -142,6 +143,9 @@ async function handleMorningDispatch(
         },
       });
       results.push({ type: "pm_ticket_created", sent: r.ok, error: r.error });
+      if (r.ok) {
+        await logEvent(supabase, ticketId, "PM_NOTIFIED_TICKET", {});
+      }
     })());
   }
 
@@ -162,6 +166,9 @@ async function handleMorningDispatch(
         },
       });
       results.push({ type: "ll_ticket_created", sent: r.ok, error: r.error });
+      if (r.ok) {
+        await logEvent(supabase, ticketId, "LANDLORD_NOTIFIED_TICKET", {});
+      }
     })());
   }
 
@@ -317,6 +324,9 @@ async function handleIntake(
               },
             });
             results.push({ type: `ooh_contact_${contact.name}`, sent: r.ok, error: r.error });
+            if (r.ok) {
+              await logEvent(supabase, ticketId, "OOH_EMERGENCY_DISPATCHED", { ooh_token: token });
+            }
           }
 
           // Notify PM too (standard ticket_created template so they know)
@@ -335,6 +345,9 @@ async function handleIntake(
               },
             });
             results.push({ type: "pm_ooh_notify", sent: r.ok, error: r.error });
+            if (r.ok) {
+              await logEvent(supabase, ticketId, "PM_NOTIFIED_TICKET", {});
+            }
           }
 
           // Send tenant portal link alongside OOH dispatch
@@ -350,6 +363,9 @@ async function handleIntake(
               variables: { "1": tenantFirstName, "2": tenantToken },
             });
             results.push({ type: "tenant_portal_link", sent: tResult.ok, error: tResult.error });
+            if (tResult.ok) {
+              await logEvent(supabase, ticketId, "TENANT_PORTAL_SENT", {});
+            }
           }
 
           return new Response(
@@ -423,6 +439,9 @@ async function handleIntake(
         },
       });
       results.push({ type: "pm_ticket_review", sent: r.ok, error: r.error });
+      if (r.ok) {
+        await logEvent(supabase, ticketId, "PM_NOTIFIED_TICKET", {});
+      }
     }
     // NO contractor dispatch — ticket stays in pending_review until PM triages
   } else if (ctx.handoff) {
@@ -456,6 +475,9 @@ async function handleIntake(
         },
       });
       results.push({ type: "pm_handoff", sent: r.ok, error: r.error });
+      if (r.ok) {
+        await logEvent(supabase, ticketId, "PM_NOTIFIED_TICKET", {});
+      }
     } else {
       // No PM phone — property not matched. Send urgent Telegram alert.
       const isEmergency = (ctx.label || "").toUpperCase().includes("EMERGENCY")
@@ -504,6 +526,9 @@ async function handleIntake(
         },
       });
       results.push({ type: "pm_ticket_review", sent: r.ok, error: r.error });
+      if (r.ok) {
+        await logEvent(supabase, ticketId, "PM_NOTIFIED_TICKET", {});
+      }
     }
 
     // NO landlord notification in review mode — PM triages first, decides what happens
@@ -528,6 +553,9 @@ async function handleIntake(
           },
         });
         results.push({ type: "pm_ticket_created", sent: r.ok, error: r.error });
+        if (r.ok) {
+          await logEvent(supabase, ticketId, "PM_NOTIFIED_TICKET", {});
+        }
       })());
     }
 
@@ -548,6 +576,9 @@ async function handleIntake(
           },
         });
         results.push({ type: "ll_ticket_created", sent: r.ok, error: r.error });
+        if (r.ok) {
+          await logEvent(supabase, ticketId, "LANDLORD_NOTIFIED_TICKET", {});
+        }
       })());
     }
 
@@ -634,6 +665,10 @@ async function handleManualLandlord(
       "4": formatReportTime(ctx.date_logged)
     },
   });
+
+  if (r.ok) {
+    await logEvent(supabase, ticketId, "LANDLORD_NOTIFIED_TICKET", {});
+  }
 
   return new Response(
     JSON.stringify({

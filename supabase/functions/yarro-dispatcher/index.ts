@@ -4,6 +4,7 @@ import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES, formatUkPhone } from "../_shared/templates.ts";
 import { signedImageUrl } from "../_shared/image-url.ts";
+import { logEvent } from "../_shared/events.ts";
 
 // ─── Function: yarro-dispatcher ──────────────────────────────────────────
 
@@ -95,6 +96,11 @@ async function handleContractorSms(
       p_ticket_id: ticket.id,
       p_contractor_id: contractor.id,
       p_patch: { portal_token: portalToken },
+    });
+
+    await logEvent(supabase, ticket.id, "CONTRACTOR_DISPATCHED", {
+      contractor_id: contractor.id,
+      channel: result.channel,
     });
   } else {
     // Failure — mark contractor as send_failed so state machine can advance
@@ -223,6 +229,11 @@ async function handlePmSms(
         Ticket: ticket.id,
       });
     }
+
+    await logEvent(supabase, ticket.id, "PM_QUOTE_NOTIFIED", {
+      contractor_id: contractor.id,
+      quote_amount: contractor.quote_amount || null,
+    });
   }
 
   return new Response(
@@ -353,6 +364,10 @@ async function handleLandlordSms(
         Ticket: ticket.id,
       });
     }
+
+    await logEvent(supabase, ticket.id, "LANDLORD_QUOTE_SENT", {
+      auto_approve: prepData.auto_approve,
+    });
   }
 
   return new Response(
@@ -425,6 +440,13 @@ async function handleLandlordAllocate(
     }
   }
 
+  if (result.ok) {
+    await logEvent(supabase, ticket.id, "LANDLORD_ALLOCATED", {
+      landlord_id: landlord.id,
+      property_id: property.id,
+    });
+  }
+
   return new Response(
     JSON.stringify({
       instruction: "landlord-allocate",
@@ -462,6 +484,12 @@ async function handleNoMoreContractors(
       "2": issueWithReason,
     },
   });
+
+  if (result.ok) {
+    await logEvent(supabase, ticket.id, "NO_CONTRACTORS_ESCALATION", {
+      reason: payload.reason || null,
+    });
+  }
 
   return new Response(
     JSON.stringify({

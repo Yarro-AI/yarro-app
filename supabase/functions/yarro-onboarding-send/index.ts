@@ -3,6 +3,7 @@ import { createSupabaseClient, type SupabaseClient } from "../_shared/supabase.t
 import { alertTelegram, alertInfo } from "../_shared/telegram.ts";
 import { sendAndLog } from "../_shared/twilio.ts";
 import { TEMPLATES } from "../_shared/templates.ts";
+import { logSystemEvent } from "../_shared/events.ts";
 
 const FN = "yarro-onboarding-send";
 const TENANT_INTAKE_NUMBER = "+44 7446 904822";
@@ -129,22 +130,26 @@ async function processEntity(
   entry: TokenResult,
   businessName: string,
   templateSid: string,
+  pmId: string,
 ): Promise<SendResult> {
   // Skip if no phone
   if (!entry.phone || entry.status === "skipped_no_phone") {
     console.warn(`[${FN}] Skipping ${entry.id} — no phone number`);
+    await logSystemEvent(supabase, pmId, "ONBOARDING_SKIPPED", null, { entity_type: entityType, reason: "no_phone" });
     return { entity_id: entry.id, name: entry.name, sent: false, skipped: true };
   }
 
   // Skip if entity not found or already verified
   if (entry.status === "skipped_not_found_or_verified") {
     console.warn(`[${FN}] Skipping ${entry.id} — not found or already verified`);
+    await logSystemEvent(supabase, pmId, "ONBOARDING_SKIPPED", null, { entity_type: entityType, reason: "not_found_or_verified" });
     return { entity_id: entry.id, name: entry.name, sent: false, skipped: true };
   }
 
   // Skip if no token generated
   if (!entry.token) {
     console.warn(`[${FN}] Skipping ${entry.id} — no token generated`);
+    await logSystemEvent(supabase, pmId, "ONBOARDING_SKIPPED", null, { entity_type: entityType, reason: "no_token" });
     return { entity_id: entry.id, name: entry.name, sent: false, skipped: true };
   }
 
@@ -178,6 +183,8 @@ async function processEntity(
       error: result.error,
     };
   }
+
+  await logSystemEvent(supabase, pmId, "ONBOARDING_SENT", propertyAddress || null, { entity_type: entityType, entity_id: entry.id });
 
   return { entity_id: entry.id, name: entry.name, sent: true, skipped: false };
 }
@@ -282,7 +289,7 @@ Deno.serve(async (req: Request) => {
     const results: SendResult[] = [];
     for (const entry of entries) {
       try {
-        const result = await processEntity(supabase, body.entity_type, entry, displayName, templateSid);
+        const result = await processEntity(supabase, body.entity_type, entry, displayName, templateSid, body.pm_id);
         results.push(result);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

@@ -479,6 +479,10 @@ async function handleFilloutScheduling(
 
   await Promise.all(sends);
 
+  await logEvent(supabase, ticketId, "JOB_SCHEDULED_FILLOUT", {
+    scheduled_date: scheduledIso,
+  }, "CONTRACTOR");
+
   return new Response(
     JSON.stringify({
       ok: true,
@@ -574,6 +578,11 @@ async function handlePortalQuote(
   }
 
   console.log(`[${FN}] portal-quote: contractor ${ctx.contractor_id} submitted ${numFmt} for ticket ${ctx.ticket_id}`);
+
+  await logEvent(supabase, ctx.ticket_id, "CONTRACTOR_QUOTE_SUBMITTED", {
+    amount: numFmt,
+    notes: quote_notes || null,
+  }, "CONTRACTOR");
 
   return new Response(
     JSON.stringify({
@@ -732,6 +741,8 @@ async function handlePortalSchedule(
 
   await Promise.all(sends);
 
+  await logEvent(supabase, ticketId, "JOB_SCHEDULED", { date, time_slot }, "CONTRACTOR");
+
   return new Response(
     JSON.stringify({
       ok: true,
@@ -796,6 +807,10 @@ async function handlePortalCompletion(
         },
       });
     }
+
+    await logEvent(supabase, ticketId, "JOB_NOT_COMPLETED_PORTAL", {
+      notes: notes || null,
+    }, "CONTRACTOR");
 
     return new Response(
       JSON.stringify({ ok: true, path: "portal-not-completed", ticket_id: ticketId }),
@@ -908,6 +923,10 @@ async function handlePortalCompletion(
 
   await Promise.all(sends);
 
+  await logEvent(supabase, ticketId, "JOB_COMPLETED_PORTAL", {
+    notes: notes || null,
+  }, "CONTRACTOR");
+
   return new Response(
     JSON.stringify({
       ok: true,
@@ -976,6 +995,10 @@ async function handlePortalComplianceCompletion(
       },
     });
   }
+
+  await logEvent(supabase, ticketId, "COMPLIANCE_CERT_UPLOADED", {
+    cert_id: data.cert_id,
+  }, "CONTRACTOR");
 
   return new Response(
     JSON.stringify({
@@ -1244,6 +1267,11 @@ async function handleTenantConfirmation(
       });
     }
   }
+
+  await logEvent(supabase, ticketId, "TENANT_RESOLUTION_CONFIRMED", {
+    confirmed: resolved,
+    notes: notes || null,
+  }, "TENANT");
 
   return new Response(
     JSON.stringify({ ok: true, path: "tenant-confirmation", ticket_id: ticketId, resolved }),
