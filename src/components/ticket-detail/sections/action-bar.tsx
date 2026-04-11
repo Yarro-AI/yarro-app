@@ -125,64 +125,66 @@ export function ActionBar({ ticket, messages, isStuck, onToggleHold, onArchive, 
 
   return (
     <>
-      {/* Inline action area (renders above the bar) */}
-      {showInline === 'approve' && (
-        <div className="px-4 pb-3">
-          <div className="bg-card rounded-xl border border-border p-4">
-            <StageApproveAction ticketId={ticket.id} messages={messages} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
-          </div>
-        </div>
-      )}
-      {showInline === 'dispatch' && (
-        <div className="px-4 pb-3">
-          <div className="bg-card rounded-xl border border-border p-4">
-            <StageDispatchAction ticketId={ticket.id} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
-          </div>
-        </div>
-      )}
-      {showInline === 'allocate' && (
-        <div className="px-4 pb-3">
-          <div className="bg-card rounded-xl border border-border p-4">
-            <StageAllocateAction ticketId={ticket.id} landlordName={ticket.landlord?.name || ''} landlordPhone={ticket.landlord?.phone || ''} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
-          </div>
-        </div>
-      )}
-
-      {/* Sticky bar */}
       {isOpen && (
-        <div className="sticky bottom-0 z-10 bg-card border-t border-border px-5 py-3 flex items-center gap-2">
-          {/* Primary CTA */}
-          {cta.type !== 'none' && (
-            <Button onClick={handleCTA} size="sm" className="flex-1">
-              {cta.type === 'contact' && <Phone className="h-3.5 w-3.5 mr-1.5" />}
-              {cta.label}
-            </Button>
+        <div className="sticky bottom-0 z-10 bg-card border-t border-border">
+          {/* Inline action area — expands above button row */}
+          {showInline === 'approve' && (
+            <div className="px-4 pt-3">
+              <div className="rounded-xl border border-border p-4">
+                <StageApproveAction ticketId={ticket.id} messages={messages} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
+              </div>
+            </div>
+          )}
+          {showInline === 'dispatch' && (
+            <div className="px-4 pt-3">
+              <div className="rounded-xl border border-border p-4">
+                <StageDispatchAction ticketId={ticket.id} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
+              </div>
+            </div>
+          )}
+          {showInline === 'allocate' && (
+            <div className="px-4 pt-3">
+              <div className="rounded-xl border border-border p-4">
+                <StageAllocateAction ticketId={ticket.id} landlordName={ticket.landlord?.name || ''} landlordPhone={ticket.landlord?.phone || ''} onActionTaken={() => { setShowInline(null); onActionTaken() }} />
+              </div>
+            </div>
           )}
 
-          {/* Spacer when no CTA */}
-          {cta.type === 'none' && <div className="flex-1" />}
-
-          {/* Hold toggle */}
-          <Button variant="ghost" size="sm" onClick={onToggleHold}>
-            {isOnHold ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-          </Button>
-
-          {/* More menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
+          {/* Button row */}
+          <div className="px-5 py-3 flex items-center gap-2">
+            {/* Primary CTA */}
+            {cta.type !== 'none' && (
+              <Button onClick={handleCTA} size="sm" className="flex-1">
+                {cta.type === 'contact' && <Phone className="h-3.5 w-3.5 mr-1.5" />}
+                {cta.label}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onClose}>
-                <XCircle className="h-4 w-4 mr-2" /> Close ticket
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onArchive}>
-                <Archive className="h-4 w-4 mr-2" /> Archive
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+
+            {/* Spacer when no CTA */}
+            {cta.type === 'none' && <div className="flex-1" />}
+
+            {/* Hold toggle */}
+            <Button variant="ghost" size="sm" onClick={onToggleHold}>
+              {isOnHold ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+            </Button>
+
+            {/* More menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onClose}>
+                  <XCircle className="h-4 w-4 mr-2" /> Close ticket
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onArchive}>
+                  <Archive className="h-4 w-4 mr-2" /> Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
     </>
