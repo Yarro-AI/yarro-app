@@ -212,7 +212,14 @@ function ComplianceSection({ ticket }: { ticket: TicketDetail }) {
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Certificate</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Certificate</p>
+        {cert.cert_id && (
+          <Link href={`/compliance/${cert.cert_id}`} className="text-muted-foreground hover:text-foreground transition-colors" title="View certificate">
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        )}
+      </div>
       <div className="space-y-3">
         {cert.expiry_date && (
           <div className="flex items-center justify-between">

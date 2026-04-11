@@ -55,8 +55,7 @@ function getCTA(reason: string | null, isStuck: boolean, ticket: TicketDetail): 
   // Needs action CTAs
   switch (reason) {
     case 'compliance_needs_dispatch':
-      return { label: 'Dispatch contractor', type: 'navigate',
-        href: ticket.compliance_certificate_id ? `/compliance/${ticket.compliance_certificate_id}` : undefined }
+      return { label: 'Dispatch contractor', type: 'inline_dispatch' }
     case 'cert_incomplete':
       return { label: 'Complete certificate', type: 'navigate',
         href: ticket.compliance_certificate_id ? `/compliance/${ticket.compliance_certificate_id}` : undefined }
