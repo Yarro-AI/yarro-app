@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
-import { normalizeRecord, validateProperty, validateTenant, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
+import { normalizeRecord, validateProperty, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
+import { CONTRACTOR_CATEGORIES } from '@/lib/constants'
 import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
 import type { TicketRow } from '@/components/profile'
 import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
@@ -168,6 +169,8 @@ function PropertyDetailInner() {
   const [addLandlordOpen, setAddLandlordOpen] = useState(false)
   const [newLandlord, setNewLandlord] = useState({ full_name: '', phone: '', email: '', contact_method: 'whatsapp' })
   const [savingNewLandlord, setSavingNewLandlord] = useState(false)
+  const [confirmRemoveTenant, setConfirmRemoveTenant] = useState<TenantRow | null>(null)
+  const [confirmRemoveContractor, setConfirmRemoveContractor] = useState<ContractorRow | null>(null)
 
   const fetchProperty = useCallback(async () => {
     if (!propertyId) return
@@ -273,9 +276,8 @@ function PropertyDetailInner() {
   }
 
   const handleCreateTenant = async () => {
+    if (!newTenant.full_name.trim()) { toast.error('Name is required'); return }
     const normalized = normalizeRecord('tenants', { full_name: newTenant.full_name, phone: newTenant.phone, email: newTenant.email })
-    const errors = validateTenant(normalized)
-    if (hasErrors(errors)) { toast.error(Object.values(errors).filter(Boolean).join(', ')); return }
     setSavingNewTenant(true)
     const { error } = await supabase.from('c1_tenants').insert({
       ...normalized, property_id: propertyId, property_manager_id: propertyManager!.id,
@@ -289,9 +291,9 @@ function PropertyDetailInner() {
   }
 
   const handleCreateContractor = async () => {
+    if (!newContractor.contractor_name.trim()) { toast.error('Name is required'); return }
+    if (!newContractor.contractor_phone.trim()) { toast.error('Phone is required'); return }
     const normalized = normalizeRecord('contractors', { contractor_name: newContractor.contractor_name, contractor_phone: newContractor.contractor_phone })
-    const errors = validateContractor({ ...normalized, categories: newContractor.category ? [newContractor.category] : [] })
-    if (hasErrors(errors)) { toast.error(Object.values(errors).filter(Boolean).join(', ')); return }
     setSavingNewContractor(true)
     const { error } = await supabase.from('c1_contractors').insert({
       ...normalized, category: newContractor.category || null, categories: newContractor.category ? [newContractor.category] : [],
@@ -497,10 +499,12 @@ function PropertyDetailInner() {
               <ProfileCard
                 title="Tenants"
                 count={tenants.length}
-                action={isEditing ? (
+                action={
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm"><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
+                      <button type="button" className="h-6 w-6 rounded-md border border-input bg-background hover:bg-accent/50 flex items-center justify-center transition-colors">
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-72 p-1.5 max-h-64 overflow-y-auto" align="end">
                       {(() => {
@@ -522,7 +526,7 @@ function PropertyDetailInner() {
                       </div>
                     </PopoverContent>
                   </Popover>
-                ) : undefined}
+                }
               >
                 {tenants.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-3">No tenants assigned</p>
@@ -540,7 +544,7 @@ function PropertyDetailInner() {
                               {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                             </p>
                           </div>
-                          <button type="button" onClick={() => handleTenantRemove(t.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                          <button type="button" onClick={() => setConfirmRemoveTenant(t)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -566,10 +570,12 @@ function PropertyDetailInner() {
               <ProfileCard
                 title="Contractors"
                 count={contractors.length}
-                action={isEditing ? (
+                action={
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm"><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
+                      <button type="button" className="h-6 w-6 rounded-md border border-input bg-background hover:bg-accent/50 flex items-center justify-center transition-colors">
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-1.5 max-h-64 overflow-y-auto" align="end">
                       {allContractors.map((c) => {
@@ -590,7 +596,7 @@ function PropertyDetailInner() {
                       </div>
                     </PopoverContent>
                   </Popover>
-                ) : undefined}
+                }
               >
                 {contractors.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-3">No contractors assigned</p>
@@ -606,7 +612,7 @@ function PropertyDetailInner() {
                               {c.contractor_phone && ` \u00b7 ${formatPhoneDisplay(c.contractor_phone)}`}
                             </p>
                           </div>
-                          <button type="button" onClick={() => handleContractorToggle(c.id)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                          <button type="button" onClick={() => setConfirmRemoveContractor(c)} className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -693,6 +699,26 @@ function PropertyDetailInner() {
 
       <ConfirmDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Property" description="Are you sure you want to delete this property? This action cannot be undone." itemName={property.address} onConfirm={handleDelete} />
 
+      {/* Confirm Remove: Tenant */}
+      <ConfirmDeleteDialog
+        open={!!confirmRemoveTenant}
+        onOpenChange={(open) => { if (!open) setConfirmRemoveTenant(null) }}
+        title="Remove Tenant"
+        description={`Remove ${confirmRemoveTenant?.full_name || 'this tenant'} from ${property.address}? They won't be deleted — just unlinked from this property.`}
+        itemName={confirmRemoveTenant?.full_name || undefined}
+        onConfirm={async () => { if (confirmRemoveTenant) { await handleTenantRemove(confirmRemoveTenant.id); setConfirmRemoveTenant(null) } }}
+      />
+
+      {/* Confirm Remove: Contractor */}
+      <ConfirmDeleteDialog
+        open={!!confirmRemoveContractor}
+        onOpenChange={(open) => { if (!open) setConfirmRemoveContractor(null) }}
+        title="Remove Contractor"
+        description={`Remove ${confirmRemoveContractor?.contractor_name || 'this contractor'} from ${property.address}? They won't be deleted — just unlinked from this property.`}
+        itemName={confirmRemoveContractor?.contractor_name || undefined}
+        onConfirm={async () => { if (confirmRemoveContractor) { await handleContractorToggle(confirmRemoveContractor.id); setConfirmRemoveContractor(null) } }}
+      />
+
       {/* Inline Create: Tenant */}
       <Dialog open={addTenantOpen} onOpenChange={setAddTenantOpen}>
         <DialogContent className="sm:max-w-md">
@@ -743,7 +769,14 @@ function PropertyDetailInner() {
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-1.5 block">Trade</label>
-                <Input value={newContractor.category} onChange={(e) => setNewContractor((p) => ({ ...p, category: e.target.value }))} placeholder="e.g. Plumber" />
+                <Select value={newContractor.category} onValueChange={(v) => setNewContractor((p) => ({ ...p, category: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select trade..." /></SelectTrigger>
+                  <SelectContent>
+                    {CONTRACTOR_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

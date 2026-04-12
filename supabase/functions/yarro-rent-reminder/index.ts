@@ -154,8 +154,9 @@ async function processReminder(
     [reminderCol]: new Date().toISOString(),
   };
 
-  // Overdue flip: if this is reminder 3 and status is still pending, mark overdue
-  if (entry.reminder_level === 3 && entry.status === "pending") {
+  // Overdue flip: handled by bulk UPDATE at start of cron run.
+  // This per-entry flip is kept as a safety net for any entries missed by the bulk query.
+  if (entry.status === "pending" && new Date(entry.due_date) < new Date()) {
     (updatePayload as Record<string, string>).status = "overdue";
   }
 
@@ -208,6 +209,20 @@ Deno.serve(async (_req: Request) => {
   const supabase = createSupabaseClient();
 
   try {
+    // Day-1 overdue flip: any pending entry past due date gets marked overdue immediately.
+    // This triggers trg_rent_ledger_overdue_ticket for instant dashboard tickets.
+    const { error: flipError, count: flippedCount } = await supabase
+      .from("c1_rent_ledger")
+      .update({ status: "overdue" })
+      .eq("status", "pending")
+      .lt("due_date", new Date().toISOString().split("T")[0]);
+
+    if (flipError) {
+      console.error(`[${FN}] Overdue flip failed:`, flipError.message);
+    } else if (flippedCount && flippedCount > 0) {
+      console.log(`[${FN}] Flipped ${flippedCount} entries to overdue`);
+    }
+
     const { data: entries, error: rpcError } = await supabase.rpc(
       "get_rent_reminders_due",
       {},
