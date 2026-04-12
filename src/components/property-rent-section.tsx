@@ -257,6 +257,9 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
                     </td>
                     <td className="px-3 py-2.5">
                       {entry.tenant_name || '—'}
+                      {entry.is_former_tenant && (
+                        <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 hidden sm:table-cell">
                       {formatDueDate(entry.due_date)}
