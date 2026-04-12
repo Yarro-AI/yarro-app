@@ -22,6 +22,7 @@ interface RentSummaryRow {
   payment_method: string | null
   effective_status: string | null
   notes: string | null
+  is_former_tenant: boolean
 }
 
 interface PropertyRentSectionProps {

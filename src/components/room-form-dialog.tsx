@@ -85,9 +85,9 @@ export function RoomFormDialog({
       if (isNaN(rent) || rent < 0) return 'Monthly rent must be a positive number'
     }
 
-    if (rentDueDay) {
+    if (rentDueDay && rentDueDay !== '0') {
       const day = parseInt(rentDueDay, 10)
-      if (isNaN(day) || day < 1 || day > 28) return 'Rent due day must be between 1 and 28'
+      if (isNaN(day) || day < 1 || day > 31) return 'Rent due day must be between 1 and 31 (or 0 for last day of month)'
     }
 
     return null
@@ -184,16 +184,28 @@ export function RoomFormDialog({
             </div>
             <div>
               <p className="text-sm text-muted-foreground mb-1.5">
-                {rentFrequency === 'monthly' ? 'Due Day (1–28)' : 'Due Day (0=Mon – 6=Sun)'}
+                {rentFrequency === 'monthly' ? 'Due Day' : 'Due Day (0=Mon – 6=Sun)'}
               </p>
+              {rentFrequency === 'monthly' ? (
+                <Select value={rentDueDay || '1'} onValueChange={setRentDueDay}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                      <SelectItem key={d} value={String(d)}>{d}{d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th'}</SelectItem>
+                    ))}
+                    <SelectItem value="0">Last day of month</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
               <Input
                 type="number"
-                min={rentFrequency === 'monthly' ? 1 : 0}
-                max={rentFrequency === 'monthly' ? 28 : 6}
+                min={0}
+                max={6}
                 value={rentDueDay}
                 onChange={(e) => setRentDueDay(e.target.value)}
-                placeholder={rentFrequency === 'monthly' ? '1' : '0'}
+                placeholder="0"
               />
+              )}
             </div>
           </div>
         </DialogBody>

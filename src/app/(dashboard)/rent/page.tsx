@@ -22,6 +22,7 @@ interface LedgerRow {
   amount_due: number
   amount_paid: number
   effective_status: string // 'arrears' | 'overdue' | 'partial' | 'pending' | 'paid'
+  is_former_tenant: boolean
 }
 
 type StatusFilter = 'all' | 'arrears' | 'overdue' | 'partial' | 'pending' | 'paid'
@@ -245,7 +246,10 @@ export default function RentPage() {
                     )}
                   >
                     <td className="px-4 py-3">
-                      <span className="font-medium">{row.tenant_name}</span>
+                      <span className={cn("font-medium", row.is_former_tenant && "text-muted-foreground")}>{row.tenant_name}</span>
+                      {row.is_former_tenant && (
+                        <span className="ml-1.5 text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider">Former</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                       <span className="truncate block max-w-[220px]">{row.property_address}</span>

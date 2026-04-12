@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 interface EndTenancyDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  room: { id: string; room_number: string; tenant_name: string | null } | null
+  room: { id: string; room_number: string; tenant_name: string | null; current_tenant_id: string | null } | null
   pmId: string
   onComplete: () => void
 }
@@ -32,6 +32,25 @@ export function EndTenancyDialog({
   const supabase = createClient()
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [outstandingDebt, setOutstandingDebt] = useState<number>(0)
+
+  // Check outstanding rent when dialog opens
+  useEffect(() => {
+    if (!open || !room?.current_tenant_id) { setOutstandingDebt(0); return }
+    const checkDebt = async () => {
+      const { data } = await supabase
+        .from('c1_rent_ledger')
+        .select('amount_due, amount_paid')
+        .eq('tenant_id', room.current_tenant_id!)
+        .in('status', ['overdue', 'partial'])
+      if (data) {
+        const total = data.reduce((sum, r) => sum + ((r.amount_due || 0) - (r.amount_paid || 0)), 0)
+        setOutstandingDebt(total)
+      }
+    }
+    checkDebt()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, room?.current_tenant_id])
 
   const handleEndTenancy = async () => {
     if (!room) return
@@ -99,6 +118,20 @@ export function EndTenancyDialog({
             Do you want to end the tenancy?
           </DialogDescription>
         </DialogHeader>
+
+        {outstandingDebt > 0 && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-start gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                {tenantName} still owes £{Math.round(outstandingDebt).toLocaleString('en-GB')}
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Outstanding rent will remain on record and can be chased after the tenancy ends.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2 text-sm text-muted-foreground">
           <p><strong>End Tenancy</strong> — closes tenancy, cancels future rent reminders, logs to audit trail.</p>
