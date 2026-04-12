@@ -169,10 +169,10 @@ export async function sendAndLog(
       const table = TABLE_MAP[params.recipientRole];
       const emailCol = EMAIL_COL_MAP[params.recipientRole];
 
+      // BUG-16 fix: query actual contact_method (was hardcoded to filter for email only)
       let query = supabase
         .from(table)
         .select(`contact_method, ${emailCol}`)
-        .eq("contact_method", "email")
         .limit(1);
 
       // Use ID when available (accurate), fall back to phone lookup
@@ -184,7 +184,7 @@ export async function sendAndLog(
       }
 
       const { data } = await query.maybeSingle();
-      if (data && data[emailCol]) {
+      if (data?.contact_method === "email" && data[emailCol]) {
         channel = "email";
         recipientEmail = data[emailCol];
       }

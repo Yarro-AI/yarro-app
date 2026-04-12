@@ -156,8 +156,12 @@ export default function TenantDetailPage() {
   if (room) subtitleParts.push(`Room ${room.room_number}${room.room_name ? ` \u2014 ${room.room_name}` : ''}`)
   if (property) subtitleParts.push(property.address)
 
+  // SSOT: tenant is active if they have a room_id (assigned to a room)
+  const isActiveTenant = !!tenant?.room_id
   const badges: { label: string; variant: 'success' | 'warning' | 'muted' }[] = [
-    { label: 'Active tenant', variant: 'success' as const },
+    isActiveTenant
+      ? { label: 'Active tenant', variant: 'success' as const }
+      : { label: 'Former tenant', variant: 'muted' as const },
   ]
   if (!tenant?.verified_by) badges.push({ label: 'Identity unverified', variant: 'warning' as const })
 

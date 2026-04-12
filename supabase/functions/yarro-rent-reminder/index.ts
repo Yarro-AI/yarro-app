@@ -21,6 +21,8 @@ interface RentReminder {
   reminder_level: number;
   tenant_name: string;
   tenant_phone: string | null;
+  tenant_email: string | null;
+  contact_method: string | null;
   property_address: string;
   room_number: string;
 }
@@ -89,13 +91,14 @@ async function processReminder(
     };
   }
 
-  // Guard: skip if tenant has no phone
-  if (!entry.tenant_phone) {
-    console.warn(
-      `[${FN}] Skipping ledger ${entry.ledger_id} — tenant ${entry.tenant_name} has no phone`,
-    );
+  // Determine channel from tenant's contact_method (SSOT)
+  const preferredChannel = entry.contact_method === "email" ? "email" as const : "whatsapp" as const;
 
-    // Still log the skip as an event
+  // Guard: skip if tenant has no contact info for their preferred channel
+  if (preferredChannel === "whatsapp" && !entry.tenant_phone) {
+    console.warn(
+      `[${FN}] Skipping ledger ${entry.ledger_id} — tenant ${entry.tenant_name} prefers WhatsApp but has no phone`,
+    );
     await supabase.rpc("c1_log_system_event", {
       p_pm_id: entry.property_manager_id,
       p_event_type: "RENT_REMINDER_SKIPPED",
@@ -107,22 +110,36 @@ async function processReminder(
         reason: "no_phone",
       },
     });
-
-    return {
-      ledger_id: entry.ledger_id,
-      tenant_name: entry.tenant_name,
-      reminder_level: entry.reminder_level,
-      sent: false,
-      skipped: true,
-    };
+    return { ledger_id: entry.ledger_id, tenant_name: entry.tenant_name, reminder_level: entry.reminder_level, sent: false, skipped: true };
   }
 
-  // Send via sendAndLog (audit trail + Telegram alert on failure)
+  if (preferredChannel === "email" && !entry.tenant_email) {
+    console.warn(
+      `[${FN}] Skipping ledger ${entry.ledger_id} — tenant ${entry.tenant_name} prefers email but has no email`,
+    );
+    await supabase.rpc("c1_log_system_event", {
+      p_pm_id: entry.property_manager_id,
+      p_event_type: "RENT_REMINDER_SKIPPED",
+      p_property_label: entry.property_address,
+      p_metadata: {
+        ledger_id: entry.ledger_id,
+        tenant_name: entry.tenant_name,
+        reminder_level: entry.reminder_level,
+        reason: "no_email",
+      },
+    });
+    return { ledger_id: entry.ledger_id, tenant_name: entry.tenant_name, reminder_level: entry.reminder_level, sent: false, skipped: true };
+  }
+
+  // Send via sendAndLog with explicit channel + recipientId (BUG-16 fix)
   const variables = buildVariables(entry);
   const result = await sendAndLog(supabase, FN, `reminder_${entry.reminder_level}`, {
     ticketId: null,
     recipientPhone: entry.tenant_phone,
+    recipientEmail: entry.tenant_email,
+    recipientId: entry.tenant_id,
     recipientRole: "tenant",
+    channel: preferredChannel,
     messageType: templateKey,
     templateSid: templateSid,
     variables,
@@ -221,6 +238,17 @@ Deno.serve(async (_req: Request) => {
       console.error(`[${FN}] Overdue flip failed:`, flipError.message);
     } else if (flippedCount && flippedCount > 0) {
       console.log(`[${FN}] Flipped ${flippedCount} entries to overdue`);
+    }
+
+    // BUG-2 fix: Escalate priority on open rent arrears tickets based on current days overdue
+    // Tiers: >= 14d = urgent, >= 7d = high, >= 1d = medium
+    try {
+      const { error: escError } = await supabase.rpc("escalate_rent_ticket_priority" as never);
+      if (escError) {
+        console.error(`[${FN}] Priority escalation failed:`, escError.message);
+      }
+    } catch (e) {
+      console.error(`[${FN}] Priority escalation error:`, e);
     }
 
     const { data: entries, error: rpcError } = await supabase.rpc(

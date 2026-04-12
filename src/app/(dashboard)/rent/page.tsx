@@ -69,7 +69,6 @@ export default function RentPage() {
   const [paymentTarget, setPaymentTarget] = useState<LedgerRow | null>(null)
   const [filter, setFilter] = useState<StatusFilter>('all')
 
-  const isFutureMonth = new Date(year, month - 1) > new Date(now.getFullYear(), now.getMonth())
   const pmSignupDate = propertyManager?.created_at ? new Date(propertyManager.created_at) : null
   const isBeforeSignup = pmSignupDate ? new Date(year, month - 1) < new Date(pmSignupDate.getFullYear(), pmSignupDate.getMonth()) : false
 
@@ -183,10 +182,6 @@ export default function RentPage() {
         </div>
       ) : fetchError ? (
         <QueryError message={fetchError} onRetry={fetchData} />
-      ) : isFutureMonth ? (
-        <div className="bg-card rounded-2xl border border-border p-12 text-center">
-          <p className="text-sm text-muted-foreground">Rent for {monthLabel} hasn&apos;t started yet.</p>
-        </div>
       ) : isBeforeSignup ? (
         <div className="bg-card rounded-2xl border border-border p-12 text-center">
           <p className="text-sm text-muted-foreground">No data for this period — your account was created after this month.</p>

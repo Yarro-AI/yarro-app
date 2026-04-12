@@ -545,7 +545,12 @@ function PropertyDetailInner() {
                             <Users className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-medium truncate">{t.full_name}</p>
+                            <p className="text-[13px] font-medium truncate">
+                              {t.full_name}
+                              {!rooms.some(r => r.current_tenant_id === t.id) && (
+                                <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+                              )}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                             </p>
@@ -560,7 +565,12 @@ function PropertyDetailInner() {
                             <Users className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-medium truncate">{t.full_name}</p>
+                            <p className="text-[13px] font-medium truncate">
+                              {t.full_name}
+                              {!rooms.some(r => r.current_tenant_id === t.id) && (
+                                <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+                              )}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {(t.role_tag || 'tenant').replace(/_/g, ' ')}
                             </p>

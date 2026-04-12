@@ -29,6 +29,9 @@ export interface TodoItem {
   compliance_certificate_id: string | null
   created_at: string | null
   reschedule_initiated_by: string | null
+  tenant_id: string | null
+  tenant_name: string | null
+  is_former_tenant: boolean | null
 }
 
 export interface TicketSummary {

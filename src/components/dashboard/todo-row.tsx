@@ -61,7 +61,12 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
           <p className="text-sm font-medium text-card-foreground truncate">{item.property_label}</p>
           {item.priority && <StatusBadge status={item.priority} size="sm" className="border-border/50 text-muted-foreground/70" />}
         </div>
-        <p className="text-sm text-muted-foreground truncate mt-0.5">{item.issue_summary}</p>
+        <p className="text-sm text-muted-foreground truncate mt-0.5">
+          {item.issue_summary}
+          {item.is_former_tenant && (
+            <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+          )}
+        </p>
         <div className="flex items-center gap-2 mt-1">
           <span className="flex items-center gap-1.5 flex-shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
