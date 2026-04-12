@@ -69,6 +69,24 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
     fetchSummary()
   }, [fetchSummary])
 
+  // Realtime: refetch when rent ledger changes for this property's rooms
+  useEffect(() => {
+    const channel = supabase
+      .channel(`rent-ledger-${propertyId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'c1_rent_ledger',
+        filter: `property_manager_id=eq.${pmId}`,
+      }, () => {
+        fetchSummary()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyId, pmId])
+
   const handleGenerate = async () => {
     setGenerating(true)
     const { data, error } = await supabase.rpc('create_rent_ledger_entries', {

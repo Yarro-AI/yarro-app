@@ -91,16 +91,10 @@ export default function RentPage() {
     if (!propertyManager) return
     setLoading(true)
 
-    // Auto-generate entries for current month only
-    const currentMonth = now.getMonth() + 1
-    const currentYear = now.getFullYear()
-    if (month === currentMonth && year === currentYear) {
-      await supabase.rpc('auto_generate_rent_entries' as never, {
-        p_pm_id: propertyManager.id,
-        p_month: currentMonth,
-        p_year: currentYear,
-      } as never)
-    }
+    // Rent entries are auto-created by DB triggers:
+    //   trg_room_tenant_assigned (on tenant assignment)
+    //   trg_room_rent_configured (on rent config change)
+    //   Monthly cron (1st of each month)
 
     const { data, error } = await supabase.rpc('get_rent_ledger_for_month' as never, {
       p_pm_id: propertyManager.id,
@@ -122,6 +116,25 @@ export default function RentPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Realtime: refetch when rent ledger changes
+  useEffect(() => {
+    if (!propertyManager) return
+    const channel = supabase
+      .channel(`rent-ledger-pm-${propertyManager.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'c1_rent_ledger',
+        filter: `property_manager_id=eq.${propertyManager.id}`,
+      }, () => {
+        fetchData()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyManager?.id])
 
   // Reset filter when month changes
   useEffect(() => {
