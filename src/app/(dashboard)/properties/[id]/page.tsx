@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { usePM } from '@/contexts/pm-context'
 import { useEditMode } from '@/hooks/use-edit-mode'
-import { normalizeRecord, validateProperty, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
+import { normalizeRecord, validateProperty, validateTenant, validateContractor, hasErrors, formatPhoneDisplay, type ValidationErrors } from '@/lib/normalize'
 import { ProfilePageHeader, ProfileCard, KeyValueRow, TicketCard } from '@/components/profile'
 import type { TicketRow } from '@/components/profile'
 import { useOnTicketUpdated } from '@/components/ticket-drawer-provider'
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { PropertyComplianceSection } from '@/components/property-compliance-section'
@@ -155,6 +156,19 @@ function PropertyDetailInner() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
+  // Inline create dialogs
+  const [addTenantOpen, setAddTenantOpen] = useState(false)
+  const [newTenant, setNewTenant] = useState({ full_name: '', phone: '', email: '' })
+  const [savingNewTenant, setSavingNewTenant] = useState(false)
+
+  const [addContractorOpen, setAddContractorOpen] = useState(false)
+  const [newContractor, setNewContractor] = useState({ contractor_name: '', contractor_phone: '', category: '' })
+  const [savingNewContractor, setSavingNewContractor] = useState(false)
+
+  const [addLandlordOpen, setAddLandlordOpen] = useState(false)
+  const [newLandlord, setNewLandlord] = useState({ full_name: '', phone: '', email: '', contact_method: 'whatsapp' })
+  const [savingNewLandlord, setSavingNewLandlord] = useState(false)
+
   const fetchProperty = useCallback(async () => {
     if (!propertyId) return
     const { data, error } = await supabase
@@ -256,6 +270,58 @@ function PropertyDetailInner() {
     const { error } = await supabase.from('c1_tenants').update({ property_id: propertyId }).eq('id', tenantId)
     if (error) { toast.error('Failed to add tenant'); return }
     await fetchRelated()
+  }
+
+  const handleCreateTenant = async () => {
+    const normalized = normalizeRecord('tenants', { full_name: newTenant.full_name, phone: newTenant.phone, email: newTenant.email })
+    const errors = validateTenant(normalized)
+    if (hasErrors(errors)) { toast.error(Object.values(errors).filter(Boolean).join(', ')); return }
+    setSavingNewTenant(true)
+    const { error } = await supabase.from('c1_tenants').insert({
+      ...normalized, property_id: propertyId, property_manager_id: propertyManager!.id,
+    })
+    setSavingNewTenant(false)
+    if (error) { toast.error('Failed to create tenant'); return }
+    toast.success('Tenant created and added to property')
+    setNewTenant({ full_name: '', phone: '', email: '' })
+    setAddTenantOpen(false)
+    await fetchRelated()
+  }
+
+  const handleCreateContractor = async () => {
+    const normalized = normalizeRecord('contractors', { contractor_name: newContractor.contractor_name, contractor_phone: newContractor.contractor_phone })
+    const errors = validateContractor({ ...normalized, categories: newContractor.category ? [newContractor.category] : [] })
+    if (hasErrors(errors)) { toast.error(Object.values(errors).filter(Boolean).join(', ')); return }
+    setSavingNewContractor(true)
+    const { error } = await supabase.from('c1_contractors').insert({
+      ...normalized, category: newContractor.category || null, categories: newContractor.category ? [newContractor.category] : [],
+      property_ids: [propertyId], property_manager_id: propertyManager!.id, active: true,
+    })
+    setSavingNewContractor(false)
+    if (error) { toast.error('Failed to create contractor'); return }
+    toast.success('Contractor created and added to property')
+    setNewContractor({ contractor_name: '', contractor_phone: '', category: '' })
+    setAddContractorOpen(false)
+    await fetchRelated()
+  }
+
+  const handleCreateLandlord = async () => {
+    if (!newLandlord.full_name.trim()) { toast.error('Name is required'); return }
+    setSavingNewLandlord(true)
+    const normalized = normalizeRecord('landlords', { full_name: newLandlord.full_name, phone: newLandlord.phone, email: newLandlord.email })
+    const { data: ll, error: llErr } = await supabase.from('c1_landlords').insert({
+      ...normalized, contact_method: newLandlord.contact_method, property_manager_id: propertyManager!.id,
+    }).select('id, full_name, phone, email').single()
+    if (llErr || !ll) { setSavingNewLandlord(false); toast.error('Failed to create landlord'); return }
+    const { error: propErr } = await supabase.from('c1_properties').update({
+      landlord_id: ll.id, landlord_name: ll.full_name, landlord_phone: ll.phone, landlord_email: ll.email,
+    }).eq('id', propertyId)
+    setSavingNewLandlord(false)
+    if (propErr) { toast.error('Landlord created but failed to link to property'); return }
+    toast.success('Landlord created and linked to property')
+    setNewLandlord({ full_name: '', phone: '', email: '', contact_method: 'whatsapp' })
+    setAddLandlordOpen(false)
+    await Promise.all([fetchProperty(), fetchRelated()])
   }
 
   const handleTabChange = (tab: string) => {
@@ -448,6 +514,12 @@ function PropertyDetailInner() {
                           </button>
                         ))
                       })()}
+                      <div className="border-t border-border mt-1 pt-1">
+                        <button type="button" onClick={() => setAddTenantOpen(true)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-primary/5 transition-colors text-left text-primary font-medium">
+                          <Plus className="h-3.5 w-3.5 flex-shrink-0" />
+                          Create new tenant
+                        </button>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 ) : undefined}
@@ -510,6 +582,12 @@ function PropertyDetailInner() {
                           </button>
                         )
                       })}
+                      <div className="border-t border-border mt-1 pt-1">
+                        <button type="button" onClick={() => setAddContractorOpen(true)} className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-primary/5 transition-colors text-left text-primary font-medium">
+                          <Plus className="h-3.5 w-3.5 flex-shrink-0" />
+                          Create new contractor
+                        </button>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 ) : undefined}
@@ -545,7 +623,14 @@ function PropertyDetailInner() {
                 )}
               </ProfileCard>
               {/* Landlord detail card */}
-              <ProfileCard title="Landlord">
+              <ProfileCard
+                title="Landlord"
+                action={!property.landlord_id ? (
+                  <Button variant="outline" size="sm" onClick={() => setAddLandlordOpen(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                  </Button>
+                ) : undefined}
+              >
                 {property.landlord_id ? (
                   <>
                     <KeyValueRow label="Name">
@@ -564,7 +649,7 @@ function PropertyDetailInner() {
                     </KeyValueRow>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground py-3 italic">No landlord assigned</p>
+                  <p className="text-sm text-muted-foreground py-3">No landlord linked to this property yet.</p>
                 )}
               </ProfileCard>
             </div>
@@ -607,6 +692,109 @@ function PropertyDetailInner() {
       </Tabs>
 
       <ConfirmDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete Property" description="Are you sure you want to delete this property? This action cannot be undone." itemName={property.address} onConfirm={handleDelete} />
+
+      {/* Inline Create: Tenant */}
+      <Dialog open={addTenantOpen} onOpenChange={setAddTenantOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Tenant to {property.address}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1.5 block">Full Name <span className="text-destructive">*</span></label>
+              <Input value={newTenant.full_name} onChange={(e) => setNewTenant((p) => ({ ...p, full_name: e.target.value }))} placeholder="John Smith" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Phone</label>
+                <Input type="tel" value={newTenant.phone} onChange={(e) => setNewTenant((p) => ({ ...p, phone: e.target.value }))} placeholder="07700 900123" />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
+                <Input type="email" value={newTenant.email} onChange={(e) => setNewTenant((p) => ({ ...p, email: e.target.value }))} placeholder="tenant@email.com" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddTenantOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateTenant} disabled={savingNewTenant}>
+              {savingNewTenant && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Add Tenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline Create: Contractor */}
+      <Dialog open={addContractorOpen} onOpenChange={setAddContractorOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Contractor to {property.address}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1.5 block">Name <span className="text-destructive">*</span></label>
+              <Input value={newContractor.contractor_name} onChange={(e) => setNewContractor((p) => ({ ...p, contractor_name: e.target.value }))} placeholder="Contractor name" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Phone <span className="text-destructive">*</span></label>
+                <Input type="tel" value={newContractor.contractor_phone} onChange={(e) => setNewContractor((p) => ({ ...p, contractor_phone: e.target.value }))} placeholder="07700 900123" />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Trade</label>
+                <Input value={newContractor.category} onChange={(e) => setNewContractor((p) => ({ ...p, category: e.target.value }))} placeholder="e.g. Plumber" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddContractorOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateContractor} disabled={savingNewContractor}>
+              {savingNewContractor && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Add Contractor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline Create: Landlord */}
+      <Dialog open={addLandlordOpen} onOpenChange={setAddLandlordOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Landlord to {property.address}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1.5 block">Full Name <span className="text-destructive">*</span></label>
+              <Input value={newLandlord.full_name} onChange={(e) => setNewLandlord((p) => ({ ...p, full_name: e.target.value }))} placeholder="Landlord name" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Phone</label>
+                <Input type="tel" value={newLandlord.phone} onChange={(e) => setNewLandlord((p) => ({ ...p, phone: e.target.value }))} placeholder="07700 900123" />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
+                <Input type="email" value={newLandlord.email} onChange={(e) => setNewLandlord((p) => ({ ...p, email: e.target.value }))} placeholder="landlord@email.com" />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1.5 block">Preferred Contact</label>
+              <div className="flex rounded-lg border border-input overflow-hidden w-fit">
+                <button type="button" onClick={() => setNewLandlord((p) => ({ ...p, contact_method: 'whatsapp' }))} className={`px-3 py-1.5 text-xs font-medium transition-colors ${newLandlord.contact_method === 'whatsapp' ? 'bg-success text-success-foreground' : 'bg-background hover:bg-muted'}`}>WhatsApp</button>
+                <button type="button" onClick={() => setNewLandlord((p) => ({ ...p, contact_method: 'email' }))} className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-input ${newLandlord.contact_method === 'email' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Email</button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddLandlordOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateLandlord} disabled={savingNewLandlord}>
+              {savingNewLandlord && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Add Landlord
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
