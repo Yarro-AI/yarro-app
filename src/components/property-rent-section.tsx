@@ -42,16 +42,11 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
   const fetchSummary = useCallback(async () => {
     setLoading(true)
 
-    // Auto-generate entries for current month (idempotent, silent)
-    const today = new Date()
-    if (month === today.getMonth() + 1 && year === today.getFullYear()) {
-      await supabase.rpc('create_rent_ledger_entries', {
-        p_property_id: propertyId,
-        p_pm_id: pmId,
-        p_month: month,
-        p_year: year,
-      })
-    }
+    // Rent entries are auto-created by DB triggers:
+    //   trg_room_tenant_assigned (on tenant assignment)
+    //   trg_room_rent_configured (on rent config change)
+    //   Monthly cron (1st of each month)
+    // Manual "Generate" button available as fallback.
 
     const { data, error } = await supabase.rpc('get_rent_summary_for_property', {
       p_property_id: propertyId,

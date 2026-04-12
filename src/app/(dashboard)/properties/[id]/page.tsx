@@ -253,24 +253,30 @@ function PropertyDetailInner() {
   }
 
   const handleContractorToggle = async (contractorId: string) => {
-    const contractor = allContractors.find((c) => c.id === contractorId)
-    if (!contractor) return
-    const currentIds = contractor.property_ids || []
-    const isAssigned = currentIds.includes(propertyId)
-    const newIds = isAssigned ? currentIds.filter((id) => id !== propertyId) : [...currentIds, propertyId]
-    const { error } = await supabase.from('c1_contractors').update({ property_ids: newIds }).eq('id', contractorId)
+    const { error } = await supabase.rpc('c1_toggle_contractor_property', {
+      p_contractor_id: contractorId,
+      p_property_id: propertyId,
+      p_pm_id: propertyManager!.id,
+    })
     if (error) { toast.error('Failed to update contractor'); return }
     await fetchRelated()
   }
 
   const handleTenantRemove = async (tenantId: string) => {
-    const { error } = await supabase.from('c1_tenants').update({ property_id: null }).eq('id', tenantId)
+    const { error } = await supabase.rpc('c1_unlink_tenant_from_property', {
+      p_tenant_id: tenantId,
+      p_pm_id: propertyManager!.id,
+    })
     if (error) { toast.error('Failed to remove tenant'); return }
     await fetchRelated()
   }
 
   const handleTenantAdd = async (tenantId: string) => {
-    const { error } = await supabase.from('c1_tenants').update({ property_id: propertyId }).eq('id', tenantId)
+    const { error } = await supabase.rpc('c1_link_tenant_to_property', {
+      p_tenant_id: tenantId,
+      p_property_id: propertyId,
+      p_pm_id: propertyManager!.id,
+    })
     if (error) { toast.error('Failed to add tenant'); return }
     await fetchRelated()
   }
