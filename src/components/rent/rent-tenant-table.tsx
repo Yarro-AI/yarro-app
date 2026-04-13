@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { getRentStatusStyle, getRentStatusLabel } from '@/lib/rent-status-display'
 
 export interface TenantHealthRow {
   tenant_id: string
@@ -36,24 +37,11 @@ function OnTimeRateBadge({ rate }: { rate: number }) {
 }
 
 function StatusBadge({ status, owed }: { status: string; owed?: number }) {
-  switch (status) {
-    case 'paid':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600">Paid</span>
-    case 'overdue':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-600">Overdue</span>
-    case 'partial':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600">
-          {owed && owed > 0 ? `£${Math.round(owed).toLocaleString('en-GB')} outstanding` : 'Partial'}
-        </span>
-      )
-    case 'pending':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">Pending</span>
-    case 'no_entry':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-muted-foreground/50">—</span>
-    default:
-      return null
-  }
+  const style = getRentStatusStyle(status)
+  const label = status === 'partial' && owed && owed > 0
+    ? `£${Math.round(owed).toLocaleString('en-GB')} outstanding`
+    : getRentStatusLabel(status)
+  return <span className={style}>{label}</span>
 }
 
 export function RentTenantTable({ data }: { data: TenantHealthRow[] }) {

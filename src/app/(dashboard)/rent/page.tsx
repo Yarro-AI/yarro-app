@@ -10,6 +10,7 @@ import { RentPaymentDialog } from '@/components/rent-payment-dialog'
 import { QueryError } from '@/components/query-error'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getRentStatusStyle, getRentStatusLabel } from '@/lib/rent-status-display'
 
 interface LedgerRow {
   rent_ledger_id: string
@@ -34,20 +35,13 @@ function formatCurrency(amount: number): string {
 
 function StatusBadge({ status, amountDue, amountPaid }: { status: string; amountDue: number; amountPaid: number }) {
   const owing = amountDue - amountPaid
-  switch (status) {
-    case 'paid':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600">Paid</span>
-    case 'arrears':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-600">{formatCurrency(owing)} arrears</span>
-    case 'overdue':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-600">Overdue</span>
-    case 'partial':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600">{formatCurrency(owing)} owing</span>
-    case 'pending':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">Due {format(new Date(amountDue ? (amountDue as unknown as string) : ''), 'd MMM')}</span>
-    default:
-      return null
-  }
+  const style = getRentStatusStyle(status)
+  // Dynamic labels for statuses that show amounts
+  const label = status === 'arrears' ? `${formatCurrency(owing)} arrears`
+    : status === 'partial' ? `${formatCurrency(owing)} owing`
+    : status === 'pending' ? `Due ${format(new Date(amountDue ? (amountDue as unknown as string) : ''), 'd MMM')}`
+    : getRentStatusLabel(status)
+  return label ? <span className={style}>{label}</span> : null
 }
 
 // Simpler pending badge — just shows "Awaiting" since due date is in its own column

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Banknote, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { RentPaymentDialog } from '@/components/rent-payment-dialog'
+import { getRentStatusStyle, getRentStatusLabel } from '@/lib/rent-status-display'
 
 interface RentSummaryRow {
   room_id: string
@@ -130,48 +131,12 @@ export function PropertyRentSection({ propertyId, pmId }: PropertyRentSectionPro
   }
 
   const statusBadge = (status: string | null, amountDue?: number | null, amountPaid?: number | null) => {
-    switch (status) {
-      case 'paid':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600">
-            Paid
-          </span>
-        )
-      case 'overdue':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-600">
-            Overdue
-          </span>
-        )
-      case 'partial': {
-        const owing = (amountDue || 0) - (amountPaid || 0)
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600">
-            {owing > 0 ? formatCurrency(owing) + ' owing' : 'Partial'}
-          </span>
-        )
-      }
-      case 'pending':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-            Pending
-          </span>
-        )
-      case 'vacant':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-muted-foreground/50 italic">
-            Vacant
-          </span>
-        )
-      case 'no_entry':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-muted-foreground/50">
-            No rent configured
-          </span>
-        )
-      default:
-        return null
-    }
+    if (!status) return null
+    const style = getRentStatusStyle(status)
+    const owing = (amountDue || 0) - (amountPaid || 0)
+    const label = status === 'partial' && owing > 0 ? formatCurrency(owing) + ' owing'
+      : getRentStatusLabel(status)
+    return <span className={style}>{label}</span>
   }
 
   const monthLabel = format(new Date(year, month - 1), 'MMMM yyyy')
