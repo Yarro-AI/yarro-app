@@ -34,19 +34,15 @@ export function EndTenancyDialog({
   const [error, setError] = useState<string | null>(null)
   const [outstandingDebt, setOutstandingDebt] = useState<number>(0)
 
-  // Check outstanding rent when dialog opens
+  // Check outstanding rent when dialog opens — uses RPC with rent_effective_status
   useEffect(() => {
     if (!open || !room?.current_tenant_id) { setOutstandingDebt(0); return }
     const checkDebt = async () => {
-      const { data } = await supabase
-        .from('c1_rent_ledger')
-        .select('amount_due, amount_paid')
-        .eq('tenant_id', room.current_tenant_id!)
-        .in('status', ['overdue', 'partial'])
-      if (data) {
-        const total = data.reduce((sum, r) => sum + ((r.amount_due || 0) - (r.amount_paid || 0)), 0)
-        setOutstandingDebt(total)
-      }
+      const { data } = await supabase.rpc('get_tenant_outstanding_debt', {
+        p_tenant_id: room.current_tenant_id!,
+        p_pm_id: pmId,
+      })
+      if (data != null) setOutstandingDebt(data as number)
     }
     checkDebt()
   // eslint-disable-next-line react-hooks/exhaustive-deps
