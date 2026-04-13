@@ -311,62 +311,25 @@ export default function TicketsPage() {
   }
 
   const handleArchiveRow = async (ticket: TicketRow) => {
-    const archivedAt = new Date().toISOString()
-
-    const { error: ticketError } = await supabase
-      .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
-      .eq('id', ticket.id)
-
-    if (ticketError) {
-      toast.error('Failed to archive ticket')
-      return
-    }
-
-    await supabase
-      .from('c1_messages')
-      .update({ archived: true, archived_at: archivedAt })
-      .eq('ticket_id', ticket.id)
-
-    if (ticket.conversation_id) {
-      await supabase
-        .from('c1_conversations')
-        .update({ archived: true, archived_at: archivedAt })
-        .eq('id', ticket.conversation_id)
-    }
-
+    if (!propertyManager) return
+    const { error } = await supabase.rpc('c1_archive_ticket', {
+      p_ticket_id: ticket.id,
+      p_pm_id: propertyManager.id,
+    })
+    if (error) { toast.error('Failed to archive ticket'); return }
     toast.success('Ticket archived')
     await fetchTickets()
   }
 
   const handleDismissTicket = async () => {
     const dismissId = handoffTicketId || reviewTicketId
-    if (!dismissId || !selectedTicketBasic) return
+    if (!dismissId || !propertyManager) return
 
-    const archivedAt = new Date().toISOString()
-
-    const { error: ticketError } = await supabase
-      .from('c1_tickets')
-      .update({ archived: true, archived_at: archivedAt, status: 'closed' })
-      .eq('id', dismissId)
-
-    if (ticketError) {
-      toast.error('Failed to dismiss ticket')
-      return
-    }
-
-    await supabase
-      .from('c1_messages')
-      .update({ archived: true, archived_at: archivedAt })
-      .eq('ticket_id', dismissId)
-
-    if (selectedTicketBasic.conversation_id) {
-      await supabase
-        .from('c1_conversations')
-        .update({ archived: true, archived_at: archivedAt })
-        .eq('id', selectedTicketBasic.conversation_id)
-    }
-
+    const { error } = await supabase.rpc('c1_archive_ticket', {
+      p_ticket_id: dismissId,
+      p_pm_id: propertyManager.id,
+    })
+    if (error) { toast.error('Failed to dismiss ticket'); return }
     toast.success(reviewTicketId ? 'Ticket dismissed and archived' : 'Handoff dismissed and archived')
     handleCloseCreateDrawer()
     await fetchTickets()
@@ -544,7 +507,7 @@ export default function TicketsPage() {
       result = result.filter(t =>
         selectedLifecycle.some(lc => {
           if (lc === 'open')     return t.status !== 'closed' && t.archived !== true
-          if (lc === 'closed')   return t.status === 'closed'
+          if (lc === 'closed')   return t.status === 'closed' && t.archived !== true
           if (lc === 'archived') return t.archived === true
           return false
         })

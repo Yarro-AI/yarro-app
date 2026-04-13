@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MoreHorizontal, Pause, Play, Archive, XCircle, Phone } from 'lucide-react'
+import { MoreHorizontal, Pause, Play, Archive, XCircle, RotateCcw, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -95,14 +95,16 @@ interface ActionBarProps {
   onToggleHold: () => void
   onArchive: () => void
   onClose: () => void
+  onReopen: () => void
   onActionTaken: () => void
 }
 
-export function ActionBar({ ticket, messages, isStuck, onToggleHold, onArchive, onClose, onActionTaken }: ActionBarProps) {
+export function ActionBar({ ticket, messages, isStuck, onToggleHold, onArchive, onClose, onReopen, onActionTaken }: ActionBarProps) {
   const router = useRouter()
   const [showInline, setShowInline] = useState<'approve' | 'dispatch' | 'allocate' | null>(null)
 
   const isOpen = ticket.status === 'open' && !ticket.archived
+  const isClosed = ticket.status === 'closed' && !ticket.archived
   const isOnHold = ticket.on_hold === true
   const cta = getCTA(ticket.next_action_reason, isStuck, ticket)
 
@@ -122,8 +124,35 @@ export function ActionBar({ ticket, messages, isStuck, onToggleHold, onArchive, 
     }
   }
 
+  // Archived tickets: no action bar (restore lives in tickets page row actions)
+  if (ticket.archived) return null
+
   return (
     <>
+      {/* Closed ticket: Reopen + Archive */}
+      {isClosed && (
+        <div className="sticky bottom-0 z-10 bg-card border-t border-border">
+          <div className="px-5 py-3 flex items-center gap-2">
+            <Button onClick={onReopen} variant="outline" size="sm" className="flex-1 gap-1.5">
+              <RotateCcw className="h-3.5 w-3.5" /> Reopen
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onArchive}>
+                  <Archive className="h-4 w-4 mr-2" /> Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      )}
+
+      {/* Open ticket: CTA + Hold + Close/Archive */}
       {isOpen && (
         <div className="sticky bottom-0 z-10 bg-card border-t border-border">
           {/* Inline action area — expands above button row */}

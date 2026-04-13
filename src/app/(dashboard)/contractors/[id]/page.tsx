@@ -68,7 +68,7 @@ export default function ContractorDetailPage() {
     if (!contractorId || !propertyManager) return
     const [propertiesRes, ticketsRes] = await Promise.all([
       supabase.from('c1_properties').select('id, address').eq('property_manager_id', propertyManager.id).order('address'),
-      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('contractor_id', contractorId).order('date_logged', { ascending: false }).limit(50),
+      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('contractor_id', contractorId).neq('archived', true).order('date_logged', { ascending: false }).limit(50),
     ])
     if (propertiesRes.data) setAllProperties(propertiesRes.data as PropertyOption[])
     if (ticketsRes.data) setTickets(ticketsRes.data as TicketRow[])

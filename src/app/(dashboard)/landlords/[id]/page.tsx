@@ -62,7 +62,7 @@ export default function LandlordDetailPage() {
     if (propertyIds.length === 0) { setTenantCounts({}); setTickets([]); return }
     const [tenantsRes, ticketsRes] = await Promise.all([
       supabase.from('c1_tenants').select('property_id').in('property_id', propertyIds),
-      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, property_id, archived').in('property_id', propertyIds).order('date_logged', { ascending: false }).limit(50),
+      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, property_id, archived').in('property_id', propertyIds).neq('archived', true).order('date_logged', { ascending: false }).limit(50),
     ])
     if (tenantsRes.data) {
       const counts: Record<string, number> = {}

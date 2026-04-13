@@ -193,7 +193,7 @@ function PropertyDetailInner() {
       supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_id', propertyId).order('full_name'),
       supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_manager_id', propertyManager.id).order('full_name'),
       supabase.from('c1_contractors').select('id, contractor_name, category, categories, contractor_phone, property_ids').eq('property_manager_id', propertyManager.id).eq('active', true),
-      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('property_id', propertyId).order('date_logged', { ascending: false }).limit(50),
+      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('property_id', propertyId).neq('archived', true).order('date_logged', { ascending: false }).limit(50),
       supabase.from('c1_landlords').select('id, full_name, phone, email').eq('property_manager_id', propertyManager.id).order('full_name'),
       supabase.from('c1_rooms').select('id, current_tenant_id, is_vacant, monthly_rent').eq('property_id', propertyId),
     ])

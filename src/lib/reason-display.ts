@@ -44,6 +44,7 @@ export const REASON_DISPLAY: Record<string, ReasonDisplay> = {
 
   // ── Terminal (shown in drawer, not dashboard) ──
   completed:                  { label: 'Completed',           stuckLabel: '',                context: 'Issue resolved' },
+  manually_closed:            { label: 'Closed by PM',        stuckLabel: '',                context: 'Manually closed by property manager' },
   archived:                   { label: 'Archived',            stuckLabel: '',                context: 'Ticket archived' },
   dismissed:                  { label: 'Dismissed',           stuckLabel: '',                context: 'Ticket dismissed' },
   on_hold:                    { label: 'On hold',             stuckLabel: '',                context: 'Ticket paused' },

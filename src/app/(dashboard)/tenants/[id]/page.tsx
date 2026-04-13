@@ -91,7 +91,7 @@ export default function TenantDetailPage() {
   const fetchRelated = useCallback(async () => {
     if (!tenantId || !propertyManager) return
     const [ticketsRes, propertiesRes] = await Promise.all([
-      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('tenant_id', tenantId).order('date_logged', { ascending: false }).limit(50),
+      supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('tenant_id', tenantId).neq('archived', true).order('date_logged', { ascending: false }).limit(50),
       supabase.from('c1_properties').select('id, address').eq('property_manager_id', propertyManager.id).order('address'),
     ])
     if (ticketsRes.data) setTickets(ticketsRes.data as TicketRow[])

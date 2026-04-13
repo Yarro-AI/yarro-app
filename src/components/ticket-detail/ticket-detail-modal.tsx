@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { usePM } from '@/contexts/pm-context'
 import { useTicketDetail } from '@/hooks/use-ticket-detail'
 import { TicketOverview } from './ticket-overview'
 import { ActionBar } from './sections/action-bar'
@@ -24,6 +25,7 @@ export function TicketDetailModal({
   onClose,
   onTicketUpdated,
 }: TicketDetailModalProps) {
+  const { propertyManager } = usePM()
   const {
     ticket,
     conversation,
@@ -38,14 +40,24 @@ export function TicketDetailModal({
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
 
   const isOnHold = ticket?.on_hold === true
+  const pmId = propertyManager?.id
 
   const handleCloseTicket = async () => {
-    if (!ticketId) return
+    if (!ticketId || !pmId) return
     const supabase = createClient()
-    await supabase
-      .from('c1_tickets')
-      .update({ status: 'closed', resolved_at: new Date().toISOString(), next_action_reason: 'archived' })
-      .eq('id', ticketId)
+    const { error } = await supabase.rpc('c1_close_ticket', { p_ticket_id: ticketId, p_pm_id: pmId })
+    if (error) { toast.error('Failed to close ticket'); return }
+    toast.success('Ticket closed')
+    refetch()
+    onTicketUpdated?.()
+  }
+
+  const handleReopenTicket = async () => {
+    if (!ticketId || !pmId) return
+    const supabase = createClient()
+    const { error } = await supabase.rpc('c1_reopen_ticket', { p_ticket_id: ticketId, p_pm_id: pmId })
+    if (error) { toast.error('Failed to reopen ticket'); return }
+    toast.success('Ticket reopened')
     refetch()
     onTicketUpdated?.()
   }
@@ -59,27 +71,10 @@ export function TicketDetailModal({
   }
 
   const handleArchive = async () => {
-    if (!ticket?.id) return
-    const now = new Date().toISOString()
+    if (!ticket?.id || !pmId) return
     const supabase = createClient()
-
-    await supabase
-      .from('c1_tickets')
-      .update({ archived: true, archived_at: now, status: 'closed' })
-      .eq('id', ticket.id)
-
-    await supabase
-      .from('c1_messages')
-      .update({ archived: true, archived_at: now })
-      .eq('ticket_id', ticket.id)
-
-    if (ticket.conversation_id) {
-      await supabase
-        .from('c1_conversations')
-        .update({ archived: true, archived_at: now })
-        .eq('id', ticket.conversation_id)
-    }
-
+    const { error } = await supabase.rpc('c1_archive_ticket', { p_ticket_id: ticket.id, p_pm_id: pmId })
+    if (error) { toast.error('Failed to archive ticket'); return }
     toast.success('Ticket archived')
     setArchiveDialogOpen(false)
     onTicketUpdated?.()
@@ -135,6 +130,7 @@ export function TicketDetailModal({
                   onToggleHold={handleToggleHold}
                   onArchive={() => setArchiveDialogOpen(true)}
                   onClose={handleCloseTicket}
+                  onReopen={handleReopenTicket}
                   onActionTaken={() => { refetch(); onTicketUpdated?.() }}
                 />
               </div>
