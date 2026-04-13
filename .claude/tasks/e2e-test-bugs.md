@@ -123,6 +123,13 @@
 - **Actual:** Contractor gets WhatsApp, landlord gets email, PM gets nothing
 - **Trace:** Edge function dispatch flow — PM notification step missing for manual ticket creation
 
+### BUG-19: Contractor portal doesn't show tenant reschedule request
+- **Test:** 12d
+- **Severity:** High
+- **Expected:** When tenant requests a reschedule, contractor portal shows the proposed new date, reason, and approve/decline options
+- **Actual:** Contractor portal just shows the normal "job scheduled" success state. No indication a reschedule was requested. Tenant's proposed date and reason are invisible to the contractor.
+- **Trace:** Contractor portal frontend — not reading `reschedule_requested`, `reschedule_date`, `reschedule_reason` from the ticket data returned by `c1_get_contractor_ticket`
+
 ### BUG-8: Compliance contractor not notified despite message claiming so
 - **Test:** 4c
 - **Severity:** High

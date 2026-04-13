@@ -387,6 +387,7 @@ $$;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 ALTER PUBLICATION supabase_realtime ADD TABLE c1_rent_ledger;
+ALTER TABLE c1_rent_ledger REPLICA IDENTITY FULL;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
