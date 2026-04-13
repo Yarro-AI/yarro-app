@@ -141,9 +141,10 @@ All 5 are SECURITY DEFINER and protected. Called only by `c1_compute_next_action
 
 ### c1_contractor_context
 - **Purpose:** Gets contractor dispatch context for ticket.
-- **Live in:** `20260327041845_remote_schema.sql`
+- **Live in:** `20260419400000_fix_contractor_context_trade_lookup.sql`
 - **Called by:** `yarro-ticket-notify` edge function
 - **Breaks:** Contractors never assigned to tickets
+- **Modified:** 2026-04-13 — COALESCE(t.maintenance_trade, t.category) for contractor_mapping lookup + JSON category field (SSOT Finding #1)
 
 ### c1_contractor_mark_sent
 - **Purpose:** Records SMS dispatch to contractor (Twilio SID, body, direction).
