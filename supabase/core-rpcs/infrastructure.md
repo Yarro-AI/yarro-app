@@ -53,10 +53,11 @@ These execute automatically on INSERT/UPDATE. Breaking them causes silent data c
 These run on pg_cron schedules. If broken, automated workflows stop silently.
 
 ### c1_contractor_timeout_check
-- **Purpose:** Reminds contractor after 15 min no response. Escalates to PM if still no response.
-- **Live in:** `20260327041845_remote_schema.sql`
+- **Purpose:** Reminds contractor after 15 min no response. Escalates to PM if still no response. Logs CONTRACTOR_TIMED_OUT audit events.
+- **Live in:** `20260419500000_contractor_lifecycle_guards.sql`
 - **Schedule:** Every 15 minutes (`*/15 * * * *`)
 - **Breaks:** Contractors never chased — tickets stuck waiting for response
+- **Modified:** 2026-04-13 — Added CONTRACTOR_TIMED_OUT audit events (SSOT Finding #14)
 
 ### c1_landlord_timeout_check
 - **Purpose:** Escalates stalled tickets when landlord doesn't respond.

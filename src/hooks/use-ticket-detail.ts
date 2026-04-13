@@ -325,11 +325,12 @@ export function getRecipient(json: Json | null): RecipientEntry | null {
   return json as unknown as RecipientEntry
 }
 
-export function getContractorStatus(contractor: ContractorEntry): 'sent' | 'replied' | 'approved' | 'pending' {
+export function getContractorStatus(contractor: ContractorEntry): string {
+  // PM decision overrides contractor lifecycle (highest-level state for display)
   if (contractor.manager_decision === 'approved') return 'approved'
-  if (contractor.replied_at) return 'replied'
-  if (contractor.sent_at) return 'sent'
-  return 'pending'
+  if (contractor.manager_decision === 'declined_by_manager') return 'declined_by_manager'
+  // Contractor lifecycle status is the SSOT — read it, trust it
+  return contractor.status ?? 'pending'
 }
 
 export function getRecipientStatus(json: Json | null): 'sent' | 'replied' | 'pending' | 'none' {

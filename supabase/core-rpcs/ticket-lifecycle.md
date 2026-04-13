@@ -153,10 +153,11 @@ All 5 are SECURITY DEFINER and protected. Called only by `c1_compute_next_action
 - **Breaks:** SMS logging fails — no audit trail for contractor messages
 
 ### c1_msg_merge_contractor
-- **Purpose:** Merges data into contractor JSONB entry (portal_token, quote, etc.). **11 callers.**
-- **Live in:** `20260327041845_remote_schema.sql`
+- **Purpose:** Merges data into contractor JSONB entry (portal_token, quote, etc.). **11 callers.** Includes late reply guard — won't overwrite terminal status with 'replied'.
+- **Live in:** `20260419500000_contractor_lifecycle_guards.sql`
 - **Called by:** `c1_inbound_reply`, `c1_contractor_timeout_check` (multiple), `yarro-dispatcher`, `yarro-scheduling`
 - **Breaks:** Contractor portal tokens not stored, quotes not recorded
+- **Modified:** 2026-04-13 — Late reply guard at merge layer (SSOT Finding #13)
 
 ### c1_submit_contractor_schedule
 - **Purpose:** Processes contractor schedule submission via portal token.
