@@ -55,11 +55,8 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
-function daysUntilExpiry(dateStr: string | null): string {
-  if (!dateStr) return ''
-  const expiry = new Date(dateStr)
-  const now = new Date()
-  const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+function formatDaysRemaining(days: number | null): string {
+  if (days === null || days === undefined) return ''
   if (days < 0) return `${Math.abs(days)} days overdue`
   if (days === 0) return 'Expires today'
   if (days === 1) return '1 day remaining'
@@ -87,26 +84,10 @@ export default function CertificateDetailPage() {
   const fetchCertificate = useCallback(async () => {
     if (!propertyManager) return
 
-    const [certResult, ticketResult] = await Promise.all([
-      supabase
-        .from('c1_compliance_certificates')
-        .select('*, c1_properties(address), c1_contractors(contractor_name)')
-        .eq('id', certId)
-        .eq('property_manager_id', propertyManager.id)
-        .single(),
-      supabase
-        .from('c1_tickets')
-        .select('id, next_action, next_action_reason')
-        .eq('compliance_certificate_id', certId)
-        .eq('status', 'open')
-        .eq('archived', false)
-        .limit(1),
-    ])
-
-    const activeTicket = ticketResult.data?.[0] ?? null
-    setHasActiveTicket(!!activeTicket)
-
-    const { data, error } = certResult
+    const { data, error } = await supabase.rpc('compliance_get_cert_detail', {
+      p_cert_id: certId,
+      p_pm_id: propertyManager.id,
+    })
 
     if (error || !data) {
       toast.error('Certificate not found')
@@ -114,33 +95,14 @@ export default function CertificateDetailPage() {
       return
     }
 
-    // Compute display status from ticket bucket (next_action) — no hardcoded reason lists
-    let status = 'incomplete'
-    if (activeTicket) {
-      const reason = activeTicket.next_action_reason as string | null
-      const bucket = activeTicket.next_action as string | null
-
-      if (reason === 'cert_renewed' || reason === 'completed') status = 'renewed'
-      else if (bucket === 'scheduled') status = 'renewal_scheduled'
-      else if (bucket === 'waiting') status = 'in_progress'
-      else if (bucket === 'needs_action') status = 'awaiting_dispatch'
-      else status = 'renewal_requested'
-    } else if (data.document_url && data.expiry_date) {
-      const expiry = new Date(data.expiry_date)
-      const now = new Date()
-      const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      if (expiry < now) status = 'expired'
-      else if (days <= 30) status = 'expiring_soon'
-      else status = 'valid'
-    }
-
-    const contractorData = data.c1_contractors as unknown as { contractor_name: string } | null
+    const cert = data as Record<string, unknown>
+    setHasActiveTicket(!!(cert.ticket as Record<string, unknown> | null))
     setCertificate({
-      ...data,
-      status,
-      contractor_name: contractorData?.contractor_name ?? null,
+      ...cert,
+      status: cert.display_status as string,
+      contractor_name: cert.contractor_name as string | null,
     } as CertificateDetail)
-    setPropertyAddress((data.c1_properties as unknown as { address: string })?.address || 'Unknown')
+    setPropertyAddress((cert.property_address as string) || 'Unknown')
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [certId, propertyManager])
@@ -357,8 +319,8 @@ export default function CertificateDetailPage() {
           )}
         >
           {certificate.status === 'expired'
-            ? `This certificate expired on ${formatDate(certificate.expiry_date)}. ${daysUntilExpiry(certificate.expiry_date)}.`
-            : `This certificate is expiring soon — ${daysUntilExpiry(certificate.expiry_date)}.`}
+            ? `This certificate expired on ${formatDate(certificate.expiry_date)}. ${formatDaysRemaining((certificate as unknown as Record<string, unknown>).days_remaining as number | null)}.`
+            : `This certificate is expiring soon — ${formatDaysRemaining((certificate as unknown as Record<string, unknown>).days_remaining as number | null)}.`}
         </div>
       )}
 
@@ -434,7 +396,7 @@ export default function CertificateDetailPage() {
           <DetailItem label="Issued Date" value={formatDate(certificate.issued_date)} />
           <DetailItem label="Expiry Date" value={formatDate(certificate.expiry_date)} />
           {certificate.expiry_date && (
-            <DetailItem label="Time Remaining" value={daysUntilExpiry(certificate.expiry_date)} />
+            <DetailItem label="Time Remaining" value={formatDaysRemaining((certificate as unknown as Record<string, unknown>).days_remaining as number | null)} />
           )}
           <DetailItem label="Added" value={formatDate(certificate.created_at)} />
         </div>

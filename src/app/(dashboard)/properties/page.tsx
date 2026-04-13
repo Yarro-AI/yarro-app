@@ -285,12 +285,13 @@ export default function PropertiesPage() {
     }
     const statusMap = new Map<string, 'valid' | 'expiring' | 'expired' | 'incomplete'>()
 
-    for (const row of data as unknown as Array<{ property_id: string; display_status: string }>) {
-      const displayToLegacy: Record<string, 'valid' | 'expiring' | 'expired' | 'incomplete'> = {
-        valid: 'valid', expiring_soon: 'expiring', expired: 'expired',
-        incomplete: 'incomplete', review: 'expiring', renewal_requested: 'valid', renewal_scheduled: 'valid',
-      }
-      const mapped = displayToLegacy[row.display_status] || 'incomplete'
+    for (const row of data as unknown as Array<{ property_id: string; display_status: string; status_group: string }>) {
+      // Use status_group (SSOT) for valid; display_status for specific attention type
+      const mapped: 'valid' | 'expiring' | 'expired' | 'incomplete' =
+        row.status_group === 'valid' ? 'valid'
+        : row.display_status === 'expired' ? 'expired'
+        : row.display_status === 'incomplete' ? 'incomplete'
+        : 'expiring'
       const current = statusMap.get(row.property_id)
       const currentRank = current ? (severityRank[current] ?? 0) : -1
       if ((severityRank[row.display_status] ?? 0) > currentRank) {

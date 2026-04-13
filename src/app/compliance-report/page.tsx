@@ -59,8 +59,7 @@ function ComplianceReportContent() {
   }, [filtered])
 
   const actionsNeeded = filtered.filter((r) =>
-    r.display_status === 'expired' || r.display_status === 'incomplete' ||
-    r.display_status === 'expiring_soon' || r.display_status === 'review'
+    (r as unknown as { status_group?: string }).status_group === 'attention'
   ).length
 
   if (loading) {

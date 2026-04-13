@@ -8,31 +8,31 @@ import { CERTIFICATE_LABELS, type CertificateType } from '@/lib/constants'
 import { StatusBadge } from '@/components/status-badge'
 import { cn } from '@/lib/utils'
 
-function ExpiryLabel({ expiryDate }: { expiryDate: string }) {
-  const expiry = new Date(expiryDate)
-  const daysUntil = differenceInDays(expiry, new Date())
-  const formatted = format(expiry, 'd MMM yyyy')
+function ExpiryLabel({ expiryDate, daysRemaining }: { expiryDate: string; daysRemaining?: number | null }) {
+  const formatted = format(new Date(expiryDate), 'd MMM yyyy')
+  // Use backend-computed days_remaining if available, otherwise compute locally
+  const days = daysRemaining ?? differenceInDays(new Date(expiryDate), new Date())
 
-  if (daysUntil < 0) {
+  if (days < 0) {
     return (
       <div>
         <p className="text-sm font-semibold text-danger">{formatted}</p>
-        <p className="text-[11px] text-danger">Expired {Math.abs(daysUntil)} days ago</p>
+        <p className="text-[11px] text-danger">Expired {Math.abs(days)} days ago</p>
       </div>
     )
   }
-  if (daysUntil <= 30) {
+  if (days <= 30) {
     return (
       <div>
         <p className="text-sm font-semibold text-warning">{formatted}</p>
-        <p className="text-[11px] text-warning">{daysUntil} days remaining</p>
+        <p className="text-[11px] text-warning">{days} days remaining</p>
       </div>
     )
   }
   return (
     <div>
       <p className="text-sm font-semibold text-success">{formatted}</p>
-      <p className="text-[11px] text-muted-foreground">{daysUntil} days remaining</p>
+      <p className="text-[11px] text-muted-foreground">{days} days remaining</p>
     </div>
   )
 }
@@ -234,7 +234,7 @@ export function ComplianceOverviewTab({ context, basic, cert, loading }: Complia
             {cert.expiry_date && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Expiry</span>
-                <ExpiryLabel expiryDate={cert.expiry_date} />
+                <ExpiryLabel expiryDate={cert.expiry_date} daysRemaining={(cert as unknown as Record<string, unknown>).days_remaining as number | undefined} />
               </div>
             )}
 

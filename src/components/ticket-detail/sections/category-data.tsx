@@ -10,21 +10,20 @@ import { cn } from '@/lib/utils'
 
 // --- Shared sub-components ---
 
-function ExpiryLabel({ expiryDate }: { expiryDate: string }) {
-  const expiry = new Date(expiryDate)
-  const daysUntil = differenceInDays(expiry, new Date())
-  const formatted = format(expiry, 'd MMM yyyy')
+function ExpiryLabel({ expiryDate, daysRemaining }: { expiryDate: string; daysRemaining?: number | null }) {
+  const formatted = format(new Date(expiryDate), 'd MMM yyyy')
+  const days = daysRemaining ?? differenceInDays(new Date(expiryDate), new Date())
 
-  if (daysUntil < 0) return (
+  if (days < 0) return (
     <div className="text-right">
       <span className="text-sm font-semibold text-danger">{formatted}</span>
-      <p className="text-[11px] text-danger/70">Expired {Math.abs(daysUntil)} days ago</p>
+      <p className="text-[11px] text-danger/70">Expired {Math.abs(days)} days ago</p>
     </div>
   )
-  if (daysUntil <= 30) return (
+  if (days <= 30) return (
     <div className="text-right">
       <span className="text-sm font-semibold text-warning">{formatted}</span>
-      <p className="text-[11px] text-warning/70">Expires in {daysUntil} days</p>
+      <p className="text-[11px] text-warning/70">Expires in {days} days</p>
     </div>
   )
   return <span className="text-sm text-card-foreground">{formatted}</span>
@@ -224,7 +223,7 @@ function ComplianceSection({ ticket }: { ticket: TicketDetail }) {
         {cert.expiry_date && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Expiry</span>
-            <ExpiryLabel expiryDate={cert.expiry_date} />
+            <ExpiryLabel expiryDate={cert.expiry_date} daysRemaining={(cert as unknown as Record<string, unknown>).days_remaining as number | undefined} />
           </div>
         )}
         {cert.status && (

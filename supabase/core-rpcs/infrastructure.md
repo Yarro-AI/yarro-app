@@ -159,6 +159,18 @@ These run on pg_cron schedules. If broken, automated workflows stop silently.
 - **Live in:** `20260419600000_shared_timeout_function.sql`
 - **Called by:** Dashboard `page.tsx`
 - **Modified:** 2026-04-13 — Uses shared `compute_is_past_timeout()` function (SSOT Findings #4, #9)
+
+### compliance_get_all_statuses
+- **Purpose:** All cert statuses with display_status + status_group + days_remaining.
+- **Live in:** `20260419700000_compliance_ssot_display.sql`
+- **Called by:** Compliance list page, sidebar badge, compliance report
+- **Modified:** 2026-04-13 — Uses shared `compute_cert_display_status()`, added `status_group` (SSOT Findings #2, #10)
+
+### compliance_get_cert_detail
+- **Purpose:** Single cert detail with display_status + days_remaining + ticket info.
+- **Live in:** `20260419700000_compliance_ssot_display.sql`
+- **Called by:** Cert detail page (`compliance/[id]/page.tsx`)
+- **Added:** 2026-04-13 — Replaces direct .from() query + frontend status computation (SSOT Finding #2)
 - **Breaks:** Dashboard to-do queue empty
 
 ### c1_get_recent_events

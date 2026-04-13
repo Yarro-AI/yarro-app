@@ -45,6 +45,7 @@ interface ComplianceRow {
   property_id: string
   certificate_type: CertificateType
   display_status: string
+  status_group: string
   expiry_date: string | null
   days_remaining: number | null
   issued_date: string | null
@@ -92,13 +93,13 @@ export default function CompliancePage() {
     if (data && data.length > 0) {
       setCertificates((data as unknown as Array<{
         cert_id: string | null; property_id: string; property_address: string
-        certificate_type: string; display_status: string; expiry_date: string | null
+        certificate_type: string; display_status: string; status_group: string; expiry_date: string | null
         days_remaining: number | null; issued_date: string | null
         issued_by: string | null; certificate_number: string | null
       }>).map((r) => ({
         cert_id: r.cert_id, property_id: r.property_id,
         certificate_type: r.certificate_type as CertificateType,
-        display_status: r.display_status, expiry_date: r.expiry_date,
+        display_status: r.display_status, status_group: r.status_group, expiry_date: r.expiry_date,
         days_remaining: r.days_remaining, issued_date: r.issued_date,
         issued_by: r.issued_by, certificate_number: r.certificate_number,
         property_address: r.property_address || 'Unknown',
@@ -116,14 +117,14 @@ export default function CompliancePage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Counts derived from actual data (single source of truth)
+  // Counts derived from backend status_group (SSOT)
   const counts = useMemo(() => {
     const c = { expired: 0, expiring_soon: 0, incomplete: 0, valid: 0 }
     for (const cert of certificates) {
       if (cert.display_status === 'expired') c.expired++
       else if (cert.display_status === 'expiring_soon') c.expiring_soon++
       else if (cert.display_status === 'incomplete') c.incomplete++
-      else if (cert.display_status === 'valid' || cert.display_status === 'renewal_scheduled' || cert.display_status === 'renewal_requested') c.valid++
+      else if (cert.status_group === 'valid') c.valid++
     }
     return c
   }, [certificates])
@@ -131,7 +132,7 @@ export default function CompliancePage() {
   const filteredCertificates = useMemo(() => {
     if (activeFilter === 'all') return certificates
     return certificates.filter((c) => {
-      if (activeFilter === 'valid') return c.display_status === 'valid' || c.display_status === 'renewal_scheduled' || c.display_status === 'renewal_requested'
+      if (activeFilter === 'valid') return c.status_group === 'valid'
       if (activeFilter === 'expiring_soon') return c.display_status === 'expiring_soon'
       if (activeFilter === 'incomplete') return c.display_status === 'incomplete'
       return c.display_status === activeFilter
