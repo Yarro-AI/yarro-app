@@ -190,8 +190,8 @@ export function RoomFormDialog({
                 {rentFrequency === 'monthly' ? 'Due Day' : 'Due Day (0=Mon – 6=Sun)'}
               </p>
               {rentFrequency === 'monthly' ? (
-                <Select value={rentDueDay || '1'} onValueChange={setRentDueDay}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={rentDueDay || undefined} onValueChange={setRentDueDay}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                       <SelectItem key={d} value={String(d)}>{d}{d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th'}</SelectItem>
