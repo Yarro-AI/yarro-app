@@ -102,6 +102,20 @@ const STATUS_STYLES: Record<string, string> = {
   escalation: 'bg-red-500/10 text-red-700',
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  sent: 'Sent',
+  awaiting: 'Awaiting',
+  quoted: 'Quoted',
+  approved: 'Approved',
+  completed: 'Completed',
+  declined: 'Declined',
+  declined_by_manager: 'Declined',
+  no_response: 'No Response',
+  send_failed: 'Send Failed',
+  escalation: 'Escalation',
+}
+
 // ─── Build purpose entries ───
 
 const OOH_OUTCOME_LABELS: Record<string, string> = {
@@ -1091,8 +1105,8 @@ export function TicketDispatchTab({ messages, outboundLog, ticketId, onRedispatc
                       {entry.amount && (
                         <span className="text-xs font-medium text-foreground/70">{entry.amount}</span>
                       )}
-                      <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium capitalize', STATUS_STYLES[entry.status] || STATUS_STYLES.pending)}>
-                        {entry.status}
+                      <span className={cn('px-1.5 py-0.5 text-[10px] rounded-full font-medium', STATUS_STYLES[entry.status] || STATUS_STYLES.pending)}>
+                        {STATUS_LABELS[entry.status] || entry.status}
                       </span>
                       {entry.channel && (
                         <span className="text-muted-foreground/60" title={entry.channel === 'email' ? 'Sent via email' : entry.channel === 'whatsapp' ? 'Sent via WhatsApp' : 'Via portal'}>
