@@ -171,11 +171,7 @@ async function processReminder(
     [reminderCol]: new Date().toISOString(),
   };
 
-  // Overdue flip: handled by bulk UPDATE at start of cron run.
-  // This per-entry flip is kept as a safety net for any entries missed by the bulk query.
-  if (entry.status === "pending" && new Date(entry.due_date) < new Date()) {
-    (updatePayload as Record<string, string>).status = "overdue";
-  }
+  // Overdue is derived by rent_effective_status() — no status flip needed.
 
   const { error: updateError } = await supabase
     .from("c1_rent_ledger")
@@ -226,19 +222,7 @@ Deno.serve(async (_req: Request) => {
   const supabase = createSupabaseClient();
 
   try {
-    // Day-1 overdue flip: any pending entry past due date gets marked overdue immediately.
-    // This triggers trg_rent_ledger_overdue_ticket for instant dashboard tickets.
-    const { error: flipError, count: flippedCount } = await supabase
-      .from("c1_rent_ledger")
-      .update({ status: "overdue" })
-      .eq("status", "pending")
-      .lt("due_date", new Date().toISOString().split("T")[0]);
-
-    if (flipError) {
-      console.error(`[${FN}] Overdue flip failed:`, flipError.message);
-    } else if (flippedCount && flippedCount > 0) {
-      console.log(`[${FN}] Flipped ${flippedCount} entries to overdue`);
-    }
+    // Overdue is now derived by rent_effective_status() — no bulk flip needed.
 
     // BUG-2 fix: Escalate priority on open rent arrears tickets based on current days overdue
     // Tiers: >= 14d = urgent, >= 7d = high, >= 1d = medium
@@ -300,10 +284,12 @@ Deno.serve(async (_req: Request) => {
     let ticketsCreated = 0;
     let ticketsUpdated = 0;
     try {
+      // Find PMs with potentially overdue entries (pending or partial, past due)
+      // The RPC get_rent_overdue_for_tickets uses rent_effective_status() for accurate filtering
       const { data: pmRows } = await supabase
         .from("c1_rent_ledger")
         .select("property_manager_id")
-        .in("status", ["overdue", "partial"])
+        .in("status", ["pending", "partial"])
         .gte("due_date", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
         .lt("due_date", new Date().toISOString().split("T")[0]);
 
