@@ -90,6 +90,9 @@ export function RoomFormDialog({
       if (isNaN(day) || day < 1 || day > 31) return 'Rent due day must be between 1 and 31 (or 0 for last day of month)'
     }
 
+    // If rent is set, due day is required
+    if (monthlyRent && !rentDueDay) return 'Due day is required when rent is set'
+
     return null
   }
 

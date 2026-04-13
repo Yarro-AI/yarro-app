@@ -12,6 +12,7 @@ Review each morning when writing the day's PRD.
 ## Items
 
 <!-- Add items below this line -->
+- [2026-04-12] CRITICAL: Mid-month tenant changeover breaks rent ledger. Unique constraint (room_id, due_date) prevents new entry for new tenant when old tenant's entry exists. Need: (1) change constraint to (room_id, tenant_id, due_date), (2) room_assign_tenant should auto-create ledger entry for new tenant, (3) room_end_tenancy should handle partial month, (4) rent page must show both tenants for same month, (5) rent cron queries need updating. Touches: DB schema, 3 RPCs, rent page, cron. Dedicated sprint. [priority: critical]
 - [2026-04-10] UX: Compliance drawer dispatch — wire compliance_needs_dispatch CTA to inline_dispatch (dispatch from drawer, no page hop). Add "View certificate" link in cert details section for full cert page access. Part of next UI/UX session. [priority: high]
 - [2026-04-10] UX: Manual ticket form — no title field, every manual ticket gets "New maintenance ticket" title. Needs title input or auto-generation from description. Part of next UI/UX session. [priority: medium]
 - [2026-04-10] UX: Assign contractor CTA intermittent — StageDispatchAction sometimes doesn't respond. Investigate. [priority: medium]
@@ -95,6 +96,16 @@ Review each morning when writing the day's PRD.
 - [2026-04-01] Landlord approval skip for solo operators — `c1_message_next_action` should also skip landlord approval when `landlord_id IS NULL` (not just when `require_landlord_approval = false`). Currently defaults to requiring approval even with no landlord linked, which causes Twilio SMS failure on null phone. One-line fix in the RPC's IF condition. [priority: high]
 - [2026-03-30] Table scroll / page scroll fix — tenants page (and likely all table pages) has broken scroll behaviour. Table should scroll independently or page should scroll naturally. Key pre-demo UI fix. [priority: high]
 - [2026-03-30] Compliance onboarding flow — focus on ONE property: pick a property → select which certs are needed → upload those certs (they may only have 1-2 to hand, option to add rest later) → complete that property's compliance in full. Then send a test reminder message (WhatsApp/email) showing what happens when a cert is about to expire. Gets them to the "aha" moment fast — see the full loop on one property before scaling to the rest. [priority: high]
+
+### Audit Trail Gaps (logged 2026-04-13)
+- [2026-04-13] AUDIT: Rent payment not logged to c1_events — only in c1_rent_payments table. Need RENT_PAYMENT_RECORDED event in central audit. [priority: high]
+- [2026-04-13] AUDIT: Tenant creation not logged (any path: direct insert, onboarding, bulk import). Need TENANT_CREATED event. [priority: high]
+- [2026-04-13] AUDIT: Tenant field edits stored in local _audit_log JSONB, not in c1_events. Need TENANT_UPDATED event in central audit. [priority: high]
+- [2026-04-13] AUDIT: Property details edits not logged. Need PROPERTY_UPDATED event. [priority: medium]
+- [2026-04-13] AUDIT: c1_events has no direct FK to tenant_id, property_id, room_id — events linked only through ticket_id or metadata JSONB. Add proper FK columns for entity-level timelines. [priority: high]
+- [2026-04-13] AUDIT: Room-level event history needed for recurring issue detection and preventive maintenance insights. [priority: high]
+- [2026-04-13] AUDIT: Ticket creation event not logged to c1_events. [priority: medium]
+- [2026-04-13] AUDIT: _audit_log JSONB on tenant/property records fetched but never rendered on detail pages. [priority: medium]
 
 ### Security
 - [2026-04-04] SECURITY: `c1_inbound_reply` (SECURITY DEFINER) doesn't verify `property_manager_id` before updating `c1_messages`. Low risk (attacker would need a valid Twilio SID) but should be hardened with an explicit PM ownership check. Protected RPC — discuss before modifying. [priority: medium]
