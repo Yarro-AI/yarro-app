@@ -156,8 +156,9 @@ These run on pg_cron schedules. If broken, automated workflows stop silently.
 
 ### c1_get_dashboard_todo
 - **Purpose:** Fetches prioritized to-do list scored by system.
-- **Live in:** `20260405600000_dashboard_todo_perf.sql`
+- **Live in:** `20260419600000_shared_timeout_function.sql`
 - **Called by:** Dashboard `page.tsx`
+- **Modified:** 2026-04-13 — Uses shared `compute_is_past_timeout()` function (SSOT Findings #4, #9)
 - **Breaks:** Dashboard to-do queue empty
 
 ### c1_get_recent_events
