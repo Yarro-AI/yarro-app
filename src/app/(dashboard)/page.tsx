@@ -42,7 +42,7 @@ import { JobsList } from '@/components/dashboard/jobs-list'
 import { WaitingSection } from '@/components/dashboard/waiting-section'
 import { ScheduledSection } from '@/components/dashboard/scheduled-section'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
-import { SimulationOverlay } from '@/components/onboarding/simulation-overlay'
+import { DashboardTour } from '@/components/onboarding/dashboard-tour'
 import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
 import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
 
@@ -482,11 +482,13 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      {/* Magic-first onboarding: simulation overlay */}
-      {propertyManager && (propertyManager as Record<string, unknown>).onboarding_step === 'simulation' && (
-        <SimulationOverlay
+      {/* Magic-first onboarding: guided tour → simulation → investment CTA */}
+      {propertyManager && inSimulation && (
+        <DashboardTour
           pmId={propertyManager.id}
-          onComplete={async () => {
+          demoTicketId={actionable[0]?.ticket_id ?? null}
+          openTicket={openTicket}
+          onTourDone={async () => {
             await refreshPM()
             router.push('/import')
           }}

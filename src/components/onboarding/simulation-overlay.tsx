@@ -112,17 +112,29 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
     setState('idle')
   }, [])
 
-  const handleInvest = async () => {
+  const wipeDemoAndComplete = async () => {
     try {
-      // onboarding_step added by migration, not yet in generated types
+      // Wipe all is_demo data + set onboarding_step='complete' in one RPC
+      await supabase.rpc('onboarding_wipe_demo', { p_pm_id: pmId })
+    } catch (err) {
+      console.error('[simulation] Demo wipe failed:', err)
+      // Fallback: at least set onboarding_step manually
       await supabase
         .from('c1_property_managers')
         .update({ onboarding_step: 'complete' } as never)
         .eq('id', pmId)
-    } catch {
-      // Non-blocking — onComplete handles the redirect regardless
     }
+  }
+
+  const handleMakeItReal = async () => {
+    await wipeDemoAndComplete()
     onComplete()
+  }
+
+  const handleExploreFirst = async () => {
+    await wipeDemoAndComplete()
+    // Don't call onComplete (which navigates to /import) — just reload the dashboard
+    window.location.href = '/'
   }
 
   // Idle state: pulsing FAB
@@ -207,11 +219,11 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
                   <CheckCircle2 className="w-8 h-8 text-green-500" />
                 </div>
                 <h2 className={`${typography.pageTitle}`}>
-                  {smsError ? 'Simulation complete!' : 'Check your phone.'}
+                  {smsError ? 'Here\u2019s what just happened.' : 'Check your phone.'}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-2">
                   {smsError
-                    ? 'That\'s how Yarro handles emergencies — automatically, in seconds.'
+                    ? 'Yarro triaged the issue, matched a contractor, checked the budget, and dispatched a quote \u2014 all automatically.'
                     : 'That just happened for real. Your contractor would already be on their way.'}
                 </p>
                 {smsError && (
@@ -230,15 +242,21 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
             {state === 'investment' && (
               <div className="text-center">
                 <h2 className={`${typography.pageTitle}`}>
-                  That was a simulation.
+                  That took 6 seconds.
                 </h2>
                 <p className="text-sm text-muted-foreground mt-2 mb-8">
-                  To make this real, we just need your first property.
+                  To put Yarro to work on a real property:
                 </p>
-                <Button onClick={handleInvest} size="lg" className="w-full">
-                  Add my first property
+                <Button onClick={handleMakeItReal} size="lg" className="w-full">
+                  Let&apos;s make it real
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
+                <button
+                  onClick={handleExploreFirst}
+                  className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  I&apos;ll explore first
+                </button>
               </div>
             )}
 

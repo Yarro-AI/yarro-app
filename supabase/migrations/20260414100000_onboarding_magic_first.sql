@@ -145,3 +145,64 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.onboarding_seed_demo TO authenticated;
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- 3. Wipe demo data — clean break before real onboarding
+-- ═══════════════════════════════════════════════════════════════
+-- Called when user finishes the simulation and clicks "Let's make it real".
+-- Deletes all is_demo=true rows in FK-safe order so the user starts
+-- real onboarding with a completely clean slate.
+
+CREATE OR REPLACE FUNCTION public.onboarding_wipe_demo(p_pm_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Verify ownership
+  IF NOT EXISTS (
+    SELECT 1 FROM c1_property_managers WHERE id = p_pm_id AND user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- Delete in FK-safe order (leaf tables first)
+  DELETE FROM c1_events WHERE ticket_id IN (
+    SELECT id FROM c1_tickets WHERE property_manager_id = p_pm_id AND is_demo = true);
+
+  DELETE FROM c1_outbound_log WHERE ticket_id IN (
+    SELECT id FROM c1_tickets WHERE property_manager_id = p_pm_id AND is_demo = true);
+
+  DELETE FROM c1_messages WHERE ticket_id IN (
+    SELECT id FROM c1_tickets WHERE property_manager_id = p_pm_id AND is_demo = true);
+
+  DELETE FROM c1_tickets WHERE property_manager_id = p_pm_id AND is_demo = true;
+
+  DELETE FROM c1_conversations WHERE property_manager_id = p_pm_id
+    AND tenant_id IN (
+      SELECT id FROM c1_tenants WHERE property_manager_id = p_pm_id AND is_demo = true);
+
+  DELETE FROM c1_rent_ledger WHERE room_id IN (
+    SELECT id FROM c1_rooms WHERE property_id IN (
+      SELECT id FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = true));
+
+  -- Unlink demo tenants from rooms before deleting rooms (avoids trigger on is_vacant)
+  UPDATE c1_tenants SET room_id = NULL
+    WHERE property_manager_id = p_pm_id AND is_demo = true;
+
+  DELETE FROM c1_rooms WHERE property_id IN (
+    SELECT id FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = true);
+
+  DELETE FROM c1_tenants WHERE property_manager_id = p_pm_id AND is_demo = true;
+  DELETE FROM c1_contractors WHERE property_manager_id = p_pm_id AND is_demo = true;
+  DELETE FROM c1_properties WHERE property_manager_id = p_pm_id AND is_demo = true;
+
+  -- Mark onboarding as complete
+  UPDATE c1_property_managers
+  SET onboarding_step = 'complete'
+  WHERE id = p_pm_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.onboarding_wipe_demo TO authenticated;
