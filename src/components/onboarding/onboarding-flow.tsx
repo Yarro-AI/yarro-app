@@ -72,8 +72,10 @@ export function OnboardingFlow() {
     setStep('pain-point')
   }
 
-  const handlePainPointComplete = () => {
-    // onboarding_step is already set to 'simulation' by PainPointPicker
+  const handlePainPointComplete = async () => {
+    // onboarding_step is set to 'simulation' by PainPointPicker in DB
+    // Must refresh PM context so dashboard sees the new value
+    await refreshPM()
     setStep('done') // redirects to dashboard where SimulationOverlay renders
   }
 
