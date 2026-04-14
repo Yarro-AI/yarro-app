@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { useDateRange } from '@/contexts/date-range-context'
@@ -41,6 +42,7 @@ import { JobsList } from '@/components/dashboard/jobs-list'
 import { WaitingSection } from '@/components/dashboard/waiting-section'
 import { ScheduledSection } from '@/components/dashboard/scheduled-section'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
+import { SimulationOverlay } from '@/components/onboarding/simulation-overlay'
 import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
 import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
 
@@ -123,6 +125,7 @@ const EVENT_DOT_COLOR: Record<string, string> = {
 export default function DashboardPage() {
   const { propertyManager, refreshPM } = usePM()
   const { dateRange } = useDateRange()
+  const router = useRouter()
   const openTicket = useOpenTicket()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [allTickets, setAllTickets] = useState<TicketSummary[]>([])
@@ -475,6 +478,17 @@ export default function DashboardPage() {
           100% { opacity: 0; }
         }
       `}</style>
+
+      {/* Magic-first onboarding: simulation overlay */}
+      {propertyManager && (propertyManager as Record<string, unknown>).onboarding_step === 'simulation' && (
+        <SimulationOverlay
+          pmId={propertyManager.id}
+          onComplete={async () => {
+            await refreshPM()
+            router.push('/import')
+          }}
+        />
+      )}
       {/* Header — greeting */}
       <div className="px-6 py-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold text-foreground">{greetingLabel}</h1>

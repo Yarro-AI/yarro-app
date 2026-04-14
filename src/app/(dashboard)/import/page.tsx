@@ -5,7 +5,7 @@ import { usePM } from '@/contexts/pm-context'
 import { OnboardingFlow } from '@/components/onboarding/onboarding-flow'
 import { PropertyCard } from '@/components/onboarding/property-card'
 import { SuccessCard } from '@/components/onboarding/success-card'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 
 export default function ImportPage() {
@@ -14,23 +14,39 @@ export default function ImportPage() {
   const [propertyDone, setPropertyDone] = useState(false)
   const [dismissing, setDismissing] = useState(false)
 
-  // No PM yet → full onboarding (account + demo)
+  // Read onboarding_step from PM record (SSOT — not localStorage)
+  const onboardingStep = propertyManager
+    ? (propertyManager as unknown as Record<string, unknown>).onboarding_step as string | null
+    : undefined
+
+  // Redirect to dashboard if simulation step — overlay renders there
+  useEffect(() => {
+    if (onboardingStep === 'simulation') {
+      router.replace('/')
+    }
+  }, [onboardingStep, router])
+
+  // No PM yet → full onboarding (account + pain-point picker)
   if (!propertyManager) {
     return <OnboardingFlow />
   }
 
-  // PM exists but demo not seen → onboarding flow handles it
-  const demoSeen = localStorage.getItem(`yarro_demo_seen_${propertyManager.id}`)
-  if (!demoSeen) {
+  // Still in onboarding flow (account or segment step) → show onboarding
+  if (onboardingStep === 'account' || onboardingStep === 'segment') {
     return <OnboardingFlow />
   }
 
+  // Simulation step → useEffect handles redirect above
+  if (onboardingStep === 'simulation') {
+    return null
+  }
+
+  // onboarding_step is 'complete' or null → show property creation
   const handleDismiss = () => {
     setDismissing(true)
     setTimeout(() => router.push('/'), 600)
   }
 
-  // PM exists + demo seen → property creation flow
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-500 ${

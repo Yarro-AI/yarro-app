@@ -9,6 +9,7 @@ type PropertyManager = Tables<'c1_property_managers'>
 interface AuthUser {
   id: string
   email: string
+  name?: string
 }
 
 interface PMContextType {
@@ -81,7 +82,11 @@ export function PMProvider({ children }: { children: ReactNode }) {
     // Middleware already validates with getUser() on every request
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
-      setAuthUser(session?.user ? { id: session.user.id, email: session.user.email! } : null)
+      setAuthUser(session?.user ? {
+        id: session.user.id,
+        email: session.user.email!,
+        name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+      } : null)
       setInitialized(true) // Mark that we've checked - now safe to show "no user" state
     })
 
@@ -94,7 +99,11 @@ export function PMProvider({ children }: { children: ReactNode }) {
           setAuthUser(null)
         } else if (session?.user) {
           setUserId(session.user.id)
-          setAuthUser({ id: session.user.id, email: session.user.email! })
+          setAuthUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+          })
         }
       }
     )

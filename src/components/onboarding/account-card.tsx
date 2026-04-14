@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { usePM } from '@/contexts/pm-context'
 import { normalizePhone, isValidUKPhone } from '@/lib/normalize'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -11,26 +10,26 @@ import { Loader2, ChevronLeft } from 'lucide-react'
 import { typography } from '@/lib/typography'
 
 interface AccountCardProps {
-  authUser: { id: string; email: string }
-  onComplete: () => void
+  authUser: { id: string; email: string; name?: string }
+  onComplete: (pmId: string) => void
 }
 
-type Step = 'name' | 'contact' | 'contact-detail' | 'role'
+type Step = 'name' | 'phone' | 'role'
 
 export function AccountCard({ authUser, onComplete }: AccountCardProps) {
-  const { refreshPM } = usePM()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<Step>('name')
 
-  const [name, setName] = useState('')
-  const [preferredContact, setPreferredContact] = useState<'whatsapp' | 'email'>('whatsapp')
+  const hasGoogleName = !!authUser.name?.trim()
+  const initialStep: Step = hasGoogleName ? 'phone' : 'name'
+  const [step, setStep] = useState<Step>(initialStep)
+
+  const [name, setName] = useState(authUser.name?.trim() || '')
   const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState(authUser.email)
   const [role, setRole] = useState<string | null>(null)
 
-  const steps: Step[] = ['name', 'contact', 'contact-detail', 'role']
+  const steps: Step[] = hasGoogleName ? ['phone', 'role'] : ['name', 'phone', 'role']
   const stepIndex = steps.indexOf(step)
 
   const handleBack = () => {
@@ -43,21 +42,12 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
   const handleNameNext = () => {
     if (!name.trim()) { setError('Your name is required'); return }
     setError(null)
-    setStep('contact')
+    setStep('phone')
   }
 
-  const handleContactSelect = (method: 'whatsapp' | 'email') => {
-    setPreferredContact(method)
-    setStep('contact-detail')
-  }
-
-  const handleContactDetailNext = () => {
-    if (preferredContact === 'whatsapp') {
-      if (!phone.trim()) { setError('Your WhatsApp number is required'); return }
-      if (!isValidUKPhone(phone)) { setError('Enter a valid UK phone number'); return }
-    } else {
-      if (!email.trim()) { setError('Your email is required'); return }
-    }
+  const handlePhoneNext = () => {
+    if (!phone.trim()) { setError('Your mobile number is required for alerts'); return }
+    if (!isValidUKPhone(phone)) { setError('Enter a valid UK phone number'); return }
     setError(null)
     setStep('role')
   }
@@ -68,12 +58,12 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
     setSaving(true)
 
     try {
-      const { error: rpcError } = await supabase.rpc('onboarding_create_account', {
+      const { data, error: rpcError } = await supabase.rpc('onboarding_create_account', {
         p_user_id: authUser.id,
         p_name: name.trim(),
-        p_email: preferredContact === 'email' ? email.trim().toLowerCase() : authUser.email,
-        p_phone: preferredContact === 'whatsapp' ? normalizePhone(phone) : '',
-        p_preferred_contact: preferredContact,
+        p_email: authUser.email,
+        p_phone: normalizePhone(phone),
+        p_preferred_contact: 'whatsapp',
         p_business_name: '',
         p_role: selectedRole,
       })
@@ -85,8 +75,15 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
         return
       }
 
-      await refreshPM()
-      onComplete()
+      const pmId = data?.id
+      if (!pmId) {
+        setError('Account created but no ID returned. Please refresh.')
+        setSaving(false)
+        setRole(null)
+        return
+      }
+
+      onComplete(pmId)
     } catch {
       setError('Something went wrong. Please try again.')
       setSaving(false)
@@ -105,13 +102,13 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
           <div className="w-8" />
         )}
         <div className="flex-1">
-          <ProgressDots current={stepIndex + 1} total={4} />
+          <ProgressDots current={stepIndex + 1} total={steps.length} />
         </div>
         <div className="w-8" />
       </div>
 
       <div className="px-10 pb-10 pt-6">
-        {/* Step 1: Name */}
+        {/* Step: Name (only if Google didn't provide it) */}
         {step === 'name' && (
           <>
             <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your full name?</h2>
@@ -132,56 +129,33 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
           </>
         )}
 
-        {/* Step 2: Contact method */}
-        {step === 'contact' && (
-          <>
-            <h2 className={`${typography.pageTitle} text-center`}>How should we contact you?</h2>
-            <div className="mt-8 space-y-3">
-              <OptionButton label="WhatsApp" selected={false} onClick={() => handleContactSelect('whatsapp')} />
-              <OptionButton label="Email" selected={false} onClick={() => handleContactSelect('email')} />
-            </div>
-          </>
-        )}
-
-        {/* Step 3: Contact detail */}
-        {step === 'contact-detail' && (
+        {/* Step: Phone */}
+        {step === 'phone' && (
           <>
             <h2 className={`${typography.pageTitle} text-center`}>
-              {preferredContact === 'whatsapp'
-                ? "What\u2019s your WhatsApp number?"
-                : "What\u2019s your email?"
-              }
+              What&apos;s your mobile number?
             </h2>
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              We&apos;ll send you a real automation alert in 60 seconds.
+            </p>
             <div className="mt-8">
-              {preferredContact === 'whatsapp' ? (
-                <Input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. 07456789123"
-                  className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleContactDetailNext() } }}
-                />
-              ) : (
-                <Input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  type="email"
-                  className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleContactDetailNext() } }}
-                />
-              )}
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. 07456789123"
+                className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePhoneNext() } }}
+              />
             </div>
             {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
-            <Button onClick={handleContactDetailNext} className="w-full mt-8" size="lg">
+            <Button onClick={handlePhoneNext} className="w-full mt-8" size="lg">
               Continue
             </Button>
           </>
         )}
 
-        {/* Step 4: Role */}
+        {/* Step: Role */}
         {step === 'role' && (
           <>
             <h2 className={`${typography.pageTitle} text-center`}>I am a...</h2>
