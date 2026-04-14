@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { OnboardingHelper } from './onboarding-helper'
-import { SimulationOverlay } from './simulation-overlay'
 
 type TourStep =
   | 'welcome'
@@ -11,7 +10,7 @@ type TourStep =
   | 'needs-action'
   | 'opening-ticket'
   | 'ticket-drawer'
-  | 'simulate'
+  | 'done'
 
 interface HighlightRect {
   top: number
@@ -24,218 +23,195 @@ interface DashboardTourProps {
   pmId: string
   demoTicketId: string | null
   openTicket: (ticketId: string) => void
-  onTourDone: () => void
+  onTourComplete: () => void
 }
 
-export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: DashboardTourProps) {
-  const [tourStep, setTourStep] = useState<TourStep>('welcome')
+function getTourDoneKey(pmId: string) {
+  return `yarro_tour_done_${pmId}`
+}
+
+export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }: DashboardTourProps) {
+  const [tourStep, setTourStep] = useState<TourStep>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem(getTourDoneKey(pmId))) return 'done'
+    return 'welcome'
+  })
   const [cardVisible, setCardVisible] = useState(false)
   const [highlight, setHighlight] = useState<HighlightRect | null>(null)
+  const [dimVisible, setDimVisible] = useState(true)
   const searchParams = useSearchParams()
-  const transitionTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // Fade card in after step change
+  // Clean up on unmount
   useEffect(() => {
-    if (tourStep === 'breathing' || tourStep === 'opening-ticket' || tourStep === 'simulate') return
-    setCardVisible(false) // Reset so fade-in transition plays
-    const id = setTimeout(() => setCardVisible(true), tourStep === 'ticket-drawer' ? 400 : 100)
-    return () => clearTimeout(id)
-  }, [tourStep])
-
-  useEffect(() => {
-    return () => {
-      if (transitionTimer.current) clearTimeout(transitionTimer.current)
-    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
-  // Detect when ticket drawer closes
-  const ticketIdParam = searchParams.get('ticketId')
+  // Fade card in when step changes to a card-showing step
   useEffect(() => {
-    if (tourStep === 'ticket-drawer' && !ticketIdParam) {
-      transitionTo('simulate')
-    }
-  }, [ticketIdParam, tourStep])
-
-  const transitionTo = useCallback((next: TourStep) => {
-    setCardVisible(false)
-
-    // After card fades out (400ms), enter breathing state
-    transitionTimer.current = setTimeout(() => {
-      setTourStep('breathing')
-      setHighlight(null)
-
-      // After breathing pause (600ms), switch to next step with highlight
-      transitionTimer.current = setTimeout(() => {
-        // Position highlight on the first ticket card
-        if (next === 'needs-action') {
-          const el = document.querySelector('[data-ticket-id]')
-          if (el) {
-            const rect = el.getBoundingClientRect()
-            setHighlight({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
-          }
-        } else {
-          setHighlight(null)
-        }
-
-        setTourStep(next)
-      }, 600)
-    }, 400)
-  }, [])
-
-  const handleWelcome = useCallback(() => {
-    transitionTo('needs-action')
-  }, [transitionTo])
-
-  const handleSeeIssue = useCallback(() => {
-    if (!demoTicketId) {
-      transitionTo('simulate')
+    const cardSteps: TourStep[] = ['welcome', 'needs-action', 'ticket-drawer']
+    if (!cardSteps.includes(tourStep)) {
+      setCardVisible(false)
       return
     }
     setCardVisible(false)
-    setHighlight(null)
+    const delay = tourStep === 'ticket-drawer' ? 500 : 150
+    const id = setTimeout(() => setCardVisible(true), delay)
+    return () => clearTimeout(id)
+  }, [tourStep])
 
-    transitionTimer.current = setTimeout(() => {
-      setTourStep('opening-ticket')
-      transitionTimer.current = setTimeout(() => {
-        openTicket(demoTicketId)
-        // Wait for Sheet animation to complete (500ms) before showing tour card
-        transitionTimer.current = setTimeout(() => {
-          setTourStep('ticket-drawer')
-          // cardVisible is set by the useEffect — no manual override needed
-        }, 700)
-      }, 600)
-    }, 400)
-  }, [demoTicketId, openTicket])
+  // Detect drawer close (user hit Escape)
+  const ticketIdParam = searchParams.get('ticketId')
+  useEffect(() => {
+    if (tourStep === 'ticket-drawer' && !ticketIdParam) {
+      completeTour()
+    }
+  }, [ticketIdParam, tourStep])
 
-  const handleBackToDashboard = useCallback(() => {
+  // If tour is already done, signal parent immediately
+  useEffect(() => {
+    if (tourStep === 'done') onTourComplete()
+  }, [tourStep, onTourComplete])
+
+  const completeTour = useCallback(() => {
     setCardVisible(false)
-    transitionTimer.current = setTimeout(() => {
-      window.history.replaceState(null, '', window.location.pathname)
-      // Breathing pause before simulate FAB appears
+    setDimVisible(false)
+    setHighlight(null)
+    localStorage.setItem(getTourDoneKey(pmId), 'true')
+    timerRef.current = setTimeout(() => {
+      // Close drawer if still open
+      if (window.location.search.includes('ticketId')) {
+        window.history.replaceState(null, '', window.location.pathname)
+      }
+      setTourStep('done')
+    }, 400)
+  }, [pmId])
+
+  const handleWelcome = useCallback(() => {
+    setCardVisible(false)
+    timerRef.current = setTimeout(() => {
       setTourStep('breathing')
-      setHighlight(null)
-      transitionTimer.current = setTimeout(() => {
-        setTourStep('simulate')
-      }, 800)
+      timerRef.current = setTimeout(() => {
+        // Highlight the first ticket
+        const el = document.querySelector('[data-ticket-id]')
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          setHighlight({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
+        }
+        setTourStep('needs-action')
+      }, 600)
     }, 400)
   }, [])
 
-  // Simulate — hand off entirely
-  if (tourStep === 'simulate') {
-    return <SimulationOverlay pmId={pmId} onComplete={onTourDone} />
-  }
+  const handleSeeIssue = useCallback(() => {
+    if (!demoTicketId) { completeTour(); return }
+    setCardVisible(false)
+    setHighlight(null)
+    timerRef.current = setTimeout(() => {
+      setTourStep('opening-ticket')
+      timerRef.current = setTimeout(() => {
+        openTicket(demoTicketId)
+        // Wait for drawer animation before showing card
+        timerRef.current = setTimeout(() => {
+          setTourStep('ticket-drawer')
+        }, 800)
+      }, 500)
+    }, 400)
+  }, [demoTicketId, openTicket, completeTour])
 
-  // Breathing state — just dim overlay
-  if (tourStep === 'breathing') {
-    return (
-      <div className="fixed inset-0 z-40 pointer-events-none">
-        <div className="absolute inset-0 bg-black/40 transition-opacity duration-500" />
-      </div>
-    )
-  }
+  const handleBackToDashboard = useCallback(() => {
+    completeTour()
+  }, [completeTour])
 
-  // Opening ticket — dimmed, no card
-  if (tourStep === 'opening-ticket') {
-    return (
-      <div className="fixed inset-0 z-40 pointer-events-none">
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
-    )
-  }
+  // Tour complete — render nothing, parent handles simulate FAB
+  if (tourStep === 'done') return null
 
-  // Ticket drawer — card renders ABOVE the drawer (z-[60] > Sheet's z-50)
-  // Positioned in the left area, next to the drawer (drawer takes right ~384px)
-  if (tourStep === 'ticket-drawer') {
-    return (
-      <div
-        className={`fixed bottom-8 z-[60] pointer-events-auto w-full max-w-sm px-4 transition-all duration-500 ease-out ${
-          cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-        }`}
-        style={{ right: 'calc(min(384px, 75%) + 1rem)' }}
-      >
-        <OnboardingHelper
-          title="This is the ticket detail"
-          description="You'll find all the details of any issue and take action from here."
-          buttonLabel="Back to dashboard"
-          onAction={handleBackToDashboard}
-        />
-      </div>
-    )
-  }
-
+  // Single render tree — no early returns, no mount/unmount swaps
   return (
     <>
       <style jsx>{`
         @keyframes tour-glow {
-          0%, 100% {
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.2), 0 0 24px rgba(59, 130, 246, 0.08);
-          }
-          50% {
-            box-shadow: 0 0 16px rgba(59, 130, 246, 0.35), 0 0 48px rgba(59, 130, 246, 0.12);
-          }
+          0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.2), 0 0 24px rgba(59, 130, 246, 0.08); }
+          50% { box-shadow: 0 0 16px rgba(59, 130, 246, 0.35), 0 0 48px rgba(59, 130, 246, 0.12); }
         }
       `}</style>
 
-      <div className="fixed inset-0 z-40 pointer-events-none">
-        {/* When no highlight: full dim overlay. When highlight: spotlight cutout */}
-        {!highlight && (
-          <div className="absolute inset-0 bg-black/50" />
-        )}
-
-        {/* Glow highlight — box-shadow creates the dim AROUND the ticket */}
-        {/* The ticket itself is fully visible (no overlay on top of it) */}
-        {highlight && (
-          <div
-            className="absolute rounded-xl border-2 border-primary/40 pointer-events-none"
-            style={{
-              top: highlight.top - 6,
-              left: highlight.left - 6,
-              width: highlight.width + 12,
-              height: highlight.height + 12,
-              animation: 'tour-glow 2s ease-in-out infinite',
-              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
-            }}
-          />
-        )}
-
-        {/* Welcome — bottom center */}
-        {tourStep === 'welcome' && (
-          <div
-            className={`absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto w-full max-w-sm px-4 transition-all duration-400 ${
-              cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <OnboardingHelper
-              title="This is your dashboard"
-              description="This is where you manage tasks across your entire portfolio."
-              buttonLabel="See how it works"
-              onAction={handleWelcome}
-            />
-          </div>
-        )}
-
-        {/* Needs Action — positioned near the highlighted ticket */}
-        {tourStep === 'needs-action' && (
-          <div
-            className={`absolute pointer-events-auto w-full max-w-sm px-4 transition-all duration-400 ${
-              cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-            style={{
-              top: highlight ? `${highlight.top + highlight.height + 16}px` : 'auto',
-              bottom: highlight ? 'auto' : '2rem',
-              left: highlight ? `${Math.max(16, highlight.left)}px` : '50%',
-              transform: !highlight ? 'translateX(-50%)' : undefined,
-            }}
-          >
-            <OnboardingHelper
-              title="This is a ticket"
-              description="A demo tenant just reported a boiler problem. It's waiting in your Needs Action queue."
-              buttonLabel="See the issue"
-              onAction={handleSeeIssue}
-            />
-          </div>
-        )}
+      {/* Persistent dim overlay — fades based on step */}
+      <div className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-500 ${
+        dimVisible ? 'opacity-100' : 'opacity-0'
+      }`}>
+        {!highlight && <div className="absolute inset-0 bg-black/50" />}
       </div>
+
+      {/* Spotlight cutout on highlighted element */}
+      {highlight && (
+        <div
+          className="fixed z-40 rounded-xl border-2 border-primary/40 pointer-events-none transition-all duration-500"
+          style={{
+            top: highlight.top - 6,
+            left: highlight.left - 6,
+            width: highlight.width + 12,
+            height: highlight.height + 12,
+            animation: 'tour-glow 2s ease-in-out infinite',
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
+          }}
+        />
+      )}
+
+      {/* Welcome card — bottom center */}
+      {tourStep === 'welcome' && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-auto w-full max-w-sm px-4 transition-all duration-500 ${
+          cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}>
+          <OnboardingHelper
+            title="This is your dashboard"
+            description="This is where you manage tasks across your entire portfolio."
+            buttonLabel="See how it works"
+            onAction={handleWelcome}
+          />
+        </div>
+      )}
+
+      {/* Needs Action card — below the highlighted ticket */}
+      {tourStep === 'needs-action' && (
+        <div
+          className={`fixed z-40 pointer-events-auto w-full max-w-sm px-4 transition-all duration-500 ${
+            cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+          style={{
+            top: highlight ? `${highlight.top + highlight.height + 16}px` : 'auto',
+            bottom: highlight ? 'auto' : '2rem',
+            left: highlight ? `${Math.max(16, highlight.left)}px` : '50%',
+            transform: !highlight && !cardVisible ? 'translateX(-50%)' : undefined,
+          }}
+        >
+          <OnboardingHelper
+            title="This is a ticket"
+            description="A demo tenant just reported a boiler problem. It's waiting in your Needs Action queue."
+            buttonLabel="See the issue"
+            onAction={handleSeeIssue}
+          />
+        </div>
+      )}
+
+      {/* Ticket drawer card — top-left, outside drawer, aligned with drawer header */}
+      {tourStep === 'ticket-drawer' && (
+        <div
+          className={`fixed z-[60] pointer-events-auto w-full max-w-xs px-4 transition-all duration-500 ease-out ${
+            cardVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
+          }`}
+          style={{
+            top: '4rem',
+            right: 'calc(min(50vw, 100% - 600px) + min(50vw, 600px) + 1rem)',
+          }}
+        >
+          <OnboardingHelper
+            title="This is the ticket detail"
+            description="You'll find all the details of any issue and take action from here."
+            buttonLabel="Back to dashboard"
+            onAction={handleBackToDashboard}
+          />
+        </div>
+      )}
     </>
   )
 }

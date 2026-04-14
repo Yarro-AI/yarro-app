@@ -482,15 +482,14 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      {/* Magic-first onboarding: guided tour → simulation → investment CTA */}
+      {/* Magic-first onboarding: guided dashboard tour (cards only, no simulate) */}
       {propertyManager && inSimulation && (
         <DashboardTour
           pmId={propertyManager.id}
           demoTicketId={actionable[0]?.ticket_id ?? null}
           openTicket={openTicket}
-          onTourDone={async () => {
-            await refreshPM()
-            router.push('/import')
+          onTourComplete={() => {
+            // Tour cards are done — simulate FAB rendered by layout
           }}
         />
       )}

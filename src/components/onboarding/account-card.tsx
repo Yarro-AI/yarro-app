@@ -114,10 +114,16 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
 
       <div className="px-8 pb-8 pt-6 flex flex-col min-h-[380px]">
         {/* Identity pill — always at top */}
-        <div className="flex justify-center mb-2">
+        <div className="flex justify-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
             <GoogleIcon className="w-3.5 h-3.5" />
             Signed in as {step === 'name' ? authUser.email : displayIdentity}
+          </div>
+        </div>
+        {/* Divider — matches login page */}
+        <div className="relative my-5">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
           </div>
         </div>
 

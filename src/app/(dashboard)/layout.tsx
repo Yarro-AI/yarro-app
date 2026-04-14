@@ -11,6 +11,7 @@ import { DateRangeProvider } from '@/contexts/date-range-context'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { TicketDrawerProvider } from '@/components/ticket-drawer-provider'
 import { DashboardHeader } from '@/components/dashboard-header'
+import { SimulationOverlay } from '@/components/onboarding/simulation-overlay'
 
 export default function DashboardLayout({
   children,
@@ -112,6 +113,19 @@ export default function DashboardLayout({
             </ErrorBoundary>
           </DateRangeProvider>
         </main>
+
+        {/* Persistent simulate FAB — visible after tour cards complete, across all pages */}
+        {propertyManager
+          && (propertyManager as unknown as Record<string, unknown>).onboarding_step === 'simulation'
+          && localStorage.getItem(`yarro_tour_done_${propertyManager.id}`)
+          && (
+          <SimulationOverlay
+            pmId={propertyManager.id}
+            onComplete={() => {
+              window.location.href = '/import'
+            }}
+          />
+        )}
       </div>
     </div>
   )
