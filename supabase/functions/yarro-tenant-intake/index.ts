@@ -182,7 +182,7 @@ interface NormalisedResponse {
   availability: any;
 }
 
-function normaliseResponse(raw: string): NormalisedResponse {
+function normaliseResponse(raw: string, aiInstruction?: string): NormalisedResponse {
   // Clean code fences
   let cleaned = raw.trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -213,9 +213,13 @@ function normaliseResponse(raw: string): NormalisedResponse {
     else if (h === "false") handoff = false;
   }
 
-  // Branch detection (exact same logic as n8n Normalise node)
+  // Branch detection — stage-aware (SSOT: ai_instruction is the brain, text is confirmation)
   const norm = message.normalize("NFKC").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').toLowerCase();
   let branch: NormalisedResponse["branch"] = "normal";
+
+  const isFinalStage = aiInstruction === "verified/final_summary"
+    || aiInstruction === "final_summary";
+  const isDuplicateCloseStage = aiInstruction === "duplicate_yes_close";
 
   if (norm.includes("\ud83d\udd0e") || norm.includes("no tenancy match")) {
     branch = "nomatch";
@@ -223,6 +227,25 @@ function normaliseResponse(raw: string): NormalisedResponse {
     branch = "handoff";
   } else if (norm.includes("\ud83d\udea8") || norm.includes("priority: emergency")) {
     branch = "emergency";
+
+  // STAGE-AWARE: backend says final + any confirmation signal = final
+  } else if (isFinalStage && (
+    norm.includes("\u2705") ||
+    norm.includes("reported this issue") ||
+    norm.includes("request has been submitted") ||
+    norm.includes("report has been submitted")
+  )) {
+    branch = "final";
+
+  // STAGE-AWARE: backend says duplicate close = duplicate
+  } else if (isDuplicateCloseStage && (
+    norm.includes("\u2705") ||
+    norm.includes("close this chat") ||
+    norm.includes("close this conversation")
+  )) {
+    branch = "duplicate";
+
+  // TEXT FALLBACKS (backwards compat — catches cases where stage tracking is wrong)
   } else if (
     norm.includes("\u2705") &&
     (norm.includes("your request has been submitted") || norm.includes("your report has been submitted") || norm.includes("i've reported this issue") || norm.includes("ive reported this issue"))
@@ -235,6 +258,16 @@ function normaliseResponse(raw: string): NormalisedResponse {
     norm.includes("your existing ticket is already in progress") ||
     norm.includes("i'll close this chat now")
   ) {
+    branch = "duplicate";
+  }
+
+  // FORCE-FINALIZE: if backend says closer stage but detection still missed, force it
+  if (isFinalStage && !["final", "handoff", "emergency"].includes(branch)) {
+    console.warn(`[tenant-intake] Force-finalizing: stage=${aiInstruction} but branch=${branch}. Output: ${message.substring(0, 150)}`);
+    branch = "final";
+  }
+  if (isDuplicateCloseStage && !["duplicate", "handoff", "emergency"].includes(branch)) {
+    console.warn(`[tenant-intake] Force-closing duplicate: stage=${aiInstruction} but branch=${branch}`);
     branch = "duplicate";
   }
 
@@ -415,9 +448,21 @@ Deno.serve(async (req: Request) => {
       return new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } });
     }
 
-    // 8. Normalise response + detect branch
-    const result = normaliseResponse(aiRaw);
+    // 8. Normalise response + detect branch (stage-aware)
+    const result = normaliseResponse(aiRaw, ctx.ai_instruction);
     console.log(`[${FN}] Branch: ${result.branch}, Stage: ${ctx.ai_instruction}`);
+
+    // Alert if force-finalize kicked in (AI output didn't match expected branch at closer stage)
+    const isFinalStage = ctx.ai_instruction === "verified/final_summary" || ctx.ai_instruction === "final_summary";
+    const isDuplicateCloseStage = ctx.ai_instruction === "duplicate_yes_close";
+    if ((isFinalStage || isDuplicateCloseStage) && !aiRaw.includes("\u2705")) {
+      await alertTelegram(FN, "Force-finalized conversation",
+        `AI at ${ctx.ai_instruction} but omitted ✅. Force-finalized to prevent stuck conversation.`, {
+        Phone: phone,
+        ConvoId: ctx.conversation.id,
+        OutputPreview: result.message.substring(0, 200),
+      });
+    }
 
     // 9. Build outbound log entry
     const outboundEntry = {
