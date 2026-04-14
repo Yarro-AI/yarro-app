@@ -63,8 +63,11 @@ export function TodoRow({ item, onHandoffClick, onTicketClick }: TodoRowProps) {
         </div>
         <p className="text-sm text-muted-foreground truncate mt-0.5">
           {item.issue_summary}
-          {item.is_former_tenant && (
+          {item.tenant_status === 'former' && (
             <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+          )}
+          {item.tenant_status === 'new' && (
+            <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-blue-500/70">Unassigned</span>
           )}
         </p>
         <div className="flex items-center gap-2 mt-1">

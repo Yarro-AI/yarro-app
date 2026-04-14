@@ -31,7 +31,7 @@ export interface TodoItem {
   reschedule_initiated_by: string | null
   tenant_id: string | null
   tenant_name: string | null
-  is_former_tenant: boolean | null
+  tenant_status: string | null
 }
 
 export interface TicketSummary {

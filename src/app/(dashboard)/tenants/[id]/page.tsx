@@ -38,6 +38,7 @@ interface TenantDetail {
   verified_at: string | null
   property_id: string | null
   room_id: string | null
+  moved_out_at: string | null
   contact_method: string
   created_at: string
 }
@@ -156,13 +157,14 @@ export default function TenantDetailPage() {
   if (room) subtitleParts.push(`Room ${room.room_number}${room.room_name ? ` \u2014 ${room.room_name}` : ''}`)
   if (property) subtitleParts.push(property.address)
 
-  // SSOT: tenant is active if they have a room_id (assigned to a room)
-  const isActiveTenant = !!tenant?.room_id
-  const badges: { label: string; variant: 'success' | 'warning' | 'muted' }[] = [
-    isActiveTenant
-      ? { label: 'Active tenant', variant: 'success' as const }
-      : { label: 'Former tenant', variant: 'muted' as const },
-  ]
+  // SSOT: three-state tenant status from room_id + moved_out_at
+  const tenantStatus = tenant?.room_id ? 'current' : tenant?.moved_out_at ? 'former' : 'new'
+  const statusBadge = {
+    current: { label: 'Active tenant', variant: 'success' as const },
+    former: { label: 'Former tenant', variant: 'muted' as const },
+    new: { label: 'Unassigned', variant: 'warning' as const },
+  }[tenantStatus]
+  const badges: { label: string; variant: 'success' | 'warning' | 'muted' }[] = [statusBadge]
   if (!tenant?.verified_by) badges.push({ label: 'Identity unverified', variant: 'warning' as const })
 
   if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
