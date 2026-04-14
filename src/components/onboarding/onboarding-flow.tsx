@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { AccountCard } from './account-card'
 import { PainPointPicker } from './pain-point-picker'
+import Image from 'next/image'
 import { Loader2 } from 'lucide-react'
 import { typography } from '@/lib/typography'
 
@@ -88,6 +89,18 @@ export function OnboardingFlow() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-muted">
       <div className="w-full max-w-md px-4">
+        {/* Logo — matches login/signup page */}
+        <div className="text-center mb-8">
+          <Image
+            src="/logo-wordmark.png"
+            alt="Yarro"
+            width={120}
+            height={40}
+            className="mx-auto"
+            priority
+          />
+        </div>
+
         {step === 'account' && authUser && (
           <AccountCard authUser={authUser} onComplete={handleAccountComplete} />
         )}
