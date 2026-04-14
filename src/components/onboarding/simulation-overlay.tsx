@@ -137,7 +137,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
     window.location.href = '/'
   }
 
-  // Idle state: pulsing FAB — strong urgency, demands to be clicked
+  // Idle state: dimmed dashboard with pulsing FAB highlighted
   if (state === 'idle') {
     return (
       <>
@@ -154,10 +154,10 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
           }
         `}</style>
         <div className="fixed inset-0 z-40 pointer-events-none">
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-3">
-            <span className="text-xs font-medium text-muted-foreground bg-card/90 px-3 py-1 rounded-full border border-border/60 backdrop-blur-sm">
-              Click to trigger the automation
-            </span>
+          {/* Dim the dashboard */}
+          <div className="absolute inset-0 bg-black/50" />
+          {/* FAB — highlighted against the dark background */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
             <button
               onClick={runSimulation}
               disabled={running}

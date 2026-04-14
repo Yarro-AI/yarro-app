@@ -37,7 +37,8 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
   // Fade card in after step change
   useEffect(() => {
     if (tourStep === 'breathing' || tourStep === 'opening-ticket' || tourStep === 'simulate') return
-    const id = setTimeout(() => setCardVisible(true), 100)
+    setCardVisible(false) // Reset so fade-in transition plays
+    const id = setTimeout(() => setCardVisible(true), tourStep === 'ticket-drawer' ? 400 : 100)
     return () => clearTimeout(id)
   }, [tourStep])
 
@@ -97,8 +98,11 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
       setTourStep('opening-ticket')
       transitionTimer.current = setTimeout(() => {
         openTicket(demoTicketId)
-        setTourStep('ticket-drawer')
-        setTimeout(() => setCardVisible(true), 300)
+        // Wait for Sheet animation to complete (500ms) before showing tour card
+        transitionTimer.current = setTimeout(() => {
+          setTourStep('ticket-drawer')
+          // cardVisible is set by the useEffect — no manual override needed
+        }, 700)
       }, 600)
     }, 400)
   }, [demoTicketId, openTicket])
@@ -171,20 +175,23 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
       `}</style>
 
       <div className="fixed inset-0 z-40 pointer-events-none">
-        {/* Dim overlay */}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+        {/* When no highlight: full dim overlay. When highlight: spotlight cutout */}
+        {!highlight && (
+          <div className="absolute inset-0 bg-black/50" />
+        )}
 
-        {/* Glow highlight on individual ticket */}
+        {/* Glow highlight — box-shadow creates the dim AROUND the ticket */}
+        {/* The ticket itself is fully visible (no overlay on top of it) */}
         {highlight && (
           <div
             className="absolute rounded-xl border-2 border-primary/40 pointer-events-none"
             style={{
-              top: highlight.top - 4,
-              left: highlight.left - 4,
-              width: highlight.width + 8,
-              height: highlight.height + 8,
+              top: highlight.top - 6,
+              left: highlight.left - 6,
+              width: highlight.width + 12,
+              height: highlight.height + 12,
               animation: 'tour-glow 2s ease-in-out infinite',
-              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
             }}
           />
         )}

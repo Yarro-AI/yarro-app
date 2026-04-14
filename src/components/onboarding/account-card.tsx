@@ -160,9 +160,6 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
               <h2 className={`${typography.pageTitle} text-center`}>
                 What&apos;s your mobile number?
               </h2>
-              <p className="text-sm text-muted-foreground text-center mt-2">
-                We&apos;ll show you how Yarro works in 60 seconds.
-              </p>
               <div className="mt-8">
                 <Input
                   value={phone}
