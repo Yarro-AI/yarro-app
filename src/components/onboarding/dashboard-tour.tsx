@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
+import { OnboardingHelper } from './onboarding-helper'
 import { SimulationOverlay } from './simulation-overlay'
 
-type TourStep = 'needs-action' | 'ticket-drawer' | 'simulate'
+type TourStep =
+  | 'welcome'          // "This is your dashboard"
+  | 'needs-action'     // Card near the demo ticket
+  | 'opening-ticket'   // Brief pause simulating click
+  | 'ticket-drawer'    // Card while drawer is open
+  | 'simulate'         // Hand off to SimulationOverlay
 
 interface DashboardTourProps {
   pmId: string
@@ -16,35 +20,41 @@ interface DashboardTourProps {
 }
 
 export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: DashboardTourProps) {
-  const [tourStep, setTourStep] = useState<TourStep>('needs-action')
+  const [tourStep, setTourStep] = useState<TourStep>('welcome')
   const searchParams = useSearchParams()
 
   // Detect when ticket drawer closes (user hit Escape or clicked outside)
   const ticketIdParam = searchParams.get('ticketId')
   useEffect(() => {
     if (tourStep === 'ticket-drawer' && !ticketIdParam) {
-      // Drawer was closed — skip to simulate step
       setTourStep('simulate')
     }
   }, [ticketIdParam, tourStep])
 
+  const handleWelcome = useCallback(() => {
+    setTourStep('needs-action')
+  }, [])
+
   const handleSeeIssue = useCallback(() => {
-    if (demoTicketId) {
+    if (!demoTicketId) {
+      setTourStep('simulate')
+      return
+    }
+    setTourStep('opening-ticket')
+    // Brief pause to simulate the click, then open the ticket
+    setTimeout(() => {
       openTicket(demoTicketId)
       setTourStep('ticket-drawer')
-    } else {
-      // No demo ticket — skip to simulate
-      setTourStep('simulate')
-    }
+    }, 600)
   }, [demoTicketId, openTicket])
 
-  const handleGotIt = useCallback(() => {
-    // Close the drawer by navigating without ticketId param
+  const handleDrawerDone = useCallback(() => {
+    // Close the drawer by clearing the URL param
     window.history.replaceState(null, '', window.location.pathname)
     setTourStep('simulate')
   }, [])
 
-  // Step 3: hand off to SimulationOverlay
+  // Step: Simulate — hand off to SimulationOverlay
   if (tourStep === 'simulate') {
     return (
       <SimulationOverlay
@@ -54,61 +64,61 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
     )
   }
 
-  // Step 1: Highlight "Needs Action"
-  if (tourStep === 'needs-action') {
+  // Step: Welcome — "This is your dashboard"
+  if (tourStep === 'welcome') {
     return (
       <div className="fixed inset-0 z-40 pointer-events-none">
-        {/* Dim overlay */}
         <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
-
-        {/* Instruction card — positioned bottom center */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto w-full max-w-sm px-4">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl p-6">
-            <p className="text-base font-semibold text-foreground">
-              This is your dashboard
-            </p>
-            <p className="text-sm text-muted-foreground mt-1.5">
-              A demo tenant just reported a boiler problem. It&apos;s waiting in your &ldquo;Needs Action&rdquo; queue.
-            </p>
-            <Button
-              onClick={handleSeeIssue}
-              size="sm"
-              className="mt-4"
-            >
-              See the issue
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-            </Button>
-          </div>
+          <OnboardingHelper
+            title="This is your dashboard"
+            description="This is where you manage tasks across your entire portfolio."
+            buttonLabel="See how it works"
+            onAction={handleWelcome}
+          />
         </div>
       </div>
     )
   }
 
-  // Step 2: Highlight ticket drawer
+  // Step: Needs Action — card near the demo ticket
+  if (tourStep === 'needs-action') {
+    return (
+      <div className="fixed inset-0 z-40 pointer-events-none">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto w-full max-w-sm px-4">
+          <OnboardingHelper
+            title="This is a ticket"
+            description="A demo tenant just reported a boiler problem. It's waiting in your Needs Action queue."
+            buttonLabel="See the issue"
+            onAction={handleSeeIssue}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Step: Opening ticket — brief pause with dimmed screen
+  if (tourStep === 'opening-ticket') {
+    return (
+      <div className="fixed inset-0 z-40 pointer-events-none">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+      </div>
+    )
+  }
+
+  // Step: Ticket drawer — instruction card while drawer is open
   if (tourStep === 'ticket-drawer') {
     return (
       <div className="fixed inset-0 z-40 pointer-events-none">
-        {/* Dim overlay — but let the drawer (right side) be interactive */}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
-
-        {/* Instruction card — positioned left center */}
+        <div className="absolute inset-0 bg-black/40" />
         <div className="absolute bottom-8 left-8 pointer-events-auto w-full max-w-sm">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl p-6">
-            <p className="text-base font-semibold text-foreground">
-              This is the ticket detail
-            </p>
-            <p className="text-sm text-muted-foreground mt-1.5">
-              Every issue gets triaged, matched to a contractor, and dispatched automatically. Let&apos;s see it in action.
-            </p>
-            <Button
-              onClick={handleGotIt}
-              size="sm"
-              className="mt-4"
-            >
-              Show me how
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-            </Button>
-          </div>
+          <OnboardingHelper
+            title="This is the ticket detail"
+            description="Every issue gets triaged, matched to a contractor, and dispatched automatically. Let's see it in action."
+            buttonLabel="Show me how"
+            onAction={handleDrawerDone}
+          />
         </div>
       </div>
     )

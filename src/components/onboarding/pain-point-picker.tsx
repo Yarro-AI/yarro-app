@@ -58,13 +58,10 @@ export function PainPointPicker({ pmId, onComplete }: PainPointPickerProps) {
 
   return (
     <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
-      <div className="px-10 py-10">
+      <div className="px-8 py-8">
         <h2 className={`${typography.pageTitle} text-center`}>
           What&apos;s your biggest headache today?
         </h2>
-        <p className="text-sm text-muted-foreground text-center mt-2">
-          We&apos;ll show you how Yarro handles it automatically.
-        </p>
 
         <div className="mt-8 space-y-3">
           {PAIN_POINTS.map((point) => {

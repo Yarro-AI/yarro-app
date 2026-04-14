@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
+import { typography } from '@/lib/typography'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -50,7 +51,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Image
@@ -69,7 +70,7 @@ export default function SignupPage() {
             {emailSent ? (
               <div className="space-y-4">
                 <div className="space-y-1 mb-2">
-                  <h1 className="text-xl font-semibold tracking-tight text-foreground text-center">Check your email</h1>
+                  <h1 className={`${typography.pageTitle} text-center`}>Check your email</h1>
                   <p className="text-sm text-muted-foreground text-center">
                     We&apos;ve sent a verification link to <span className="font-medium text-foreground">{email}</span>
                   </p>
@@ -86,7 +87,7 @@ export default function SignupPage() {
             ) : (
               <>
                 <div className="space-y-1 mb-6">
-                  <h1 className="text-xl font-semibold tracking-tight text-foreground text-center">Create your account</h1>
+                  <h1 className={`${typography.pageTitle} text-center`}>Create your account</h1>
                   <p className="text-sm text-muted-foreground text-center">
                     Start your 14-day free trial
                   </p>

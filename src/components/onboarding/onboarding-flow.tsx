@@ -87,7 +87,7 @@ export function OnboardingFlow() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-muted">
-      <div className="w-full max-w-lg px-4">
+      <div className="w-full max-w-md px-4">
         {step === 'account' && authUser && (
           <AccountCard authUser={authUser} onComplete={handleAccountComplete} />
         )}

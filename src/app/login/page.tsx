@@ -8,6 +8,7 @@ import { usePM } from '@/contexts/pm-context'
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft } from 'lucide-react'
+import { typography } from '@/lib/typography'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -89,7 +90,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Image
@@ -108,7 +109,7 @@ export default function LoginPage() {
             {mode === 'login' ? (
               <>
                 <div className="space-y-1 mb-6">
-                  <h1 className="text-xl font-semibold tracking-tight text-foreground text-center">Welcome back</h1>
+                  <h1 className={`${typography.pageTitle} text-center`}>Welcome back</h1>
                   <p className="text-sm text-muted-foreground text-center">
                     Sign in to your account
                   </p>
@@ -210,7 +211,7 @@ export default function LoginPage() {
                     <ArrowLeft className="h-4 w-4 mr-1" />
                     Back
                   </button>
-                  <h1 className="text-xl font-semibold tracking-tight text-foreground text-center">Reset password</h1>
+                  <h1 className={`${typography.pageTitle} text-center`}>Reset password</h1>
                   <p className="text-sm text-muted-foreground text-center">
                     We&apos;ll send you a reset link
                   </p>
