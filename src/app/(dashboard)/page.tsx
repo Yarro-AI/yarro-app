@@ -407,6 +407,7 @@ export default function DashboardPage() {
 
   const firstName = propertyManager?.name?.split(' ')[0] || ''
   const onboardingDone = !!propertyManager?.onboarding_completed_at
+  const inSimulation = (propertyManager as Record<string, unknown>)?.onboarding_step === 'simulation'
   // During onboarding, only count maintenance items (compliance/finance are hidden)
   const visibleTaskCount = onboardingDone
     ? actionable.length
@@ -418,10 +419,12 @@ export default function DashboardPage() {
       ? onboardingChecklist
       : onboardingChecklist.filter(i => i.key === 'add_property')
   const onboardingRemaining = visibleChecklist.filter(i => !i.complete).length
-  const totalTasks = visibleTaskCount + (onboardingDone ? 0 : onboardingRemaining)
-  const greetingLabel = totalTasks > 0
-    ? `Hi, ${firstName}. You've got ${totalTasks} task${totalTasks !== 1 ? 's' : ''} today.`
-    : `Hi, ${firstName}. You're all clear.`
+  const totalTasks = visibleTaskCount + (onboardingDone || inSimulation ? 0 : onboardingRemaining)
+  const greetingLabel = inSimulation
+    ? `Hi, ${firstName}. This is your dashboard.`
+    : totalTasks > 0
+      ? `Hi, ${firstName}. You've got ${totalTasks} task${totalTasks !== 1 ? 's' : ''} today.`
+      : `Hi, ${firstName}. You're all clear.`
 
   // Autocomplete results for global search in top bar
   const searchResults = useMemo(() =>
@@ -516,7 +519,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <>
-                  {onboardingChecklist.length > 0 && !onboardingChecklist.every(i => i.complete) && (() => {
+                  {!inSimulation && onboardingChecklist.length > 0 && !onboardingChecklist.every(i => i.complete) && (() => {
                     const propertyItem = onboardingChecklist.find(i => i.key === 'add_property')
                     const hasRealProperty = propertyItem?.complete
                     const visibleItems = hasRealProperty ? onboardingChecklist : onboardingChecklist.filter(i => i.key === 'add_property')
