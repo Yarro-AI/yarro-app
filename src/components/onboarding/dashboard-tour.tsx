@@ -7,7 +7,7 @@ import { SimulationOverlay } from './simulation-overlay'
 
 type TourStep =
   | 'welcome'
-  | 'breathing'         // Pause between steps — no card, dashboard visible
+  | 'breathing'
   | 'needs-action'
   | 'opening-ticket'
   | 'ticket-drawer'
@@ -31,18 +31,16 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
   const [tourStep, setTourStep] = useState<TourStep>('welcome')
   const [cardVisible, setCardVisible] = useState(false)
   const [highlight, setHighlight] = useState<HighlightRect | null>(null)
-  const [nextStep, setNextStep] = useState<TourStep | null>(null)
   const searchParams = useSearchParams()
   const transitionTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // Fade card in after mount / step change
+  // Fade card in after step change
   useEffect(() => {
     if (tourStep === 'breathing' || tourStep === 'opening-ticket' || tourStep === 'simulate') return
     const id = setTimeout(() => setCardVisible(true), 100)
     return () => clearTimeout(id)
   }, [tourStep])
 
-  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (transitionTimer.current) clearTimeout(transitionTimer.current)
@@ -57,10 +55,8 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
     }
   }, [ticketIdParam, tourStep])
 
-  // Transition: fade out card → breathing pause → update highlight → fade in next card
   const transitionTo = useCallback((next: TourStep) => {
     setCardVisible(false)
-    setNextStep(next)
 
     // After card fades out (400ms), enter breathing state
     transitionTimer.current = setTimeout(() => {
@@ -69,9 +65,9 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
 
       // After breathing pause (600ms), switch to next step with highlight
       transitionTimer.current = setTimeout(() => {
-        // Position highlight on the target element for the next step
+        // Position highlight on the first ticket card
         if (next === 'needs-action') {
-          const el = document.getElementById('tour-needs-action')
+          const el = document.querySelector('[data-ticket-id]')
           if (el) {
             const rect = el.getBoundingClientRect()
             setHighlight({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
@@ -81,7 +77,6 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
         }
 
         setTourStep(next)
-        setNextStep(null)
       }, 600)
     }, 400)
   }, [])
@@ -100,7 +95,6 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
 
     transitionTimer.current = setTimeout(() => {
       setTourStep('opening-ticket')
-      // Brief pause, then open the ticket
       transitionTimer.current = setTimeout(() => {
         openTicket(demoTicketId)
         setTourStep('ticket-drawer')
@@ -109,11 +103,16 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
     }, 400)
   }, [demoTicketId, openTicket])
 
-  const handleDrawerDone = useCallback(() => {
+  const handleBackToDashboard = useCallback(() => {
     setCardVisible(false)
     transitionTimer.current = setTimeout(() => {
       window.history.replaceState(null, '', window.location.pathname)
-      setTourStep('simulate')
+      // Breathing pause before simulate FAB appears
+      setTourStep('breathing')
+      setHighlight(null)
+      transitionTimer.current = setTimeout(() => {
+        setTourStep('simulate')
+      }, 800)
     }, 400)
   }, [])
 
@@ -122,7 +121,7 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
     return <SimulationOverlay pmId={pmId} onComplete={onTourDone} />
   }
 
-  // Breathing state — just the dim overlay, no card
+  // Breathing state — just dim overlay
   if (tourStep === 'breathing') {
     return (
       <div className="fixed inset-0 z-40 pointer-events-none">
@@ -136,6 +135,24 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
     return (
       <div className="fixed inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 bg-black/40" />
+      </div>
+    )
+  }
+
+  // Ticket drawer — card renders ABOVE the drawer (z-[60] > Sheet's z-50)
+  if (tourStep === 'ticket-drawer') {
+    return (
+      <div
+        className={`fixed bottom-8 left-8 z-[60] pointer-events-auto w-full max-w-sm transition-all duration-400 ${
+          cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+      >
+        <OnboardingHelper
+          title="This is the ticket detail"
+          description="Every issue gets triaged, matched to a contractor, and dispatched automatically."
+          buttonLabel="Back to dashboard"
+          onAction={handleBackToDashboard}
+        />
       </div>
     )
   }
@@ -157,20 +174,17 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
         {/* Dim overlay */}
         <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
-        {/* Glow highlight on target element */}
+        {/* Glow highlight on individual ticket */}
         {highlight && (
           <div
-            className="absolute rounded-xl border-2 border-primary/40 pointer-events-none transition-all duration-500"
+            className="absolute rounded-xl border-2 border-primary/40 pointer-events-none"
             style={{
               top: highlight.top - 4,
               left: highlight.left - 4,
               width: highlight.width + 8,
               height: highlight.height + 8,
               animation: 'tour-glow 2s ease-in-out infinite',
-              // Cut through the dim overlay so the highlighted area is visible
-              backgroundColor: 'transparent',
               boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
-              // This creates a "spotlight" effect — everything outside is dark
             }}
           />
         )}
@@ -191,18 +205,17 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
           </div>
         )}
 
-        {/* Needs Action — positioned near the highlighted column */}
+        {/* Needs Action — positioned near the highlighted ticket */}
         {tourStep === 'needs-action' && (
           <div
             className={`absolute pointer-events-auto w-full max-w-sm px-4 transition-all duration-400 ${
               cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
             style={{
-              bottom: '2rem',
-              left: highlight ? `${highlight.left + highlight.width / 2}px` : '50%',
-              transform: cardVisible
-                ? `translateX(-50%) translateY(0)`
-                : `translateX(-50%) translateY(1rem)`,
+              top: highlight ? `${highlight.top + highlight.height + 16}px` : 'auto',
+              bottom: highlight ? 'auto' : '2rem',
+              left: highlight ? `${Math.max(16, highlight.left)}px` : '50%',
+              transform: !highlight ? 'translateX(-50%)' : undefined,
             }}
           >
             <OnboardingHelper
@@ -210,22 +223,6 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
               description="A demo tenant just reported a boiler problem. It's waiting in your Needs Action queue."
               buttonLabel="See the issue"
               onAction={handleSeeIssue}
-            />
-          </div>
-        )}
-
-        {/* Ticket drawer — left side */}
-        {tourStep === 'ticket-drawer' && (
-          <div
-            className={`absolute bottom-8 left-8 pointer-events-auto w-full max-w-sm transition-all duration-400 ${
-              cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <OnboardingHelper
-              title="This is the ticket detail"
-              description="Every issue gets triaged, matched to a contractor, and dispatched automatically. Let's see it in action."
-              buttonLabel="Show me how"
-              onAction={handleDrawerDone}
             />
           </div>
         )}

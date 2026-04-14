@@ -505,7 +505,7 @@ export default function DashboardPage() {
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 lg:items-stretch">
 
           {/* Left column — Needs Action (categorised) */}
-          <div id="tour-needs-action" className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-4 pb-3 flex-shrink-0 border-b border-foreground/10">
               <span className="text-base font-semibold text-foreground">Needs action</span>
               {totalTasks > 0 && (

@@ -112,71 +112,75 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
         </div>
       )}
 
-      <div className="px-8 pb-8 pt-6">
+      <div className="px-8 pb-8 pt-8 flex flex-col justify-between min-h-[380px]">
         {/* Step: Name (only if Google didn't provide it) */}
         {step === 'name' && (
-          <>
-            {/* Identity pill */}
-            <div className="flex justify-center mb-5">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
-                <GoogleIcon className="w-3.5 h-3.5" />
-                Signed in as {authUser.email}
+          <div className="flex flex-col justify-between flex-1">
+            <div>
+              {/* Identity pill */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
+                  <GoogleIcon className="w-3.5 h-3.5" />
+                  Signed in as {authUser.email}
+                </div>
               </div>
-            </div>
 
-            <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your full name?</h2>
-            <div className="mt-8">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={() => setName(prev => prev.replace(/\b\w/g, c => c.toUpperCase()))}
-                placeholder="e.g. John Doe"
-                className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNameNext() } }}
-              />
+              <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your full name?</h2>
+              <div className="mt-8">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={() => setName(prev => prev.replace(/\b\w/g, c => c.toUpperCase()))}
+                  placeholder="e.g. John Doe"
+                  className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNameNext() } }}
+                />
+              </div>
+              {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             </div>
-            {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             <Button onClick={handleNameNext} className="w-full mt-8" size="lg">
               Continue
             </Button>
-          </>
+          </div>
         )}
 
         {/* Step: Phone (submits account on continue) */}
         {step === 'phone' && (
-          <>
-            {/* Identity pill */}
-            <div className="flex justify-center mb-5">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
-                <GoogleIcon className="w-3.5 h-3.5" />
-                Signed in as {displayIdentity}
+          <div className="flex flex-col justify-between flex-1">
+            <div>
+              {/* Identity pill */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
+                  <GoogleIcon className="w-3.5 h-3.5" />
+                  Signed in as {displayIdentity}
+                </div>
               </div>
-            </div>
 
-            <h2 className={`${typography.pageTitle} text-center`}>
-              What&apos;s your mobile number?
-            </h2>
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              We&apos;ll show you how Yarro works in 60 seconds.
-            </p>
-            <div className="mt-6">
-              <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 07456789123"
-                className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePhoneSubmit() } }}
-              />
-              {/* Privacy reassurance */}
-              <div className="flex items-center justify-center gap-1.5 mt-2.5">
-                <Lock className="w-3 h-3 text-muted-foreground/60" />
-                <span className="text-xs text-muted-foreground/60">Your number stays private — only used for alerts</span>
+              <h2 className={`${typography.pageTitle} text-center`}>
+                What&apos;s your mobile number?
+              </h2>
+              <p className="text-sm text-muted-foreground text-center mt-2">
+                We&apos;ll show you how Yarro works in 60 seconds.
+              </p>
+              <div className="mt-8">
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 07456789123"
+                  className="h-14 text-center !text-lg !font-medium rounded-xl placeholder:!text-lg placeholder:!font-medium"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePhoneSubmit() } }}
+                />
+                {/* Privacy reassurance */}
+                <div className="flex items-center justify-center gap-1.5 mt-2.5">
+                  <Lock className="w-3 h-3 text-muted-foreground/60" />
+                  <span className="text-xs text-muted-foreground/60">Your number stays private — only used for alerts</span>
+                </div>
               </div>
+              {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             </div>
-            {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
-            <Button onClick={handlePhoneSubmit} className="w-full mt-6" size="lg" disabled={saving}>
+            <Button onClick={handlePhoneSubmit} className="w-full mt-8" size="lg" disabled={saving}>
               {saving ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -186,7 +190,7 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
                 'Continue'
               )}
             </Button>
-          </>
+          </div>
         )}
       </div>
     </div>

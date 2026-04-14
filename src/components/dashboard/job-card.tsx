@@ -62,14 +62,14 @@ export function JobCard({ item, onHandoffClick, onTicketClick }: JobCardProps) {
 
   if (href) {
     return (
-      <Link href={href} className={cardClass}>
+      <Link href={href} className={cardClass} data-ticket-id={item.ticket_id}>
         {content}
       </Link>
     )
   }
 
   return (
-    <button onClick={handleClick} className={cn(cardClass, 'w-full text-left')}>
+    <button onClick={handleClick} className={cn(cardClass, 'w-full text-left')} data-ticket-id={item.ticket_id}>
       {content}
     </button>
   )

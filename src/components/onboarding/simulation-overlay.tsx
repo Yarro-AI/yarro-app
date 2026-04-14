@@ -137,29 +137,34 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
     window.location.href = '/'
   }
 
-  // Idle state: pulsing FAB
+  // Idle state: pulsing FAB — strong urgency, demands to be clicked
   if (state === 'idle') {
     return (
       <>
         <style jsx>{`
-          @keyframes sim-glow {
+          @keyframes sim-glow-strong {
             0%, 100% {
-              box-shadow: 0 0 12px rgba(59, 130, 246, 0.2), 0 0 32px rgba(59, 130, 246, 0.08);
+              box-shadow: 0 0 16px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.12);
+              transform: scale(1);
             }
             50% {
-              box-shadow: 0 0 24px rgba(59, 130, 246, 0.4), 0 0 64px rgba(59, 130, 246, 0.15);
+              box-shadow: 0 0 32px rgba(59, 130, 246, 0.5), 0 0 80px rgba(59, 130, 246, 0.2);
+              transform: scale(1.02);
             }
           }
         `}</style>
         <div className="fixed inset-0 z-40 pointer-events-none">
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-3">
+            <span className="text-xs font-medium text-muted-foreground bg-card/90 px-3 py-1 rounded-full border border-border/60 backdrop-blur-sm">
+              Click to trigger the automation
+            </span>
             <button
               onClick={runSimulation}
               disabled={running}
-              className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-primary text-primary-foreground font-semibold text-base transition-transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{ animation: 'sim-glow 2s ease-in-out infinite' }}
+              className="flex items-center gap-3 px-8 py-5 rounded-2xl bg-primary text-primary-foreground font-semibold text-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              style={{ animation: 'sim-glow-strong 1.5s ease-in-out infinite' }}
             >
-              <Zap className="w-5 h-5" />
+              <Zap className="w-6 h-6" />
               Simulate a Maintenance Emergency
             </button>
           </div>
