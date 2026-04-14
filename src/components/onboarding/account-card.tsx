@@ -112,21 +112,22 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
         </div>
       )}
 
-      <div className="px-8 pb-8 pt-8 flex flex-col justify-between min-h-[380px]">
+      <div className="px-8 pb-8 pt-6 flex flex-col min-h-[380px]">
+        {/* Identity pill — always at top */}
+        <div className="flex justify-center mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
+            <GoogleIcon className="w-3.5 h-3.5" />
+            Signed in as {step === 'name' ? authUser.email : displayIdentity}
+          </div>
+        </div>
+
         {/* Step: Name (only if Google didn't provide it) */}
         {step === 'name' && (
-          <div className="flex flex-col justify-between flex-1">
-            <div>
-              {/* Identity pill */}
-              <div className="flex justify-center mb-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
-                  <GoogleIcon className="w-3.5 h-3.5" />
-                  Signed in as {authUser.email}
-                </div>
-              </div>
-
+          <>
+            {/* Centered content */}
+            <div className="flex-1 flex flex-col items-center justify-center">
               <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your full name?</h2>
-              <div className="mt-8">
+              <div className="mt-6 w-full">
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -139,28 +140,22 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
               </div>
               {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             </div>
-            <Button onClick={handleNameNext} className="w-full mt-8" size="lg">
+            {/* Button pinned to bottom */}
+            <Button onClick={handleNameNext} className="w-full" size="lg">
               Continue
             </Button>
-          </div>
+          </>
         )}
 
         {/* Step: Phone (submits account on continue) */}
         {step === 'phone' && (
-          <div className="flex flex-col justify-between flex-1">
-            <div>
-              {/* Identity pill */}
-              <div className="flex justify-center mb-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
-                  <GoogleIcon className="w-3.5 h-3.5" />
-                  Signed in as {displayIdentity}
-                </div>
-              </div>
-
+          <>
+            {/* Centered content */}
+            <div className="flex-1 flex flex-col items-center justify-center">
               <h2 className={`${typography.pageTitle} text-center`}>
                 What&apos;s your mobile number?
               </h2>
-              <div className="mt-8">
+              <div className="mt-6 w-full">
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -169,7 +164,6 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
                   autoFocus
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePhoneSubmit() } }}
                 />
-                {/* Privacy reassurance */}
                 <div className="flex items-center justify-center gap-1.5 mt-2.5">
                   <Lock className="w-3 h-3 text-muted-foreground/60" />
                   <span className="text-xs text-muted-foreground/60">Your number stays private — only used for alerts</span>
@@ -177,7 +171,8 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
               </div>
               {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             </div>
-            <Button onClick={handlePhoneSubmit} className="w-full mt-8" size="lg" disabled={saving}>
+            {/* Button pinned to bottom */}
+            <Button onClick={handlePhoneSubmit} className="w-full" size="lg" disabled={saving}>
               {saving ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -187,7 +182,7 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
                 'Continue'
               )}
             </Button>
-          </div>
+          </>
         )}
       </div>
     </div>

@@ -144,16 +144,18 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourDone }: Da
   }
 
   // Ticket drawer — card renders ABOVE the drawer (z-[60] > Sheet's z-50)
+  // Positioned in the left area, next to the drawer (drawer takes right ~384px)
   if (tourStep === 'ticket-drawer') {
     return (
       <div
-        className={`fixed bottom-8 left-8 z-[60] pointer-events-auto w-full max-w-sm transition-all duration-400 ${
-          cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        className={`fixed bottom-8 z-[60] pointer-events-auto w-full max-w-sm px-4 transition-all duration-500 ease-out ${
+          cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
         }`}
+        style={{ right: 'calc(min(384px, 75%) + 1rem)' }}
       >
         <OnboardingHelper
           title="This is the ticket detail"
-          description="Every issue gets triaged, matched to a contractor, and dispatched automatically."
+          description="You'll find all the details of any issue and take action from here."
           buttonLabel="Back to dashboard"
           onAction={handleBackToDashboard}
         />

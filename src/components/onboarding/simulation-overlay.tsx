@@ -26,6 +26,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
   const [visibleSteps, setVisibleSteps] = useState(0)
   const [smsError, setSmsError] = useState(false)
   const [running, setRunning] = useState(false)
+  const [idleDimVisible, setIdleDimVisible] = useState(true)
   const mountedRef = useRef(true)
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
@@ -38,6 +39,13 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
       timeoutsRef.current = []
     }
   }, [])
+
+  // Idle dim: show briefly then fade out so user can explore
+  useEffect(() => {
+    if (state !== 'idle') return
+    const id = setTimeout(() => setIdleDimVisible(false), 2000)
+    return () => clearTimeout(id)
+  }, [state])
 
   const delay = useCallback((ms: number) => {
     return new Promise<void>((resolve) => {
@@ -137,7 +145,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
     window.location.href = '/'
   }
 
-  // Idle state: dimmed dashboard with pulsing FAB highlighted
+  // Idle state: brief dim focused on button, then fades out. Button stays persistent.
   if (state === 'idle') {
     return (
       <>
@@ -153,21 +161,23 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
             }
           }
         `}</style>
-        <div className="fixed inset-0 z-40 pointer-events-none">
-          {/* Dim the dashboard */}
-          <div className="absolute inset-0 bg-black/50" />
-          {/* FAB — highlighted against the dark background */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
-            <button
-              onClick={runSimulation}
-              disabled={running}
-              className="flex items-center gap-3 px-8 py-5 rounded-2xl bg-primary text-primary-foreground font-semibold text-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{ animation: 'sim-glow-strong 1.5s ease-in-out infinite' }}
-            >
-              <Zap className="w-6 h-6" />
-              Simulate a Maintenance Emergency
-            </button>
-          </div>
+        {/* Dim overlay — fades out after 2s so user can explore the dashboard */}
+        <div className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-700 ${
+          idleDimVisible ? 'opacity-100' : 'opacity-0'
+        }`}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+        </div>
+        {/* FAB — stays persistent even after dim fades, always clickable */}
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+          <button
+            onClick={runSimulation}
+            disabled={running}
+            className="flex items-center gap-3 px-8 py-5 rounded-2xl bg-primary text-primary-foreground font-semibold text-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+            style={{ animation: 'sim-glow-strong 1.5s ease-in-out infinite' }}
+          >
+            <Zap className="w-6 h-6" />
+            Simulate a Maintenance Emergency
+          </button>
         </div>
       </>
     )
