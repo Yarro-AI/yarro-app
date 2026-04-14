@@ -84,6 +84,8 @@ interface TenantRow {
   phone: string | null
   email: string | null
   role_tag: string | null
+  room_id: string | null
+  moved_out_at: string | null
 }
 
 interface ContractorRow {
@@ -190,7 +192,7 @@ function PropertyDetailInner() {
   const fetchRelated = useCallback(async () => {
     if (!propertyId || !propertyManager) return
     const [tenantsRes, allTenantsRes, contractorsRes, ticketsRes, landlordsRes, roomsRes] = await Promise.all([
-      supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_id', propertyId).order('full_name'),
+      supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag, room_id, moved_out_at').eq('property_id', propertyId).order('full_name'),
       supabase.from('c1_tenants').select('id, full_name, phone, email, role_tag').eq('property_manager_id', propertyManager.id).order('full_name'),
       supabase.from('c1_contractors').select('id, contractor_name, category, categories, contractor_phone, property_ids').eq('property_manager_id', propertyManager.id).eq('active', true),
       supabase.from('c1_tickets').select('id, issue_title, issue_description, category, priority, status, next_action_reason, date_logged, archived').eq('property_id', propertyId).neq('archived', true).order('date_logged', { ascending: false }).limit(50),
@@ -547,8 +549,11 @@ function PropertyDetailInner() {
                           <div className="min-w-0 flex-1">
                             <p className="text-[13px] font-medium truncate">
                               {t.full_name}
-                              {!rooms.some(r => r.current_tenant_id === t.id) && (
+                              {!t.room_id && t.moved_out_at && (
                                 <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+                              )}
+                              {!t.room_id && !t.moved_out_at && (
+                                <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-blue-500/70">Unassigned</span>
                               )}
                             </p>
                             <p className="text-xs text-muted-foreground">
@@ -567,8 +572,11 @@ function PropertyDetailInner() {
                           <div className="min-w-0 flex-1">
                             <p className="text-[13px] font-medium truncate">
                               {t.full_name}
-                              {!rooms.some(r => r.current_tenant_id === t.id) && (
+                              {!t.room_id && t.moved_out_at && (
                                 <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">Former</span>
+                              )}
+                              {!t.room_id && !t.moved_out_at && (
+                                <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-blue-500/70">Unassigned</span>
                               )}
                             </p>
                             <p className="text-xs text-muted-foreground">
