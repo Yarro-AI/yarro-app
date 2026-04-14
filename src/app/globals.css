@@ -190,3 +190,8 @@ input:-webkit-autofill:active {
   box-shadow: 0 0 0 1000px var(--card) inset !important;
   caret-color: var(--foreground) !important;
 }
+
+/* Interactive elements get pointer cursor */
+button, [role="button"], a, summary {
+  cursor: pointer;
+}

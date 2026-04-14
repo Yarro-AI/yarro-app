@@ -37,7 +37,6 @@ import {
   Plug,
   ShieldCheck,
   BedDouble,
-  Banknote,
   FileText,
   ClipboardList,
   MessageCircle,
@@ -88,6 +87,7 @@ const navGroups: NavGroup[] = [
       { href: '/properties', label: 'Properties', countKey: 'properties' },
       { href: '/tenants', label: 'Tenants', countKey: 'tenants' },
       { href: '/landlords', label: 'Landlords', countKey: 'landlords' },
+      { href: '/rent', label: 'Rent' },
     ],
   },
   {
@@ -97,14 +97,6 @@ const navGroups: NavGroup[] = [
     children: [
       { href: '/tickets', label: 'Jobs', badgeKey: 'actionableTickets' },
       { href: '/contractors', label: 'Contractors', countKey: 'contractors' },
-    ],
-  },
-  {
-    label: 'Finances',
-    icon: Banknote,
-    defaultOpen: false,
-    children: [
-      { href: '/rent', label: 'Rent' },
     ],
   },
   {

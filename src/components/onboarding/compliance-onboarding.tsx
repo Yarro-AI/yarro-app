@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Loader2, ChevronLeft, ShieldCheck, CheckCircle,
-  Upload, FileText, Building2,
+  Upload, FileText, Building2, X,
 } from 'lucide-react'
 
 // --- Local button components (same pattern as contractor-onboarding) ---
@@ -548,6 +548,7 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
   }
 
   const handleSaveAndReturn = async () => {
+    localStorage.setItem(`compliance_setup_dismissed_${pmId}`, 'true')
     onComplete()
   }
 
@@ -558,10 +559,16 @@ export function ComplianceOnboarding({ certificates, pmId, onComplete }: Complia
       }`}
     >
       <div
-        className={`w-full max-w-xl px-4 transition-all duration-500 ${
+        className={`w-full max-w-xl px-4 transition-all duration-500 relative ${
           dismissing ? 'opacity-0 scale-95 translate-y-4' : 'opacity-100 scale-100 translate-y-0'
         }`}
       >
+        <button
+          onClick={handleSaveAndReturn}
+          className="absolute top-4 right-8 z-10 w-8 h-8 rounded-full bg-muted/80 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
         {/* Intro */}
         {phase === 'intro' && (
           <div className="bg-card rounded-2xl border border-border p-10 text-center shadow-2xl">

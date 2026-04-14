@@ -6,6 +6,7 @@ import { OnboardingFlow } from '@/components/onboarding/onboarding-flow'
 import { PropertyCard } from '@/components/onboarding/property-card'
 import { SuccessCard } from '@/components/onboarding/success-card'
 import { useState } from 'react'
+import { X } from 'lucide-react'
 
 export default function ImportPage() {
   const { propertyManager } = usePM()
@@ -42,10 +43,18 @@ export default function ImportPage() {
         }`}
       >
         {!propertyDone ? (
-          <PropertyCard
+          <div className="relative">
+            <button
+              onClick={handleDismiss}
+              className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-muted/80 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <PropertyCard
             pmId={propertyManager.id}
             onComplete={() => setPropertyDone(true)}
           />
+          </div>
         ) : (
           <SuccessCard
             onDismiss={handleDismiss}

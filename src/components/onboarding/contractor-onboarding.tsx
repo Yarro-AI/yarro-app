@@ -10,7 +10,7 @@ import { typography } from '@/lib/typography'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, ChevronLeft, Wrench, MessageCircle, Mail, CheckCircle, Building2, Upload } from 'lucide-react'
+import { Loader2, ChevronLeft, Wrench, MessageCircle, Mail, CheckCircle, Building2, Upload, X } from 'lucide-react'
 import { BulkImportDialog } from '@/components/bulk-import/bulk-import-dialog'
 
 // Single-select option (contact method) — same as tenant-onboarding
@@ -204,6 +204,7 @@ export function ContractorOnboarding() {
   }
 
   const handleDismiss = async () => {
+    if (propertyManager) localStorage.setItem(`contractor_setup_dismissed_${propertyManager.id}`, 'true')
     await refreshPM()
     setDismissing(true)
     setTimeout(() => {
@@ -218,10 +219,16 @@ export function ContractorOnboarding() {
       }`}
     >
       <div
-        className={`w-full max-w-lg px-4 transition-all duration-500 ${
+        className={`w-full max-w-lg px-4 transition-all duration-500 relative ${
           dismissing ? 'opacity-0 scale-95 translate-y-4' : 'opacity-100 scale-100 translate-y-0'
         }`}
       >
+        <button
+          onClick={handleDismiss}
+          className="absolute top-4 right-8 z-10 w-8 h-8 rounded-full bg-muted/80 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
         {/* Intro */}
         {step === 'intro' && (
           <div className="bg-card rounded-2xl border border-border p-10 text-center shadow-2xl">

@@ -269,13 +269,15 @@ export default function TenantsPage() {
       }))
       setTenants(mapped)
       // Show/hide tenant onboarding based on current data
-      if (mapped.length === 0 && !propertyManager?.onboarding_completed_at) {
+      const dismissed = typeof window !== 'undefined' && localStorage.getItem(`tenant_setup_dismissed_${propertyManager?.id}`)
+      if (mapped.length === 0 && !propertyManager?.onboarding_completed_at && !dismissed) {
         setShowTenantOnboarding(true)
       } else {
         setShowTenantOnboarding(false)
       }
     } else if (!propertyManager?.onboarding_completed_at) {
-      setShowTenantOnboarding(true)
+      const dismissed = typeof window !== 'undefined' && localStorage.getItem(`tenant_setup_dismissed_${propertyManager?.id}`)
+      if (!dismissed) setShowTenantOnboarding(true)
     }
     setLoading(false)
   }

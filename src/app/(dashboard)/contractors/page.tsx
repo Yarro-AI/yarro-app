@@ -299,13 +299,15 @@ export default function ContractorsPage() {
     setFetchError(null)
     if (data) {
       setContractors(data)
-      if (data.length === 0 && !propertyManager?.onboarding_completed_at) {
+      const dismissed = typeof window !== 'undefined' && localStorage.getItem(`contractor_setup_dismissed_${propertyManager?.id}`)
+      if (data.length === 0 && !propertyManager?.onboarding_completed_at && !dismissed) {
         setShowContractorOnboarding(true)
       } else {
         setShowContractorOnboarding(false)
       }
     } else if (!propertyManager?.onboarding_completed_at) {
-      setShowContractorOnboarding(true)
+      const dismissed = typeof window !== 'undefined' && localStorage.getItem(`contractor_setup_dismissed_${propertyManager?.id}`)
+      if (!dismissed) setShowContractorOnboarding(true)
     }
     setLoading(false)
   }

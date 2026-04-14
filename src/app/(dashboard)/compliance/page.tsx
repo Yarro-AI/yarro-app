@@ -216,8 +216,9 @@ export default function CompliancePage() {
     )
   }
 
-  // Show setup wizard when PM has properties but no certificates yet
-  if (!loading && certificates.length === 0 && propertyCount > 0) {
+  // Show setup wizard when PM has properties but no certificates yet (unless dismissed)
+  const complianceDismissed = typeof window !== 'undefined' && localStorage.getItem(`compliance_setup_dismissed_${propertyManager?.id}`)
+  if (!loading && certificates.length === 0 && propertyCount > 0 && !complianceDismissed) {
     return (
       <ComplianceOnboarding
         certificates={[]}
