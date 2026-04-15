@@ -41,10 +41,14 @@ BEGIN
     WHERE id = v_ticket_id;
   ELSE
     -- Tenant disputes — reopen ticket for PM review
+    -- Clear scheduled_date so router doesn't put it back in 'scheduled'
+    -- Preserve all completion data (photos, notes) in tenant_updates history
     UPDATE c1_tickets SET
       status = 'open',
       resolved_at = NULL,
+      scheduled_date = NULL,
       confirmation_date = now(),
+      next_action = 'needs_action',
       next_action_reason = 'job_not_completed',
       tenant_updates = COALESCE(tenant_updates, '[]'::jsonb) || jsonb_build_object(
         'type', 'disputed',
