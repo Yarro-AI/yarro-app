@@ -103,7 +103,7 @@ export default function DashboardLayout({
         </div>
         {/* Global search + create header */}
         <DashboardHeader />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
           <DateRangeProvider>
             <ErrorBoundary>
               <TicketDrawerProvider>
