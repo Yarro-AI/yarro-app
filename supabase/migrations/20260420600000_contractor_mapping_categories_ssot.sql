@@ -125,13 +125,17 @@ CREATE TRIGGER trg_auto_sync_property_mappings
 -- The trigger will clean up old single-category mappings and rebuild with
 -- the full categories array.
 
--- First clear all contractor_mapping to start fresh (trigger will rebuild)
-UPDATE c1_properties SET contractor_mapping = '{}'::jsonb
-WHERE contractor_mapping IS NOT NULL AND contractor_mapping != '{}'::jsonb;
-
--- Now touch every active contractor's property_ids to fire the trigger
-UPDATE c1_contractors
-SET property_ids = property_ids
-WHERE active = true
-  AND property_ids IS NOT NULL
-  AND array_length(property_ids, 1) > 0;
+-- Direct rebuild: compute contractor_mapping from categories[] array
+-- (trigger-based backfill doesn't work because UPDATE SET x=x doesn't fire UPDATE OF triggers)
+UPDATE c1_properties p
+SET contractor_mapping = COALESCE((
+  SELECT jsonb_object_agg(cat, contractor_ids)
+  FROM (
+    SELECT cat, jsonb_agg(c.id::text) AS contractor_ids
+    FROM c1_contractors c,
+         unnest(COALESCE(NULLIF(c.categories, '{}'), ARRAY[c.category])) AS cat
+    WHERE c.active = true
+      AND p.id = ANY(c.property_ids)
+    GROUP BY cat
+  ) sub
+), '{}'::jsonb);
