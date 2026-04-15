@@ -229,6 +229,32 @@ Deno.serve(async (req) => {
         const smsBody = SMS_MESSAGES[1](desc);
         result = await sendSMS(phone, smsBody);
       }
+    } else if (step === 3) {
+      // ── Interactive approval: generate token, upsert row, send SMS with link ──
+      const token = crypto.randomUUID();
+
+      const { error: upsertErr } = await supabase
+        .from("demo_approvals")
+        .upsert(
+          { pm_id, token, approved: false, created_at: new Date().toISOString() },
+          { onConflict: "pm_id" },
+        );
+
+      if (upsertErr) {
+        console.error("[demo-notify] Approval upsert failed:", upsertErr);
+        return new Response(
+          JSON.stringify({ ok: false, error: "Failed to create approval" }),
+          { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
+        );
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const approvalLink = `${supabaseUrl}/functions/v1/yarro-demo-approval?token=${token}`;
+      const smsBody = `Yarro: A contractor quoted \u00a385 for the boiler repair at 123 Demo St. Tap to approve: ${approvalLink}`;
+
+      console.log("[demo-notify] Sending approval SMS with link");
+      result = await sendSMS(phone, smsBody);
+
     } else if (step === 2) {
       const vars = {
         "1": "Demo Repairs Ltd",

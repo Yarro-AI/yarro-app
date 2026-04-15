@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
@@ -18,6 +18,37 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
   const supabase = createClient()
   const [state, setState] = useState<OverlayState>('simulating')
   const [smsError, setSmsError] = useState(false)
+  const [quoteApproved, setQuoteApproved] = useState(false)
+
+  // ── Realtime subscription on demo_approvals ──
+  useEffect(() => {
+    // Check if already approved (handles tab-close-and-return)
+    supabase
+      .from('demo_approvals')
+      .select('approved')
+      .eq('pm_id', pmId)
+      .single()
+      .then(({ data }) => {
+        if (data?.approved) setQuoteApproved(true)
+      })
+
+    const channel = supabase
+      .channel('demo-approval')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'demo_approvals',
+        filter: `pm_id=eq.${pmId}`,
+      }, (payload) => {
+        if ((payload.new as Record<string, unknown>).approved === true) {
+          setQuoteApproved(true)
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pmId])
 
   const fireSms = useCallback(async (step: number) => {
     try {
@@ -32,6 +63,15 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
       console.warn(`[simulation] SMS step ${step} error:`, err)
       setSmsError(true)
     }
+  }, [supabase, pmId])
+
+  const handleSkipApproval = useCallback(async () => {
+    // Write approval to DB so tab refresh doesn't re-pause
+    await supabase
+      .from('demo_approvals')
+      .update({ approved: true } as never)
+      .eq('pm_id', pmId)
+    setQuoteApproved(true)
   }, [supabase, pmId])
 
   const handleChatComplete = useCallback(() => {
@@ -64,6 +104,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
 
   const handleRetry = useCallback(() => {
     setSmsError(false)
+    setQuoteApproved(false)
     setState('simulating')
   }, [])
 
@@ -77,7 +118,10 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
             <WhatsAppChat
               onSmsStep1={() => fireSms(1)}
               onSmsStep2={() => fireSms(2)}
+              onApprovalSms={() => fireSms(3)}
               onComplete={handleChatComplete}
+              onSkipApproval={handleSkipApproval}
+              quoteApproved={quoteApproved}
             />
           )}
 
