@@ -124,31 +124,28 @@ export default function ContractorPortalPage() {
   }, [loadTicket])
 
   async function handleQuoteSubmit(amount: number, notes: string | null) {
-    try {
-      await supabase.functions.invoke('yarro-scheduling', {
-        body: { source: 'portal-quote', token, quote_amount: amount, quote_notes: notes },
-      })
-    } catch { /* server action fires regardless */ }
+    const { error: fnError } = await supabase.functions.invoke('yarro-scheduling', {
+      body: { source: 'portal-quote', token, quote_amount: amount, quote_notes: notes },
+    })
+    if (fnError) console.error('[portal-quote] Edge function error:', fnError)
     await loadTicket()
   }
 
   async function handleSchedule(date: string, slot: string, notes: string | null) {
     const slotHour = TIME_SLOTS.find(s => s.value === slot)?.hour ?? 9
     const dateStr = `${date}T${String(slotHour).padStart(2, '0')}:00:00`
-    try {
-      await supabase.functions.invoke('yarro-scheduling', {
-        body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: slot, notes },
-      })
-    } catch { /* server action fires regardless */ }
+    const { error: fnError } = await supabase.functions.invoke('yarro-scheduling', {
+      body: { source: 'portal-schedule', token, date: new Date(dateStr).toISOString(), time_slot: slot, notes },
+    })
+    if (fnError) console.error('[portal-schedule] Edge function error:', fnError)
     await loadTicket()
   }
 
   async function handleRescheduleDecision(approved: boolean) {
-    try {
-      await supabase.functions.invoke('yarro-scheduling', {
-        body: { source: 'portal-reschedule-decision', token, approved },
-      })
-    } catch { /* server action fires regardless */ }
+    const { error: fnError } = await supabase.functions.invoke('yarro-scheduling', {
+      body: { source: 'portal-reschedule-decision', token, approved },
+    })
+    if (fnError) console.error('[portal-reschedule] Edge function error:', fnError)
     await loadTicket()
   }
 
@@ -166,11 +163,11 @@ export default function ContractorPortalPage() {
       }
     }
 
-    try {
-      await supabase.functions.invoke('yarro-scheduling', {
-        body: { source: 'portal-completion', token, resolved, notes, photos: photoUrls },
-      })
-    } catch { /* server action fires regardless */ }
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('yarro-scheduling', {
+      body: { source: 'portal-completion', token, resolved, notes, photos: photoUrls },
+    })
+    if (fnError) console.error('[portal-completion] Edge function error:', fnError)
+    else console.log('[portal-completion] Response:', fnData)
     await loadTicket()
   }
 
@@ -186,19 +183,18 @@ export default function ContractorPortalPage() {
       }
     }
 
-    try {
-      await supabase.functions.invoke('yarro-scheduling', {
-        body: {
-          source: 'portal-compliance-completion',
-          token,
-          document_url: documentUrl,
-          expiry_date: data.expiryDate,
-          issued_by: data.issuedBy || null,
-          certificate_number: data.certNumber || null,
-          notes: data.notes || null,
-        },
-      })
-    } catch { /* server action fires regardless */ }
+    const { error: fnError } = await supabase.functions.invoke('yarro-scheduling', {
+      body: {
+        source: 'portal-compliance-completion',
+        token,
+        document_url: documentUrl,
+        expiry_date: data.expiryDate,
+        issued_by: data.issuedBy || null,
+        certificate_number: data.certNumber || null,
+        notes: data.notes || null,
+      },
+    })
+    if (fnError) console.error('[portal-compliance-completion] Edge function error:', fnError)
     await loadTicket()
   }
 
