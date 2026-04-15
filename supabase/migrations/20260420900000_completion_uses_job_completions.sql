@@ -116,7 +116,8 @@ BEGIN
         'dispute_reason', COALESCE(p_notes, 'Tenant reported job not resolved')
       ),
       completed = false,
-      reason = COALESCE(p_notes, 'Tenant reported job not resolved')
+      reason = COALESCE(p_notes, 'Tenant reported job not resolved'),
+      source = 'tenant_dispute'
     WHERE id = v_ticket_id;
 
     -- If no job_completions row exists yet, insert one

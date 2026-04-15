@@ -25,6 +25,7 @@ export const REASON_DISPLAY: Record<string, ReasonDisplay> = {
   ooh_resolved:               { label: 'Verify resolution',   stuckLabel: '',                context: 'OOH says resolved — verify and close' },
   ooh_unresolved:             { label: 'Reassign',            stuckLabel: '',                context: 'OOH couldn\'t resolve — reassign contractor' },
   job_not_completed:          { label: 'Review & redispatch', stuckLabel: '',                context: 'Contractor reports job not completed' },
+  tenant_disputed:            { label: 'Review dispute',       stuckLabel: '',                context: 'Tenant disputes completion — job was marked done but tenant says issue persists' },
   compliance_needs_dispatch:  { label: 'Dispatch contractor', stuckLabel: '',                context: 'Certificate needs renewal — dispatch contractor' },
   cert_incomplete:            { label: 'Complete certificate', stuckLabel: '',                context: 'Certificate missing document or expiry date' },
   rent_overdue:               { label: 'Chase tenant',        stuckLabel: '',                context: 'Rent overdue — contact tenant' },
