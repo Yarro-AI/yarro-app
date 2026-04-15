@@ -34,7 +34,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        'flex flex-col h-full overflow-hidden',
+        'flex flex-col min-h-full',
         className
       )}
     >
@@ -88,13 +88,13 @@ export function PageShell({
       ) : null}
 
       <div className={cn(
-        'flex flex-col flex-1 min-h-0 overflow-hidden',
+        'flex flex-col flex-1',
         !noPadding && 'pb-8'
       )}>
         {headerExtra && (
           <div className={cn('flex-shrink-0', spacing.pagePaddingX)}>{headerExtra}</div>
         )}
-        <div className={cn('flex-1 min-h-0', !noPadding && spacing.pagePaddingX, scrollable ? 'overflow-y-auto' : 'flex flex-col overflow-hidden')}>
+        <div className={cn('flex-1', !noPadding && spacing.pagePaddingX, scrollable ? 'overflow-y-auto' : 'flex flex-col')}>
           {children}
         </div>
       </div>
