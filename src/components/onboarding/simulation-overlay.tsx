@@ -66,7 +66,6 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
   }, [supabase, pmId])
 
   const handleSkipApproval = useCallback(async () => {
-    // Write approval to DB so tab refresh doesn't re-pause
     await supabase
       .from('demo_approvals')
       .update({ approved: true } as never)
@@ -76,7 +75,6 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
 
   const handleChatComplete = useCallback(() => {
     setState('result')
-    // Auto-advance to investment after 2.5s
     setTimeout(() => setState('investment'), 2500)
   }, [])
 
@@ -117,7 +115,6 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
           {state === 'simulating' && (
             <WhatsAppChat
               onSmsStep1={() => fireSms(1)}
-              onSmsStep2={() => fireSms(2)}
               onApprovalSms={() => fireSms(3)}
               onComplete={handleChatComplete}
               onSkipApproval={handleSkipApproval}
@@ -136,7 +133,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
               </h2>
               <p className="text-sm text-muted-foreground mt-2">
                 {smsError
-                  ? 'Yarro triaged the issue, matched a contractor, checked the budget, and dispatched a quote \u2014 all automatically.'
+                  ? 'Yarro triaged the issue, matched a contractor, got a quote, and dispatched \u2014 all automatically.'
                   : 'That just happened for real. Your contractor would already be on their way.'}
               </p>
               {smsError && (

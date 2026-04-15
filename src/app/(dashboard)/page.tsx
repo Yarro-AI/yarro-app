@@ -476,6 +476,10 @@ export default function DashboardPage() {
           style={{ animation: 'spotlight-fade 1.5s ease-in-out forwards' }}
         />
       )}
+      {/* Simulate step — dim overlay behind the SimulateTicketCard */}
+      {step === 'simulate' && !simulationActive && (
+        <div className="fixed inset-0 z-40 bg-black/50 pointer-events-none transition-opacity duration-500" />
+      )}
       <style>{`
         @keyframes spotlight-fade {
           0% { opacity: 0; }
@@ -547,9 +551,9 @@ export default function DashboardPage() {
                       />
                     )
                   })()}
-                  {/* Simulate ticket card — inline in Needs Action when step='simulate' */}
+                  {/* Simulate ticket card — punches through dim overlay */}
                   {step === 'simulate' && (
-                    <div className="px-4 pt-4">
+                    <div className="px-4 pt-4 relative z-50">
                       <SimulateTicketCard onClick={() => setSimulationActive(true)} />
                     </div>
                   )}

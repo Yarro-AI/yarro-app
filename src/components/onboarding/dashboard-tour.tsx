@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePM } from '@/contexts/pm-context'
 import { OnboardingHelper } from './onboarding-helper'
 
-type TourStep = 'welcome' | 'breathing' | 'needs-action' | 'opening-ticket' | 'ticket-drawer' | 'done'
+type TourStep = 'welcome' | 'needs-action' | 'ticket-drawer' | 'done'
 
 interface Rect { top: number; left: number; width: number; height: number }
 
@@ -21,28 +21,27 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
   const supabase = createClient()
   const { refreshPM } = usePM()
   const [tourStep, setTourStep] = useState<TourStep>('welcome')
-  const [cardVisible, setCardVisible] = useState(false)
   const [highlight, setHighlight] = useState<Rect | null>(null)
   const [drawerRect, setDrawerRect] = useState<Rect | null>(null)
-  const [dimVisible, setDimVisible] = useState(true)
   const searchParams = useSearchParams()
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Track which step's card is visible — single source, no competing effects
+  const [visibleCard, setVisibleCard] = useState<TourStep | null>(null)
 
   // Cleanup on unmount
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
-  // Fade card in for card-showing steps
+  // Fade card in after step change — single effect, no race
   useEffect(() => {
-    const cardSteps: TourStep[] = ['welcome', 'needs-action', 'ticket-drawer']
-    if (!cardSteps.includes(tourStep)) {
-      setCardVisible(false)
-      return
-    }
-    setCardVisible(false)
-    const delay = tourStep === 'ticket-drawer' ? 500 : 150
-    const id = setTimeout(() => setCardVisible(true), delay)
+    if (tourStep === 'done') { setVisibleCard(null); return }
+
+    // Clear previous card, then fade in after a beat
+    setVisibleCard(null)
+    const delay = tourStep === 'ticket-drawer' ? 600 : 300
+    const id = setTimeout(() => setVisibleCard(tourStep), delay)
+    timerRef.current = id
     return () => clearTimeout(id)
   }, [tourStep])
 
@@ -56,8 +55,7 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
 
   // Complete tour: update DB, refresh PM, signal parent
   const completeTour = useCallback(async () => {
-    setCardVisible(false)
-    setDimVisible(false)
+    setVisibleCard(null)
     setHighlight(null)
 
     // Close drawer if open
@@ -73,7 +71,6 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       await refreshPM()
     } catch (err) {
       console.error('[tour] Failed to update onboarding_step:', err)
-      // Retry once
       try {
         await supabase
           .from('c1_property_managers')
@@ -91,47 +88,40 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
   }, [supabase, pmId, refreshPM, onTourComplete])
 
   const handleWelcome = useCallback(() => {
-    setCardVisible(false)
-    timerRef.current = setTimeout(() => {
-      setTourStep('breathing')
-      timerRef.current = setTimeout(() => {
-        const el = document.querySelector('[data-ticket-id]')
-        if (el) {
-          const rect = el.getBoundingClientRect()
-          setHighlight({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
-        }
-        setTourStep('needs-action')
-      }, 600)
+    setVisibleCard(null)
+    // Measure the demo ticket position, then show the needs-action card
+    setTimeout(() => {
+      const el = document.querySelector('[data-ticket-id]')
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        setHighlight({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
+      }
+      setTourStep('needs-action')
     }, 400)
   }, [])
 
   const handleSeeIssue = useCallback(() => {
     if (!demoTicketId) { completeTour(); return }
-    setCardVisible(false)
+    setVisibleCard(null)
     setHighlight(null)
-    timerRef.current = setTimeout(() => {
-      setTourStep('opening-ticket')
-      timerRef.current = setTimeout(() => {
-        openTicket(demoTicketId)
-        // Wait for drawer animation, then measure its position
-        timerRef.current = setTimeout(() => {
-          const drawerEl = document.querySelector('[data-side="right"]')
-          if (drawerEl) {
-            const rect = drawerEl.getBoundingClientRect()
-            setDrawerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
-          }
-          setTourStep('ticket-drawer')
-        }, 800)
-      }, 500)
+
+    // Open ticket drawer, then measure its position
+    setTimeout(() => {
+      openTicket(demoTicketId)
+      setTimeout(() => {
+        const drawerEl = document.querySelector('[data-side="right"]')
+        if (drawerEl) {
+          const rect = drawerEl.getBoundingClientRect()
+          setDrawerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height })
+        }
+        setTourStep('ticket-drawer')
+      }, 800)
     }, 400)
   }, [demoTicketId, openTicket, completeTour])
 
-  const handleBackToDashboard = useCallback(() => {
-    completeTour()
-  }, [completeTour])
-
-  // Done — render nothing
   if (tourStep === 'done') return null
+
+  const cardShown = visibleCard === tourStep
 
   return (
     <>
@@ -142,14 +132,12 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
         }
       `}</style>
 
-      {/* Dim overlay */}
-      <div className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-500 ${
-        dimVisible ? 'opacity-100' : 'opacity-0'
-      }`}>
-        {!highlight && <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />}
+      {/* Dim overlay — always visible during tour */}
+      <div className="fixed inset-0 z-40 pointer-events-none">
+        {!highlight && <div className="absolute inset-0 bg-black/50" />}
       </div>
 
-      {/* Spotlight: glow border with massive box-shadow darkens everything outside */}
+      {/* Spotlight: glow border with box-shadow darkens everything outside */}
       {highlight && (
         <div
           className="fixed z-40 rounded-xl border-2 border-primary/40 pointer-events-none"
@@ -167,7 +155,7 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       {/* Welcome card */}
       {tourStep === 'welcome' && (
         <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-auto w-full max-w-sm px-4 transition-opacity duration-500 ${
-          cardVisible ? 'opacity-100' : 'opacity-0'
+          cardShown ? 'opacity-100' : 'opacity-0'
         }`}>
           <OnboardingHelper
             title="This is your dashboard"
@@ -182,7 +170,7 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       {tourStep === 'needs-action' && (
         <div
           className={`fixed z-40 pointer-events-auto w-full max-w-sm px-4 transition-opacity duration-500 ${
-            cardVisible ? 'opacity-100' : 'opacity-0'
+            cardShown ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
             top: highlight ? `${highlight.top + highlight.height + 16}px` : 'auto',
@@ -204,7 +192,7 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       {tourStep === 'ticket-drawer' && (
         <div
           className={`fixed z-[60] pointer-events-auto w-full max-w-xs transition-opacity duration-500 ${
-            cardVisible ? 'opacity-100' : 'opacity-0'
+            cardShown ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
             top: drawerRect ? `${drawerRect.top + 12}px` : '3rem',
@@ -215,7 +203,7 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
             title="This is the ticket detail"
             description="You'll find all the details of any issue and take action from here."
             buttonLabel="Back to dashboard"
-            onAction={handleBackToDashboard}
+            onAction={completeTour}
           />
         </div>
       )}

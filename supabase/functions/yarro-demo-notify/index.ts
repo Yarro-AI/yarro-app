@@ -208,27 +208,11 @@ Deno.serve(async (req) => {
     let result;
 
     if (step === 1) {
-      const vars = {
-        "1": desc,
-        "2": "123 Demo Street, London SW1A 1AA",
-        "3": "Jane Doe (Room 1)",
-        "4": "Today",
-      };
-      console.log(
-        "[demo-notify] Sending pm_ticket with vars:",
-        JSON.stringify(vars),
-      );
-      result = await sendWhatsApp(phone, TEMPLATES.pm_ticket, vars);
+      // Plain SMS notification — tenant just reported an issue
+      const smsBody = `Yarro: A tenant just reported an issue at 123 Demo St \u2014 "${desc}". We're collecting details and finding a contractor now.`;
+      console.log("[demo-notify] Sending issue notification SMS");
+      result = await sendSMS(phone, smsBody);
 
-      // Fallback to SMS if WhatsApp fails (opt-in issues, etc.)
-      if (!result.ok) {
-        console.log(
-          "[demo-notify] WhatsApp failed, trying SMS fallback:",
-          result.error,
-        );
-        const smsBody = SMS_MESSAGES[1](desc);
-        result = await sendSMS(phone, smsBody);
-      }
     } else if (step === 3) {
       // ── Interactive approval: generate token, upsert row, send SMS with link ──
       const token = crypto.randomUUID();
@@ -255,31 +239,6 @@ Deno.serve(async (req) => {
       console.log("[demo-notify] Sending approval SMS with link");
       result = await sendSMS(phone, smsBody);
 
-    } else if (step === 2) {
-      const vars = {
-        "1": "Demo Repairs Ltd",
-        "2": "123 Demo Street, London SW1A 1AA",
-        "3": desc,
-        "4": "-",
-        "5": "85",
-        "6": "85",
-        "7": "0",
-      };
-      console.log(
-        "[demo-notify] Sending pm_auto_approved with vars:",
-        JSON.stringify(vars),
-      );
-      result = await sendWhatsApp(phone, TEMPLATES.pm_auto_approved, vars);
-
-      // Fallback to SMS
-      if (!result.ok) {
-        console.log(
-          "[demo-notify] WhatsApp failed, trying SMS fallback:",
-          result.error,
-        );
-        const smsBody = SMS_MESSAGES[2](desc);
-        result = await sendSMS(phone, smsBody);
-      }
     } else {
       return new Response(JSON.stringify({ error: "Invalid step" }), {
         status: 400,

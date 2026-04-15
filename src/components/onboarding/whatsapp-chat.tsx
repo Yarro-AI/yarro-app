@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface WhatsAppChatProps {
   onSmsStep1: () => void
-  onSmsStep2: () => void
   onApprovalSms: () => void
   onComplete: () => void
   onSkipApproval: () => void
@@ -18,31 +17,44 @@ interface Message {
   time: string
 }
 
-// Phase 1: Tenant reports issue, Yarro acknowledges, tenant thanks
-const PHASE_1: { side: 'left' | 'right'; text: string; time: string; typingMs: number; delayAfter: number }[] = [
-  { side: 'left', text: 'Hi, I need to report an issue with my flat', time: '09:14', typingMs: 1200, delayAfter: 1500 },
-  { side: 'right', text: 'Hi Jane, thanks for reaching out. I\u2019m Yarro, your property manager\u2019s AI assistant. What\u2019s the problem?', time: '09:14', typingMs: 2000, delayAfter: 2000 },
+type ScriptLine = {
+  side: 'left' | 'right'
+  text: string
+  time: string
+  typingMs: number
+  delayAfter: number
+  sms?: 1
+}
+
+// Phase 1: Tenant reports → AI notifies PM → collects details → finds contractor
+const PHASE_1: ScriptLine[] = [
+  // Tenant opens
+  { side: 'left', text: 'Hi, I\u2019ve got an issue with my boiler', time: '09:14', typingMs: 1000, delayAfter: 1500 },
+  // AI acknowledges + notifies PM (SMS step 1 fires here)
+  { side: 'right', text: 'Hi Jane, I\u2019m Yarro \u2014 your property manager\u2019s AI assistant. I\u2019m reporting this to your PM now.\n\nCan you describe the issue in more detail?', time: '09:14', typingMs: 2200, delayAfter: 2000, sms: 1 },
+  // Tenant gives detail
   { side: 'left', text: 'The boiler isn\u2019t working. No hot water since this morning and the heating\u2019s off too', time: '09:15', typingMs: 1800, delayAfter: 2500 },
-  { side: 'right', text: 'I\u2019m sorry to hear that. I\u2019ve logged this as an urgent plumbing issue and I\u2019m finding a contractor now.\nI\u2019ll notify the property manager.', time: '09:16', typingMs: 2800, delayAfter: 1500 },
-  { side: 'left', text: 'Thanks \uD83D\uDE4F', time: '09:16', typingMs: 600, delayAfter: 2000 },
+  // AI logs + contacting contractor
+  { side: 'right', text: 'Thanks Jane, I\u2019ve logged this as urgent. I\u2019m just contacting a contractor and letting your PM know\u2026', time: '09:16', typingMs: 2600, delayAfter: 2500 },
+  // AI found a plumber, getting quote (triggers approval SMS)
+  { side: 'right', text: 'I\u2019ve found a local plumber. Getting you a quote now\u2026', time: '09:17', typingMs: 2000, delayAfter: 1500 },
 ]
 
-// Pause message: Yarro getting a quote (triggers approval SMS)
+// Pause message: waiting for PM approval
 const PAUSE_MESSAGE = {
   side: 'right' as const,
-  text: 'I\u2019ve found a local plumber. Getting you a quote now\u2026',
+  text: 'The quote is \u00a385. I\u2019m just waiting on approval from your property manager.',
   time: '09:17',
   typingMs: 2200,
 }
 
-// Phase 2: After approval — manager approved, dispatch, tenant thanks
-const PHASE_2: { side: 'left' | 'right'; text: string; time: string; typingMs: number; delayAfter: number; sms?: 1 | 2 }[] = [
-  { side: 'right', text: 'Great news \u2014 your property manager just approved the \u00a385 callout. I\u2019m coordinating with the contractor now and will keep you updated.', time: '09:18', typingMs: 3000, delayAfter: 2500, sms: 1 },
-  { side: 'right', text: 'All sorted, Jane. A plumber has been dispatched to 123 Demo Street and should be with you this afternoon. Your property manager has been notified. Is there anything else?', time: '09:19', typingMs: 2500, delayAfter: 2000, sms: 2 },
-  { side: 'left', text: 'No that\u2019s amazing, thank you!', time: '09:19', typingMs: 800, delayAfter: 0 },
+// Phase 2: After PM approves
+const PHASE_2: ScriptLine[] = [
+  { side: 'right', text: 'Great news! Your PM has approved the repair. The contractor will be with you later today \u2014 I\u2019ll send you the details shortly.', time: '09:19', typingMs: 2800, delayAfter: 2000 },
+  { side: 'left', text: 'That\u2019s amazing, thank you!', time: '09:19', typingMs: 800, delayAfter: 0 },
 ]
 
-export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete, onSkipApproval, quoteApproved }: WhatsAppChatProps) {
+export function WhatsAppChat({ onSmsStep1, onApprovalSms, onComplete, onSkipApproval, quoteApproved }: WhatsAppChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [typingSide, setTypingSide] = useState<'left' | 'right' | null>(null)
   const [waitingForApproval, setWaitingForApproval] = useState(false)
@@ -84,12 +96,10 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
   }, [])
 
   const handleSkip = useCallback(() => {
-    // Resolve the approval promise locally
     if (approvalResolverRef.current) {
       approvalResolverRef.current()
       approvalResolverRef.current = null
     }
-    // Write approval to DB so tab refresh doesn't re-pause
     onSkipApproval()
   }, [onSkipApproval])
 
@@ -97,7 +107,7 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
   useEffect(() => {
     let msgId = 0
 
-    async function playMessages(script: typeof PHASE_1) {
+    async function playMessages(script: ScriptLine[]) {
       for (const line of script) {
         if (!mountedRef.current) return
 
@@ -110,11 +120,7 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
         const id = ++msgId
         setMessages(prev => [...prev, { id, side: line.side, text: line.text, time: line.time }])
 
-        // Fire SMS callbacks
-        if ('sms' in line) {
-          if (line.sms === 1) onSmsStep1()
-          if (line.sms === 2) onSmsStep2()
-        }
+        if (line.sms === 1) onSmsStep1()
 
         requestAnimationFrame(scrollToBottom)
 
@@ -125,11 +131,14 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
     }
 
     async function run() {
-      // ── Phase 1: Tenant reports issue ──
+      // ── Phase 1: Tenant reports, AI collects details, finds contractor ──
       await playMessages(PHASE_1)
       if (!mountedRef.current) return
 
-      // ── Pause message: "Getting you a quote..." ──
+      // Fire the approval SMS (step 3 — generates token + sends link)
+      onApprovalSms()
+
+      // ── Pause message: "Waiting on approval from your PM" ──
       setTypingSide(PAUSE_MESSAGE.side)
       scrollToBottom()
       await delay(PAUSE_MESSAGE.typingMs)
@@ -140,12 +149,8 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
       setMessages(prev => [...prev, { id: pauseId, side: PAUSE_MESSAGE.side, text: PAUSE_MESSAGE.text, time: PAUSE_MESSAGE.time }])
       requestAnimationFrame(scrollToBottom)
 
-      // Fire the approval SMS
-      onApprovalSms()
-
       // ── Wait for approval ──
       setWaitingForApproval(true)
-      setTypingSide('right') // Persistent typing indicator while waiting
 
       // Show skip button after 5s
       const skipTimer = setTimeout(() => {
@@ -161,13 +166,12 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
 
       setWaitingForApproval(false)
       setShowSkip(false)
-      setTypingSide(null)
 
       // Brief pause after approval before resuming
       await delay(800)
       if (!mountedRef.current) return
 
-      // ── Phase 2: Approval confirmed, dispatch ──
+      // ── Phase 2: PM approved, contractor dispatched ──
       await playMessages(PHASE_2)
       if (!mountedRef.current) return
 
@@ -186,10 +190,6 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
         @keyframes wa-dot {
           0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
           30% { opacity: 1; transform: translateY(-3px); }
-        }
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
         }
       `}</style>
 
@@ -291,8 +291,8 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
         {waitingForApproval && showSkip ? (
           <button
             onClick={handleSkip}
-            className="flex-1 text-center py-1.5 text-sm transition-opacity"
-            style={{ color: '#075E54', animation: 'fade-in 0.5s ease' }}
+            className="flex-1 text-center py-1.5 text-sm"
+            style={{ color: '#075E54', animation: 'fadeIn 0.5s ease' }}
           >
             Didn&apos;t get the message? <span className="underline">Skip</span>
           </button>
@@ -300,7 +300,7 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onApprovalSms, onComplete
           <>
             <svg width="18" height="18" fill="none" stroke="#64748B" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/></svg>
             <div className="flex-1 rounded-full px-3.5 py-1.5 text-sm" style={{ background: 'white', color: '#999' }}>
-              {waitingForApproval ? 'Waiting for your approval...' : 'Type a message'}
+              {waitingForApproval ? 'Waiting for approval\u2026' : 'Type a message'}
             </div>
             <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#075E54' }}>
               <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
