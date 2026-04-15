@@ -614,12 +614,12 @@ export function TicketForm({
     }
   }
 
-  // Shared form body — fields + indicators
+  // Shared form body — card sections matching ticket-overview.tsx pattern
   const formFields = (
-    <>
+    <div className="max-w-2xl space-y-3">
       {/* Handoff indicator */}
       {isHandoff && formData.priority === 'Emergency' && (
-        <div className="p-3 bg-red-50 border border-red-300 rounded-lg flex items-start gap-2">
+        <div className="p-4 bg-red-50 border border-red-300 rounded-xl flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-bold text-red-800 uppercase tracking-wide">EMERGENCY</p>
@@ -630,7 +630,7 @@ export function TicketForm({
         </div>
       )}
       {isHandoff && formData.priority !== 'Emergency' && (
-        <div className="p-3 bg-red-50 border border-red-300 rounded-lg flex items-start gap-2">
+        <div className="p-4 bg-red-50 border border-red-300 rounded-xl flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-red-800">Manual Review Required</p>
@@ -642,9 +642,9 @@ export function TicketForm({
         </div>
       )}
 
-      {/* Conversation thread for handoff/review tickets — collapsible */}
+      {/* Conversation thread for handoff/review tickets */}
       {(isHandoff || isReview) && (conversationLog.length > 0 || loadingConversation) && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -685,14 +685,15 @@ export function TicketForm({
       )}
 
       {error && (
-        <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
+        <div className="p-4 bg-destructive/10 text-destructive text-sm rounded-xl">
           {error}
         </div>
       )}
 
-      {/* Two column grid — CSS Grid with row-span for Issue Description */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4 items-start">
-        {/* Row 1 left: Property */}
+      {/* ── Section 1: Property & Tenant ── */}
+      <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property &amp; Tenant</p>
+
         <div className="space-y-1.5">
           <label className="text-sm font-medium">
             Property <span className="text-destructive">*</span>
@@ -707,31 +708,6 @@ export function TicketForm({
           />
         </div>
 
-        {/* Row 1 right: Issue Title */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Title</label>
-          <Input
-            value={formData.issue_title}
-            onChange={(e) => updateField('issue_title', e.target.value)}
-            placeholder="Short summary (auto-generated if empty)"
-          />
-        </div>
-
-        {/* Row 2 right: Issue Description */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">
-            Issue Description <span className="text-destructive">*</span>
-          </label>
-          <Textarea
-            value={formData.issue_description}
-            onChange={(e) => updateField('issue_description', e.target.value)}
-            placeholder="Describe the maintenance issue..."
-            className="min-h-[120px]"
-            rows={5}
-          />
-        </div>
-
-        {/* Row 2 left: Tenant */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Tenant</label>
           <Combobox
@@ -770,8 +746,52 @@ export function TicketForm({
           })()}
         </div>
 
-        {/* Row 3 left: Category + Priority */}
-        <div className="grid grid-cols-[1.5fr_1fr] gap-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Tenant Availability</label>
+          <Input
+            value={formData.availability}
+            onChange={(e) => updateField('availability', e.target.value)}
+            placeholder="e.g., Weekdays after 5pm"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Access Details</label>
+          <Input
+            value={formData.access}
+            onChange={(e) => updateField('access', e.target.value)}
+            placeholder="e.g., Gate code 1234, key under mat"
+          />
+        </div>
+      </div>
+
+      {/* ── Section 2: Issue Details ── */}
+      <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Issue Details</p>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Title</label>
+          <Input
+            value={formData.issue_title}
+            onChange={(e) => updateField('issue_title', e.target.value)}
+            placeholder="Short summary (auto-generated if empty)"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            Description <span className="text-destructive">*</span>
+          </label>
+          <Textarea
+            value={formData.issue_description}
+            onChange={(e) => updateField('issue_description', e.target.value)}
+            placeholder="Describe the maintenance issue..."
+            className="min-h-[140px]"
+            rows={6}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               Category <span className="text-destructive">*</span>
@@ -815,17 +835,53 @@ export function TicketForm({
           </div>
         </div>
 
-        {/* Row 3 right: Tenant Availability */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Tenant Availability</label>
-          <Input
-            value={formData.availability}
-            onChange={(e) => updateField('availability', e.target.value)}
-            placeholder="e.g., Weekdays after 5pm"
-          />
+          <label className="text-sm font-medium">Photos</label>
+          <div className="flex flex-wrap gap-2">
+            {formData.images.map((url, idx) => (
+              <div key={idx} className="relative group">
+                <img
+                  src={url}
+                  alt={`Upload ${idx + 1}`}
+                  className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${(isHandoff || isReview) ? 'w-28 h-28' : 'w-16 h-16'}`}
+                  onClick={() => window.open(url, '_blank')}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <label className="w-16 h-16 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+              {uploadingImages ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <ImagePlus className="h-5 w-5 text-muted-foreground" />
+              )}
+              <input
+                key={fileInputKey}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={uploadingImages}
+                className="sr-only"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Add photos of the issue (max 5MB each)
+          </p>
         </div>
+      </div>
 
-        {/* Row 4 left: Contractors */}
+      {/* ── Section 3: Dispatch ── */}
+      <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dispatch</p>
+
         <div className="space-y-1.5">
           <label className="text-sm font-medium">
             Contractors <span className="text-destructive">*</span>
@@ -856,24 +912,14 @@ export function TicketForm({
           </p>
         </div>
 
-        {/* Row 4 right: Access Details */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Access Details</label>
-          <Input
-            value={formData.access}
-            onChange={(e) => updateField('access', e.target.value)}
-            placeholder="e.g., Gate code 1234, key under mat"
-          />
-        </div>
-
-        {/* Category mismatch warning — full width */}
+        {/* Category mismatch warning */}
         {formData.category && formData.contractor_ids.length > 0 && (() => {
           const mismatchedContractors = formData.contractor_ids
             .map(id => contractors.find(c => c.id === id))
             .filter(c => c && !(c.categories?.some(cat => cat.toLowerCase() === formData.category.toLowerCase()) || c.category?.toLowerCase() === formData.category.toLowerCase())) as Contractor[]
           if (mismatchedContractors.length === 0) return null
           return (
-            <div className="col-span-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
@@ -905,51 +951,8 @@ export function TicketForm({
             </div>
           )
         })()}
-
-        {/* Photos — full width */}
-        <div className="col-span-2 space-y-1.5">
-          <label className="text-sm font-medium">Photos</label>
-          <div className="flex flex-wrap gap-2">
-            {formData.images.map((url, idx) => (
-              <div key={idx} className="relative group">
-                <img
-                  src={url}
-                  alt={`Upload ${idx + 1}`}
-                  className={`object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity ${(isHandoff || isReview) ? 'w-28 h-28' : 'w-16 h-16'}`}
-                  onClick={() => window.open(url, '_blank')}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(idx)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-            <label className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
-              {uploadingImages ? (
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              ) : (
-                <ImagePlus className="h-5 w-5 text-muted-foreground" />
-              )}
-              <input
-                key={fileInputKey}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                disabled={uploadingImages}
-                className="sr-only"
-              />
-            </label>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Add photos of the issue (max 5MB each)
-          </p>
-        </div>
       </div>
-    </>
+    </div>
   )
 
   // Shared footer — action buttons
