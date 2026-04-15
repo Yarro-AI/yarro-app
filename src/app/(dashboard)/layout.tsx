@@ -11,8 +11,6 @@ import { DateRangeProvider } from '@/contexts/date-range-context'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { TicketDrawerProvider } from '@/components/ticket-drawer-provider'
 import { DashboardHeader } from '@/components/dashboard-header'
-import { SimulationOverlay } from '@/components/onboarding/simulation-overlay'
-import { getOnboardingStep } from '@/lib/onboarding'
 
 export default function DashboardLayout({
   children,
@@ -115,15 +113,6 @@ export default function DashboardLayout({
           </DateRangeProvider>
         </main>
 
-        {/* Persistent simulate FAB — renders when tour is done, across all pages */}
-        {propertyManager && getOnboardingStep(propertyManager) === 'simulate' && (
-          <SimulationOverlay
-            pmId={propertyManager.id}
-            onComplete={() => {
-              window.location.href = '/import'
-            }}
-          />
-        )}
       </div>
     </div>
   )

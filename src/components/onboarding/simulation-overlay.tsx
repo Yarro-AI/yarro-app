@@ -3,10 +3,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Zap, MessageSquare, UserSearch, Calculator, Send, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
+import { MessageSquare, UserSearch, Calculator, Send, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
 import { typography } from '@/lib/typography'
 
-type OverlayState = 'idle' | 'simulating' | 'result' | 'investment'
+type OverlayState = 'simulating' | 'result' | 'investment'
 
 interface SimulationOverlayProps {
   pmId: string
@@ -22,15 +22,12 @@ const SIMULATION_STEPS = [
 
 export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) {
   const supabase = createClient()
-  const [state, setState] = useState<OverlayState>('idle')
+  const [state, setState] = useState<OverlayState>('simulating')
   const [visibleSteps, setVisibleSteps] = useState(0)
   const [smsError, setSmsError] = useState(false)
-  const [running, setRunning] = useState(false)
-  const [idleDimVisible, setIdleDimVisible] = useState(true)
   const mountedRef = useRef(true)
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
-  // Clean up timeouts on unmount
   useEffect(() => {
     mountedRef.current = true
     return () => {
@@ -39,13 +36,6 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
       timeoutsRef.current = []
     }
   }, [])
-
-  // Idle dim: show briefly then fade out so user can explore
-  useEffect(() => {
-    if (state !== 'idle') return
-    const id = setTimeout(() => setIdleDimVisible(false), 2000)
-    return () => clearTimeout(id)
-  }, [state])
 
   const delay = useCallback((ms: number) => {
     return new Promise<void>((resolve) => {
@@ -56,77 +46,60 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
     })
   }, [])
 
-  const runSimulation = useCallback(async () => {
-    // Prevent double-click
-    if (running) return
-    setRunning(true)
+  // Auto-run simulation on mount
+  useEffect(() => {
+    runSimulation()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  const runSimulation = useCallback(async () => {
     setState('simulating')
     setVisibleSteps(0)
     setSmsError(false)
 
-    // Animate steps sequentially
+    // Animate steps
     for (let i = 0; i < SIMULATION_STEPS.length; i++) {
       await delay(i === 0 ? 300 : 1500)
       if (!mountedRef.current) return
       setVisibleSteps(i + 1)
     }
 
-    // Fire SMS notifications (non-blocking — animation already showing)
+    // Fire SMS
     let smsFailed = false
     try {
-      // Step 1: tenant alert
       const res1 = await supabase.functions.invoke('yarro-demo-notify', {
         body: { pm_id: pmId, step: 1 },
       })
-      if (res1.error || !res1.data?.ok) {
-        console.warn('[simulation] Step 1 SMS failed:', res1.error || res1.data?.error)
-        smsFailed = true
-      }
+      if (res1.error || !res1.data?.ok) smsFailed = true
 
-      // Step 2: auto-approved (slight delay for realism)
       await delay(2000)
       if (!mountedRef.current) return
 
       const res2 = await supabase.functions.invoke('yarro-demo-notify', {
         body: { pm_id: pmId, step: 2 },
       })
-      if (res2.error || !res2.data?.ok) {
-        console.warn('[simulation] Step 2 SMS failed:', res2.error || res2.data?.error)
-        smsFailed = true
-      }
-    } catch (err) {
-      console.warn('[simulation] SMS dispatch error:', err)
+      if (res2.error || !res2.data?.ok) smsFailed = true
+    } catch {
       smsFailed = true
     }
 
     if (!mountedRef.current) return
     setSmsError(smsFailed)
 
-    // Transition to result
     await delay(1500)
     if (!mountedRef.current) return
     setState('result')
 
-    // Auto-advance to investment CTA
     await delay(2500)
     if (!mountedRef.current) return
     setState('investment')
-    setRunning(false)
-  }, [supabase, pmId, running, delay])
-
-  const retrySimulation = useCallback(() => {
-    setRunning(false)
-    setState('idle')
-  }, [])
+  }, [supabase, pmId, delay])
 
   const wipeDemoAndComplete = async () => {
     try {
-      // Wipe all is_demo data + set onboarding_step='complete' in one RPC
       await supabase.rpc('onboarding_wipe_demo', { p_pm_id: pmId })
     } catch (err) {
       console.error('[simulation] Demo wipe failed:', err)
-      // Fallback: at least set onboarding_step manually
       await supabase
         .from('c1_property_managers')
         .update({ onboarding_step: 'complete' } as never)
@@ -141,60 +114,24 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
 
   const handleExploreFirst = async () => {
     await wipeDemoAndComplete()
-    // Don't call onComplete (which navigates to /import) — just reload the dashboard
     window.location.href = '/'
   }
 
-  // Idle state: brief dim focused on button, then fades out. Button stays persistent.
-  if (state === 'idle') {
-    return (
-      <>
-        <style jsx>{`
-          @keyframes sim-glow-strong {
-            0%, 100% {
-              box-shadow: 0 0 16px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.12);
-              transform: scale(1);
-            }
-            50% {
-              box-shadow: 0 0 32px rgba(59, 130, 246, 0.5), 0 0 80px rgba(59, 130, 246, 0.2);
-              transform: scale(1.02);
-            }
-          }
-        `}</style>
-        {/* Dim overlay — fades out after 2s so user can explore the dashboard */}
-        <div className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-700 ${
-          idleDimVisible ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
-        </div>
-        {/* FAB — stays persistent even after dim fades, always clickable */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-          <button
-            onClick={runSimulation}
-            disabled={running}
-            className="flex items-center gap-3 px-8 py-5 rounded-2xl bg-primary text-primary-foreground font-semibold text-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-            style={{ animation: 'sim-glow-strong 1.5s ease-in-out infinite' }}
-          >
-            <Zap className="w-6 h-6" />
-            Simulate a Maintenance Emergency
-          </button>
-        </div>
-      </>
-    )
-  }
+  const retrySimulation = useCallback(() => {
+    runSimulation()
+  }, [runSimulation])
 
-  // Simulation / Result / Investment states: centered card
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="w-full max-w-md px-4">
         <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
           <div className="px-8 py-8">
 
-            {/* Simulating state */}
+            {/* Simulating */}
             {state === 'simulating' && (
               <>
                 <h2 className={`${typography.pageTitle} text-center`}>
-                  Yarro&apos;s brain is working...
+                  Processing emergency...
                 </h2>
                 <div className="mt-8 space-y-4">
                   {SIMULATION_STEPS.map((step, i) => {
@@ -227,7 +164,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
               </>
             )}
 
-            {/* Result state */}
+            {/* Result */}
             {state === 'result' && (
               <div className="text-center">
                 <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
@@ -253,7 +190,7 @@ export function SimulationOverlay({ pmId, onComplete }: SimulationOverlayProps) 
               </div>
             )}
 
-            {/* Investment CTA state */}
+            {/* Investment CTA */}
             {state === 'investment' && (
               <div className="text-center">
                 <h2 className={`${typography.pageTitle}`}>

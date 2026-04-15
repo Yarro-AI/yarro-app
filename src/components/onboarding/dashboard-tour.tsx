@@ -146,22 +146,26 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       <div className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-500 ${
         dimVisible ? 'opacity-100' : 'opacity-0'
       }`}>
-        {!highlight && <div className="absolute inset-0 bg-black/50" />}
+        {!highlight && <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />}
       </div>
 
-      {/* Spotlight cutout on highlighted ticket */}
+      {/* Spotlight: blur + darken everything, cutout around highlighted ticket */}
       {highlight && (
-        <div
-          className="fixed z-40 rounded-xl border-2 border-primary/40 pointer-events-none"
-          style={{
-            top: highlight.top - 6,
-            left: highlight.left - 6,
-            width: highlight.width + 12,
-            height: highlight.height + 12,
-            animation: 'tour-glow 2s ease-in-out infinite',
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
-          }}
-        />
+        <>
+          {/* Full-screen blur+darken layer */}
+          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] pointer-events-none" />
+          {/* Clear cutout over the ticket — punches through the blur */}
+          <div
+            className="fixed z-40 rounded-xl border-2 border-primary/40 pointer-events-none bg-card"
+            style={{
+              top: highlight.top - 6,
+              left: highlight.left - 6,
+              width: highlight.width + 12,
+              height: highlight.height + 12,
+              animation: 'tour-glow 2s ease-in-out infinite',
+            }}
+          />
+        </>
       )}
 
       {/* Welcome card */}
@@ -200,15 +204,15 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
         </div>
       )}
 
-      {/* Ticket drawer card — positioned next to the drawer's left edge */}
+      {/* Ticket drawer card — snug against the drawer's left edge */}
       {tourStep === 'ticket-drawer' && (
         <div
-          className={`fixed z-[60] pointer-events-auto w-full max-w-xs px-4 transition-all duration-500 ease-out ${
+          className={`fixed z-[60] pointer-events-auto w-full max-w-xs transition-all duration-500 ease-out ${
             cardVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
           }`}
           style={{
-            top: drawerRect ? `${drawerRect.top + 16}px` : '4rem',
-            right: drawerRect ? `${window.innerWidth - drawerRect.left + 16}px` : '55vw',
+            top: drawerRect ? `${drawerRect.top + 12}px` : '3rem',
+            right: drawerRect ? `${window.innerWidth - drawerRect.left + 8}px` : '52vw',
           }}
         >
           <OnboardingHelper

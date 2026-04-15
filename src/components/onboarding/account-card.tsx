@@ -96,42 +96,38 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
 
   return (
     <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
-      {steps.length > 1 && (
-        <div className="flex items-center px-6 pt-6 pb-2">
-          {stepIndex > 0 ? (
-            <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          ) : (
+      {/* Header: progress dots (multi-step only) + identity pill + divider */}
+      <div className="px-8 pt-6">
+        {steps.length > 1 && (
+          <div className="flex items-center mb-4">
+            {stepIndex > 0 ? (
+              <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="w-8" />
+            )}
+            <div className="flex-1">
+              <ProgressDots current={stepIndex + 1} total={steps.length} />
+            </div>
             <div className="w-8" />
-          )}
-          <div className="flex-1">
-            <ProgressDots current={stepIndex + 1} total={steps.length} />
           </div>
-          <div className="w-8" />
-        </div>
-      )}
-
-      <div className="px-8 pb-8 pt-6 flex flex-col min-h-[380px]">
-        {/* Identity pill — always at top */}
+        )}
         <div className="flex justify-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/60 text-xs text-muted-foreground">
             <GoogleIcon className="w-3.5 h-3.5" />
             Signed in as {step === 'name' ? authUser.email : displayIdentity}
           </div>
         </div>
-        {/* Divider — matches login page */}
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-        </div>
+        <div className="border-t border-border mt-5" />
+      </div>
 
-        {/* Step: Name (only if Google didn't provide it) */}
+      {/* Body: content centered between divider and button */}
+      <div className="px-8 pb-8 flex flex-col" style={{ minHeight: '280px' }}>
+        {/* Step: Name */}
         {step === 'name' && (
           <>
-            {/* Centered content */}
-            <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center py-4">
               <h2 className={`${typography.pageTitle} text-center`}>What&apos;s your full name?</h2>
               <div className="mt-6 w-full">
                 <Input
@@ -146,18 +142,16 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
               </div>
               {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             </div>
-            {/* Button pinned to bottom */}
             <Button onClick={handleNameNext} className="w-full" size="lg">
               Continue
             </Button>
           </>
         )}
 
-        {/* Step: Phone (submits account on continue) */}
+        {/* Step: Phone */}
         {step === 'phone' && (
           <>
-            {/* Centered content */}
-            <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center py-4">
               <h2 className={`${typography.pageTitle} text-center`}>
                 What&apos;s your mobile number?
               </h2>
@@ -177,7 +171,6 @@ export function AccountCard({ authUser, onComplete }: AccountCardProps) {
               </div>
               {error && <p className="text-sm text-destructive mt-3 text-center">{error}</p>}
             </div>
-            {/* Button pinned to bottom */}
             <Button onClick={handlePhoneSubmit} className="w-full" size="lg" disabled={saving}>
               {saving ? (
                 <span className="flex items-center gap-2">
