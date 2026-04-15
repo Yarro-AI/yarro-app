@@ -15,7 +15,17 @@ export function SimulateTicketCard({ onClick }: SimulateTicketCardProps) {
   return (
     <>
       <style jsx>{`
-        @keyframes sim-card-glow {
+        @keyframes sim-glow-in {
+          0% {
+            opacity: 0;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.08);
+          }
+          100% {
+            opacity: 1;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.08);
+          }
+        }
+        @keyframes sim-glow {
           0%, 100% {
             box-shadow: 0 0 8px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.08);
           }
@@ -26,9 +36,9 @@ export function SimulateTicketCard({ onClick }: SimulateTicketCardProps) {
       `}</style>
       <button
         onClick={onClick}
-        className="w-full grid grid-cols-[auto_1fr_20px] items-center gap-3 p-4 rounded-xl border-2 border-primary/40 bg-primary cursor-pointer group transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:border-primary text-left animate-in fade-in duration-500"
+        className="w-full grid grid-cols-[auto_1fr_20px] items-center gap-3 p-4 rounded-xl border-2 border-primary/40 bg-primary cursor-pointer group transition-colors duration-150 hover:border-primary text-left"
         style={{
-          animation: 'sim-card-glow 2s ease-in-out infinite',
+          animation: 'sim-glow-in 0.5s ease-out forwards, sim-glow 2s ease-in-out 0.5s infinite',
         }}
       >
         {/* Icon */}
