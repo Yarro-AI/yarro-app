@@ -45,7 +45,7 @@ export function PainPointPicker({ pmId, onComplete }: PainPointPickerProps) {
       // onboarding_segment/onboarding_step added by migration, not yet in generated types
       await supabase
         .from('c1_property_managers')
-        .update({ onboarding_segment: segment, onboarding_step: 'simulation' } as never)
+        .update({ onboarding_segment: segment, onboarding_step: 'tour' } as never)
         .eq('id', pmId)
 
       onComplete(segment)

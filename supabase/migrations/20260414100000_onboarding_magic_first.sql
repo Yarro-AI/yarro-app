@@ -11,7 +11,7 @@ ALTER TABLE c1_property_managers
   ADD COLUMN IF NOT EXISTS onboarding_step text DEFAULT 'account';
 
 COMMENT ON COLUMN c1_property_managers.onboarding_segment IS 'Pain-point choice: maintenance / rent / compliance';
-COMMENT ON COLUMN c1_property_managers.onboarding_step IS 'Onboarding progress SSOT: account → segment → simulation → complete';
+COMMENT ON COLUMN c1_property_managers.onboarding_step IS 'Onboarding progress SSOT: account → segment → tour → simulate → complete';
 
 
 -- ═══════════════════════════════════════════════════════════════

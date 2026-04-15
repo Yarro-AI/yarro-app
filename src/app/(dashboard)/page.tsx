@@ -12,8 +12,6 @@ import {
   MessageSquare,
   Phone,
   User,
-
-  Search,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -43,6 +41,7 @@ import { WaitingSection } from '@/components/dashboard/waiting-section'
 import { ScheduledSection } from '@/components/dashboard/scheduled-section'
 import { OnboardingCategoryCard } from '@/components/dashboard/onboarding-category-card'
 import { DashboardTour } from '@/components/onboarding/dashboard-tour'
+import { getOnboardingStep } from '@/lib/onboarding'
 import type { OnboardingChecklistItem } from '@/components/dashboard/onboarding-category-card'
 import type { TodoItem, TicketSummary } from '@/components/dashboard/todo-panel'
 
@@ -407,7 +406,8 @@ export default function DashboardPage() {
 
   const firstName = propertyManager?.name?.split(' ')[0] || ''
   const onboardingDone = !!propertyManager?.onboarding_completed_at
-  const inSimulation = (propertyManager as Record<string, unknown>)?.onboarding_step === 'simulation'
+  const step = getOnboardingStep(propertyManager)
+  const inSimulation = step === 'tour' || step === 'simulate'
   // During onboarding, only count maintenance items (compliance/finance are hidden)
   const visibleTaskCount = onboardingDone
     ? actionable.length
@@ -482,14 +482,15 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      {/* Magic-first onboarding: guided dashboard tour (cards only, no simulate) */}
-      {propertyManager && inSimulation && (
+      {/* Guided dashboard tour — only during 'tour' step */}
+      {propertyManager && step === 'tour' && (
         <DashboardTour
           pmId={propertyManager.id}
           demoTicketId={actionable[0]?.ticket_id ?? null}
           openTicket={openTicket}
           onTourComplete={() => {
-            // Tour cards are done — simulate FAB rendered by layout
+            // Tour updated DB to 'simulate' and called refreshPM.
+            // Layout will now render SimulationOverlay.
           }}
         />
       )}

@@ -9,6 +9,7 @@ import { PainPointPicker } from './pain-point-picker'
 import Image from 'next/image'
 import { Loader2 } from 'lucide-react'
 import { typography } from '@/lib/typography'
+import { getOnboardingStep } from '@/lib/onboarding'
 
 type OnboardingStep = 'account' | 'pain-point' | 'transition' | 'done'
 
@@ -17,14 +18,10 @@ export function OnboardingFlow() {
   const router = useRouter()
   const supabase = createClient()
 
-  // onboarding_step is added by migration but not yet in generated types
-  const getOnboardingStep = (pm: typeof propertyManager) =>
-    (pm as unknown as Record<string, unknown>)?.onboarding_step as string | null | undefined
-
   const [step, setStep] = useState<OnboardingStep>(() => {
     if (propertyManager) {
       const dbStep = getOnboardingStep(propertyManager)
-      if (dbStep === 'simulation' || dbStep === 'complete' || dbStep === null) return 'done'
+      if (dbStep === 'tour' || dbStep === 'simulate' || dbStep === 'complete' || dbStep === null) return 'done'
       if (dbStep === 'segment') return 'pain-point'
       return 'account'
     }
@@ -44,7 +41,7 @@ export function OnboardingFlow() {
     if (!propertyManager || step !== 'account') return
     setPmId(propertyManager.id)
     const dbStep = getOnboardingStep(propertyManager)
-    if (dbStep === 'simulation' || dbStep === 'complete' || dbStep === null) {
+    if (dbStep === 'tour' || dbStep === 'simulate' || dbStep === 'complete' || dbStep === null) {
       setStep('done')
     } else if (dbStep === 'segment') {
       setStep('pain-point')

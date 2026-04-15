@@ -7,6 +7,7 @@ import { PropertyCard } from '@/components/onboarding/property-card'
 import { SuccessCard } from '@/components/onboarding/success-card'
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { getOnboardingStep } from '@/lib/onboarding'
 
 export default function ImportPage() {
   const { propertyManager } = usePM()
@@ -14,14 +15,11 @@ export default function ImportPage() {
   const [propertyDone, setPropertyDone] = useState(false)
   const [dismissing, setDismissing] = useState(false)
 
-  // Read onboarding_step from PM record (SSOT — not localStorage)
-  const onboardingStep = propertyManager
-    ? (propertyManager as unknown as Record<string, unknown>).onboarding_step as string | null
-    : undefined
+  const onboardingStep = getOnboardingStep(propertyManager)
 
-  // Redirect to dashboard if simulation step — overlay renders there
+  // Redirect to dashboard if tour or simulate step — overlays render there
   useEffect(() => {
-    if (onboardingStep === 'simulation') {
+    if (onboardingStep === 'tour' || onboardingStep === 'simulate') {
       router.replace('/')
     }
   }, [onboardingStep, router])
@@ -36,8 +34,8 @@ export default function ImportPage() {
     return <OnboardingFlow />
   }
 
-  // Simulation step → useEffect handles redirect above
-  if (onboardingStep === 'simulation') {
+  // Tour/simulate step → useEffect handles redirect above
+  if (onboardingStep === 'tour' || onboardingStep === 'simulate') {
     return null
   }
 
