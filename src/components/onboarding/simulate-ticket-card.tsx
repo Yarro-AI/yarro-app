@@ -46,25 +46,25 @@ export function SimulateTicketCard({ onClick }: SimulateTicketCardProps) {
       `}</style>
       <button
         onClick={onClick}
-        className="w-full grid grid-cols-[auto_1fr_20px] items-center gap-3 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 cursor-pointer group transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/50 text-left"
+        className="w-full grid grid-cols-[auto_1fr_20px] items-center gap-3 p-4 rounded-xl border-2 border-primary/40 bg-primary cursor-pointer group transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:border-primary text-left"
         style={{
           animation: 'sim-card-glow 2s ease-in-out infinite, sim-card-enter 0.6s ease-out forwards',
         }}
       >
         {/* Icon */}
-        <div className="flex items-center pr-3 border-r-2 border-primary/20 self-stretch">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Zap className="w-5 h-5 text-primary" />
+        <div className="flex items-center pr-3 border-r-2 border-white/20 self-stretch">
+          <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
+            <Zap className="w-5 h-5 text-white" />
           </div>
         </div>
         {/* Text */}
         <div className="min-w-0">
-          <p className="text-[15px] font-semibold text-primary truncate">Simulate a Maintenance Emergency</p>
-          <p className="text-sm text-primary/60 truncate mt-0.5">See how Yarro dispatches automatically</p>
+          <p className="text-[15px] font-semibold text-white truncate">Simulate a Maintenance Emergency</p>
+          <p className="text-sm text-white/70 truncate mt-0.5">See how Yarro dispatches automatically</p>
         </div>
         {/* Arrow */}
-        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
-          <Zap className="w-3 h-3 text-primary" />
+        <div className="w-5 h-5 rounded-full bg-white/15 flex items-center justify-center">
+          <Zap className="w-3 h-3 text-white" />
         </div>
       </button>
     </>

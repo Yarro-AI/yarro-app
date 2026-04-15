@@ -149,29 +149,25 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
         {!highlight && <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />}
       </div>
 
-      {/* Spotlight: blur + darken everything, cutout around highlighted ticket */}
+      {/* Spotlight: glow border with massive box-shadow darkens everything outside */}
       {highlight && (
-        <>
-          {/* Full-screen blur+darken layer */}
-          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] pointer-events-none" />
-          {/* Clear cutout over the ticket — punches through the blur */}
-          <div
-            className="fixed z-40 rounded-xl border-2 border-primary/40 pointer-events-none bg-card"
-            style={{
-              top: highlight.top - 6,
-              left: highlight.left - 6,
-              width: highlight.width + 12,
-              height: highlight.height + 12,
-              animation: 'tour-glow 2s ease-in-out infinite',
-            }}
-          />
-        </>
+        <div
+          className="fixed z-40 rounded-xl border-2 border-primary/40 pointer-events-none"
+          style={{
+            top: highlight.top - 6,
+            left: highlight.left - 6,
+            width: highlight.width + 12,
+            height: highlight.height + 12,
+            animation: 'tour-glow 2s ease-in-out infinite',
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.55)',
+          }}
+        />
       )}
 
       {/* Welcome card */}
       {tourStep === 'welcome' && (
-        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-auto w-full max-w-sm px-4 transition-all duration-500 ${
-          cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-auto w-full max-w-sm px-4 transition-opacity duration-500 ${
+          cardVisible ? 'opacity-100' : 'opacity-0'
         }`}>
           <OnboardingHelper
             title="This is your dashboard"
@@ -185,8 +181,8 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       {/* Needs Action card — below highlighted ticket */}
       {tourStep === 'needs-action' && (
         <div
-          className={`fixed z-40 pointer-events-auto w-full max-w-sm px-4 transition-all duration-500 ${
-            cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          className={`fixed z-40 pointer-events-auto w-full max-w-sm px-4 transition-opacity duration-500 ${
+            cardVisible ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
             top: highlight ? `${highlight.top + highlight.height + 16}px` : 'auto',
@@ -207,12 +203,12 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
       {/* Ticket drawer card — snug against the drawer's left edge */}
       {tourStep === 'ticket-drawer' && (
         <div
-          className={`fixed z-[60] pointer-events-auto w-full max-w-xs transition-all duration-500 ease-out ${
-            cardVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+          className={`fixed z-[60] pointer-events-auto w-full max-w-xs transition-opacity duration-500 ${
+            cardVisible ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
             top: drawerRect ? `${drawerRect.top + 12}px` : '3rem',
-            right: drawerRect ? `${window.innerWidth - drawerRect.left + 8}px` : '52vw',
+            right: drawerRect ? `${window.innerWidth - drawerRect.left + 4}px` : '52vw',
           }}
         >
           <OnboardingHelper
