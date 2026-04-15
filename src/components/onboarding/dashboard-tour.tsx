@@ -167,14 +167,14 @@ export function DashboardTour({ pmId, demoTicketId, openTicket, onTourComplete }
         />
       </div>
 
-      {/* Ticket drawer card — snug against the drawer's left edge */}
+      {/* Ticket drawer card — snug against the drawer's left edge. Hidden until measured. */}
       <div
         className="fixed z-[60] w-full max-w-xs transition-opacity duration-500"
         style={{
-          opacity: tourStep === 'ticket-drawer' ? 1 : 0,
-          pointerEvents: tourStep === 'ticket-drawer' ? 'auto' : 'none',
-          top: drawerRect ? `${drawerRect.top + 12}px` : '3rem',
-          right: drawerRect ? `${window.innerWidth - drawerRect.left + 4}px` : '52vw',
+          opacity: tourStep === 'ticket-drawer' && drawerRect ? 1 : 0,
+          pointerEvents: tourStep === 'ticket-drawer' && drawerRect ? 'auto' : 'none',
+          top: drawerRect ? `${drawerRect.top + 40}px` : '-9999px',
+          right: drawerRect ? `${window.innerWidth - drawerRect.left + 12}px` : '-9999px',
         }}
       >
         <OnboardingHelper

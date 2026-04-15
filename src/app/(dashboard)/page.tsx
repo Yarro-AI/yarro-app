@@ -477,10 +477,13 @@ export default function DashboardPage() {
           style={{ animation: 'spotlight-fade 1.5s ease-in-out forwards' }}
         />
       )}
-      {/* Simulate step — dim overlay + SimulateTicketCard rendered fixed above it */}
+      {/* Simulate step — brief spotlight dim (fades out) + SimulateTicketCard stays */}
       {step === 'simulate' && !simulationActive && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/50 pointer-events-none" />
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] pointer-events-none"
+            style={{ animation: 'sim-spotlight 2.5s ease-in-out forwards' }}
+          />
           <FixedSimulateCard anchorRef={simCardAnchorRef} onClick={() => setSimulationActive(true)} />
         </>
       )}
@@ -489,6 +492,12 @@ export default function DashboardPage() {
           0% { opacity: 0; }
           15% { opacity: 1; }
           70% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes sim-spotlight {
+          0% { opacity: 0; }
+          15% { opacity: 1; }
+          65% { opacity: 1; }
           100% { opacity: 0; }
         }
       `}</style>
