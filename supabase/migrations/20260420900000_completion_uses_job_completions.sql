@@ -104,12 +104,19 @@ BEGIN
       )
     WHERE id = v_ticket_id;
   ELSE
-    -- Tenant disputes — write completed=false to c1_job_completions
-    -- The router checks this and returns needs_action/job_not_completed
+    -- Tenant disputes — preserve completion data in attempts[], then set completed=false
+    -- The router checks completed=false and returns needs_action/job_not_completed
     UPDATE c1_job_completions SET
+      attempts = COALESCE(attempts, '[]'::jsonb) || jsonb_build_object(
+        'completed_at', received_at,
+        'completed', true,
+        'notes', notes,
+        'photos', media_urls,
+        'disputed_at', now(),
+        'dispute_reason', COALESCE(p_notes, 'Tenant reported job not resolved')
+      ),
       completed = false,
-      reason = COALESCE(p_notes, 'Tenant reported job not resolved'),
-      notes = COALESCE(p_notes, notes)
+      reason = COALESCE(p_notes, 'Tenant reported job not resolved')
     WHERE id = v_ticket_id;
 
     -- If no job_completions row exists yet, insert one
