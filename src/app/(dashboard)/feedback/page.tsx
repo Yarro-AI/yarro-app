@@ -89,6 +89,18 @@ export default function FeedbackPage() {
       toast.error('Failed to send feedback')
     } else {
       toast.success('Thanks for your feedback!')
+
+      // Notify admin via email (fire-and-forget — don't block UX on email delivery)
+      const selectedTicket = ticketId ? tickets.find(t => t.id === ticketId) : null
+      supabase.functions.invoke('yarro-feedback-notify', {
+        body: {
+          category,
+          message: message.trim(),
+          pm_name: propertyManager.name,
+          pm_email: propertyManager.email,
+          ticket_description: selectedTicket?.issue_description || null,
+        },
+      }).catch(() => { /* email notification is best-effort */ })
       setSent(true)
       setRecentFeedback(prev => [{
         id: crypto.randomUUID(),

@@ -31,3 +31,6 @@ verify_jwt = false
 
 [functions.yarro-compliance-reminder]
 verify_jwt = false
+
+[functions.yarro-feedback-notify]
+verify_jwt = true
