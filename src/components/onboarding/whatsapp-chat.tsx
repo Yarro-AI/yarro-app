@@ -15,15 +15,25 @@ interface Message {
   time: string
 }
 
+// Timing: ~40s total. Breathing room between messages so the user can read naturally.
+// SMS fires at ~25s (step 1) and ~32s (step 2) — phone buzzes during the resolution phase.
 const SCRIPT: { side: 'left' | 'right'; text: string; time: string; typingMs: number; delayAfter: number; sms?: 1 | 2 }[] = [
-  { side: 'left', text: 'Hi, I need to report an issue with my flat', time: '09:14', typingMs: 800, delayAfter: 800 },
-  { side: 'right', text: 'Hi Jane, thanks for reaching out. I\u2019m Yarro, your property manager\u2019s AI assistant. What\u2019s the problem?', time: '09:14', typingMs: 1400, delayAfter: 1000 },
-  { side: 'left', text: 'The boiler isn\u2019t working. No hot water since this morning and the heating\u2019s off too', time: '09:15', typingMs: 1200, delayAfter: 1800 },
-  { side: 'right', text: 'I\u2019m sorry to hear that. I\u2019ve logged this as an urgent plumbing issue and finding a contractor for you to come fix the boiler ASAP.\nI\u2019ll notify the property manager now.', time: '09:16', typingMs: 2000, delayAfter: 800 },
-  { side: 'left', text: 'Thanks \uD83D\uDE4F', time: '09:16', typingMs: 500, delayAfter: 1200 },
-  { side: 'right', text: 'I\u2019ve notified your property manager and they\u2019ve just approved the callout. I will coordinate with the contractor for you and keep you updated.', time: '09:17', typingMs: 1800, delayAfter: 1200, sms: 1 },
-  { side: 'right', text: 'All sorted, Jane. A plumber has been dispatched to 123 Demo Street and should be with you this afternoon. Your property manager has been notified. Is there anything else?', time: '09:18', typingMs: 1600, delayAfter: 1000, sms: 2 },
-  { side: 'left', text: 'No that\u2019s amazing, thank you!', time: '09:18', typingMs: 600, delayAfter: 0 },
+  // 0s: Tenant opens
+  { side: 'left', text: 'Hi, I need to report an issue with my flat', time: '09:14', typingMs: 1200, delayAfter: 1500 },
+  // ~3s: Yarro greets
+  { side: 'right', text: 'Hi Jane, thanks for reaching out. I\u2019m Yarro, your property manager\u2019s AI assistant. What\u2019s the problem?', time: '09:14', typingMs: 2000, delayAfter: 2000 },
+  // ~7s: Tenant describes issue
+  { side: 'left', text: 'The boiler isn\u2019t working. No hot water since this morning and the heating\u2019s off too', time: '09:15', typingMs: 1800, delayAfter: 2500 },
+  // ~12s: Yarro logs + finding contractor
+  { side: 'right', text: 'I\u2019m sorry to hear that. I\u2019ve logged this as an urgent plumbing issue and finding a contractor for you to come fix the boiler ASAP.\nI\u2019ll notify the property manager now.', time: '09:16', typingMs: 2800, delayAfter: 1500 },
+  // ~17s: Tenant quick thanks
+  { side: 'left', text: 'Thanks \uD83D\uDE4F', time: '09:16', typingMs: 600, delayAfter: 2500 },
+  // ~20s: Pause — Yarro is "working"... then manager approved → SMS Step 1 at ~25s
+  { side: 'right', text: 'I\u2019ve notified your property manager and they\u2019ve just approved the callout. I will coordinate with the contractor for you and keep you updated.', time: '09:17', typingMs: 3000, delayAfter: 2500, sms: 1 },
+  // ~28s: All sorted → SMS Step 2 at ~32s
+  { side: 'right', text: 'All sorted, Jane. A plumber has been dispatched to 123 Demo Street and should be with you this afternoon. Your property manager has been notified. Is there anything else?', time: '09:18', typingMs: 2500, delayAfter: 2000, sms: 2 },
+  // ~35s: Tenant closes
+  { side: 'left', text: 'No that\u2019s amazing, thank you!', time: '09:18', typingMs: 800, delayAfter: 0 },
 ]
 
 export function WhatsAppChat({ onSmsStep1, onSmsStep2, onComplete }: WhatsAppChatProps) {
@@ -86,8 +96,8 @@ export function WhatsAppChat({ onSmsStep1, onSmsStep2, onComplete }: WhatsAppCha
         }
       }
 
-      // Hold for reading
-      await delay(3000)
+      // Hold so user can read the final messages
+      await delay(4000)
       if (mountedRef.current) onComplete()
     }
 
